@@ -24,14 +24,17 @@ def comfyui_get_history() -> tuple[bool, list]:
     """
     Get the history information from ComfyUI.
     """
-    response = requests.get(f"{CONFYUI_URL}/history", timeout=10)
+    try:
+        response = requests.get(f"{CONFYUI_URL}/history", timeout=10)
 
-    if response.ok:
-        history_data = response.json()
-        return (True, history_data)
+        if response.ok:
+            history_data = response.json()
+            return (True, history_data)
 
-    print(f"Failed to fetch history. Status code: {response.status_code}")
-    return (False, [])
+        print(f"Failed to fetch history. Status code: {response.status_code}")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return (False, [])
 
 
 def comfyui_get_last_history_entry() -> tuple[bool, list]:
