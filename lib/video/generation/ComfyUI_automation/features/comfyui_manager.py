@@ -17,7 +17,7 @@ def main() -> None:
     """
     Main function to start the ComfyUI manager.
     """
-    
+
     manager = ComfyUIManager(COMFYUI_COMMAND, HEARTBEAT_URL)
     manager.start_comfyui()
     manager.start_monitoring()
@@ -53,7 +53,7 @@ class ComfyUIManager:
         self.comfyui_command = comfyui_command
         self.heartbeat_url = heartbeat_url
         self.max_restarts = max_restarts
-        self.restarts = 0
+        self.restarts = -1
         self.check_interval = check_interval
         self.restart_delay = restart_delay
         self.process = None
@@ -63,10 +63,11 @@ class ComfyUIManager:
         """Start the ComfyUI application."""
         print("Starting ComfyUI...")
         self.process = subprocess.Popen(self.comfyui_command, shell=True)
-        
+
         while self.check_heartbeat() is False:
             time.sleep(5)
-        
+
+        self.restarts += 1
         print("ComfyUI started...")
         self.running = True
 
@@ -89,15 +90,13 @@ class ComfyUIManager:
 
     def monitor_heartbeat(self):
         """Monitor the heartbeat of the ComfyUI application and restart if necessary."""
-        restarts = 0
         while self.running:
             if not self.check_heartbeat():
                 print("Heartbeat check failed. Restarting ComfyUI...")
                 self.stop_comfyui()
                 time.sleep(self.restart_delay)
                 self.start_comfyui()
-                restarts += 1
-            if restarts < self.max_restarts:
+            if self.restarts >= self.max_restarts:
                 print(f"Max restarts reached: {self.max_restarts}. Stopping monitoring...")
                 break
             time.sleep(self.check_interval)
