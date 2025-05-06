@@ -1,10 +1,22 @@
-def main():
-    """
-    Prototype for video generation using Stable Diffusion and AnimateDiff
-    """
-    default_positive_prompt = "cinematic animation in ultra-high detail, soft lighting, dynamic range, shallow depth of field, expressive character motion, realistic textures, golden hour glow, slow camera pan, natural background, 4k film style, "
-    default_negative_prompt = "deformed, blurry, mutated, extra limbs, extra fingers, bad hands, low quality, distorted face, missing limbs, broken anatomy, fuzzy, dark, messy background, ugly, glitch, horror style, static pose, photorealistic, grayscale, "
+"""
+Realistic Vision Sweep Automation for ComfyUI
+"""
 
+import sys
+
+from .features.environment_variables import CONFYUI_URL
+from .stable_diffusion_workflow import StableDiffusionWorkflow
+from .features.comfyui_requests import ComfyUIRequests
+
+
+def stable_diffusion_history_maker() -> None:
+    """
+    Automate the sweep process for Realistic Vision in ComfyUI.
+    """
+    workflow = StableDiffusionWorkflow()
+
+    requests = ComfyUIRequests(CONFYUI_URL)
+    
     story = [
         (
             "Once upon a time, in a quiet village surrounded by hills, lived a curious little girl named Mia. She loved to explore and ask questions about everything she saw.",
@@ -47,8 +59,17 @@ def main():
             "night scene, sad tone, broken animation, cold colors, lonely atmosphere, blurry characters, post-apocalyptic setting",
         ),
     ]
-    # negative_prompt=["bad quality, worse quality" for i in range(0, len(story))]
+    
+    for s in story:
+        workflow.set_positive_prompt(s[1])
+        requests.comfyui_send_prompt(workflow.get_json())
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        stable_diffusion_history_maker()
+    except KeyboardInterrupt:
+        sys.exit(0)
+    except Exception as e:
+        print(f"stable_diffusion_sweep_automation.py: An error occurred: {e}")
+        sys.exit(1)

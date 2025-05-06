@@ -1,0 +1,4 @@
+
+Best config for generation:
+
+	* denoise : 1.0

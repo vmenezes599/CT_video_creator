@@ -2,8 +2,6 @@
 Test script for generating video frames using Stable Diffusion and AnimateDiff
 """
 
-from lib.video.generation.generation_classes import VideoGenerationAnimateDiff
-
 def main():
     """
     Prototype for video generation using Stable Diffusion and AnimateDiff
@@ -19,26 +17,6 @@ def main():
         )
     ]
     # negative_prompt=["bad quality, worse quality" for i in range(0, len(story))]
-
-    animatediff_input = VideoGenerationAnimateDiff.AnimateDiffPipelineInput(
-        num_frames=8,
-        guidance_scale=7.5,
-        num_inference_steps=25,
-        fps=8,
-    )
-
-    generator = VideoGenerationAnimateDiff(animatediff_input)
-    generator.allocate_resources()
-
-    for i, phrase in enumerate(story):
-        generator.set_prompt(default_positive_prompt + phrase[1])
-        generator.set_negative_prompt(default_negative_prompt + phrase[2])
-
-        generator.generate()
-        # generator.export_to_video(f"story_part{i}")
-        generator.export_to_png(f"story_part{i}.png")
-
-    generator.deallocate_resources()
 
 
 if __name__ == "__main__":

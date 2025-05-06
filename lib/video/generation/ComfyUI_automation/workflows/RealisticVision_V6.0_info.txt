@@ -35,12 +35,14 @@ Recommended Workflow
 
 Recommended Generation Parameters
 	* Sampler: DPM++ SDE Karras (25+ steps) / DPM++ 2M SDE (50+ steps)
-	* Negative Prompt: (deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck
+	* Negative Prompt: (deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of
+	  frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck
 
 
 Recommended Hires.Fix Parameters
 	* Sampler: DPM++ SDE Karras or DPM++ 2M SDE
-	* Denoising steps: 10+ (DPM++ SDE Karras) / 20+ (DPM++ 2M SDE (notice. the lower the value of hires steps at a given sampler, the stronger the skin texture and the higher the chance of getting artifacts))
+	* Denoising steps: 10+ (DPM++ SDE Karras) / 20+ (DPM++ 2M SDE (notice. the lower the value of hires steps at a given sampler,
+	  the stronger the skin texture and the higher the chance of getting artifacts))
 	* Denoising strength: 0.1-0.3
 	* Upscaler: 4x-UltraSharp / 4x_NMKD-Superscale-SP_178000_G or another
 	* Upscale by: 1.1-2.0+
