@@ -5,7 +5,7 @@ Realistic Vision Sweep Automation for ComfyUI
 import sys
 
 from .features.environment_variables import CONFYUI_URL
-from .stable_diffusion_workflow import StableDiffusionWorkflow
+from .features.comfyui_workflow import StableDiffusionWorkflow
 from .features.comfyui_requests import ComfyUIRequests
 
 

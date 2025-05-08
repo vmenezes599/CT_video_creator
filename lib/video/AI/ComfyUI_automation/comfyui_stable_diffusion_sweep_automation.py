@@ -5,8 +5,7 @@ Realistic Vision Sweep Automation for ComfyUI
 import sys
 import random
 
-from .stable_diffusion_workflow import StableDiffusionWorkflow
-from .features.comfyui_sweep import ComfyUISweep
+from .features.comfyui_sweepers import StableDiffusionComfyUISweeper
 from .features.environment_variables import CONFYUI_URL, CONFYUI_OUTPUT_FOLDER
 
 
@@ -38,10 +37,8 @@ def stable_diffusion_sweep_automation() -> None:
     Automate the sweep process for Realistic Vision in ComfyUI.
     """
 
-    sweeper = ComfyUISweep(
+    sweeper = StableDiffusionComfyUISweeper(
         comfyui_url=CONFYUI_URL,
-        workflow_type=StableDiffusionWorkflow,
-        output_folder=CONFYUI_OUTPUT_FOLDER,
         output_name="output",
     )
 

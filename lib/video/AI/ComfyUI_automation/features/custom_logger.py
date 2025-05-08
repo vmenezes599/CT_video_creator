@@ -1,14 +1,35 @@
 import logging
 
+# Define the global logger
+# LOG_FILE = os.path.join(os.path.dirname(__file__), "automation.log")
+LOG_FILE = "ComfyUI_automation.log"
+logger = logging.getLogger("ComfyUIAutomationLogger")
+logger.setLevel(logging.INFO)
 
-class CustomLogger:
+# Avoid adding multiple handlers
+if not logger.handlers:
+    formatter = logging.Formatter(
+        "%(message)s | %(asctime)s - %(levelname)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+
+    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+
+    logger.addHandler(file_handler)
+
+
+class OldCustomLogger:
     """
     Custom logger class to log messages to a file with a specific format.	
     """
-    
+
     def __init__(self, file_name: str, level: int = logging.INFO):
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(level)
+
+        # unique_suffix = datetime.now().strftime("%Y-%m-%d_%Hh%Mm%Ss")  # Timestamp
+        # self.log_file_name = f"{output_folder}/{unique_suffix}_comfyui_output_sweep.log"
 
         # Create formatter and add it to the handler
         formatter = logging.Formatter(
