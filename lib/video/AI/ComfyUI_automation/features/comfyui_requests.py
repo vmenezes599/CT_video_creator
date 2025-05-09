@@ -2,14 +2,16 @@
 ComfyuiRequest is a class that handles HTTP requests to the ComfyUI API.
 """
 
-from datetime import datetime
+import os
 import time
+from datetime import datetime
 
 import requests
 from requests.exceptions import RequestException
 
+from .environment_variables import CONFYUI_URL
 from .comfyui_helpers import comfyui_get_history_output_name
-from .custom_logger import logger
+from .comfyui_workflow import IComfyUIWorkflow
 
 
 class ComfyUIRequests:
@@ -17,7 +19,9 @@ class ComfyUIRequests:
     ComfyuiRequest is a class that handles HTTP requests to the ComfyUI API.
     """
 
-    def __init__(self, comfyui_url: str, delay_seconds: int = 10) -> None:
+    COMFYUI_OUTPUT_FOLDER = "lib/ComfyUI/output"
+
+    def __init__(self, comfyui_url: str = CONFYUI_URL, delay_seconds: int = 10) -> None:
         """
         Initializes the ComfyuiRequest with a configurable retry mechanism.
         """
@@ -61,10 +65,13 @@ class ComfyUIRequests:
 
         return self._send_post_request(url=url, json=prompt, timeout=timeout)
 
-    def comfyui_ensure_send_all_prompts(self, req_list: list[dict]) -> bool:
+    def comfyui_ensure_send_all_prompts(
+        self, req_list: list[IComfyUIWorkflow]
+    ) -> list[str]:
         """
         Send all prompts in the list to ComfyUI and wait for them to finish.
         """
+        from .custom_logger import logger
 
         output_image_paths: list[str] = []
         total_requests = len(req_list)
@@ -73,14 +80,25 @@ class ComfyUIRequests:
             req = req_list[i]
 
             try:
-                print(f"Sending request {i + 1}/{total_requests}: {req[1]}")
+                print_summary_max_length = 100
+                full_summary = req.get_workflow_summary()
+                smaller_workflow_summary = full_summary[
+                    : min(print_summary_max_length, len(full_summary))
+                ]
+                if len(full_summary) > print_summary_max_length:
+                    smaller_workflow_summary += "..."
 
-                response = self.comfyui_send_prompt(json=req[0].get_json(), timeout=10)
+                print(
+                    f"Sending request {i + 1}/{total_requests}: {smaller_workflow_summary}"
+                )
+
+                response = self.comfyui_send_prompt(json=req.get_json(), timeout=10)
                 if not response.ok:
                     raise RuntimeError(f"Bad prompt: {response.status_code}")
 
                 current_time = datetime.now()
 
+                # Wait for the request to finish
                 while True:
                     server_reply = self.comfyui_get_queue()
 
@@ -92,26 +110,27 @@ class ComfyUIRequests:
                 # Log success
                 proccess_time_seconds = (datetime.now() - current_time).seconds
                 print(
-                    f"Request finished successfully after {proccess_time_seconds}s: {req[1]}"
+                    f"Request finished successfully after {proccess_time_seconds}s: {smaller_workflow_summary}"
                 )
 
-                output_name = f"{req[1].split('/')[-1]}_{str(i).zfill(5)}"
+                output_name = f"{full_summary.split('/')[-1]}_{str(i).zfill(5)}"
 
                 history_status, history_entry = self.comfyui_get_last_history_entry()
                 if history_status:
                     output_names = comfyui_get_history_output_name(history_entry)
+
                     if len(output_names) > 0:
                         output_name = output_names[-1]
 
-                    full_path_name = comfyui_get_history_output_name(
-                        history_entry_dict=history_entry, use_full_path=True
-                    )
-                    output_image_paths.append(full_path_name[-1])
+                        full_path_name = os.path.join(
+                            self.COMFYUI_OUTPUT_FOLDER, output_name
+                        )
+                        output_image_paths.append(full_path_name)
 
                 logger.info(
                     "%s == %s (%ds)",
                     output_name,
-                    req[1].split("/")[:-1],
+                    full_summary.split("/")[:-1],
                     proccess_time_seconds,
                 )
 
@@ -124,6 +143,8 @@ class ComfyUIRequests:
                 logger.error("Connection error: %s", e)
 
             time.sleep(self.delay_seconds)
+
+        return output_image_paths
 
     def comfyui_get_queue(self) -> tuple[bool, int]:
         """

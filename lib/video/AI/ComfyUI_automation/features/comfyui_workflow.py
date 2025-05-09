@@ -18,6 +18,18 @@ class IComfyUIWorkflow(ABC):
     """
 
     @abstractmethod
+    def get_workflow_summary(self) -> str:
+        """
+        Get the workflow summary for the workflow.
+        """
+
+    @abstractmethod
+    def set_workflow_summary(self, workflow_summary: str) -> None:
+        """
+        Set the model sweeper to the JSON configuration.
+        """
+
+    @abstractmethod
     def set_output_filename(self, filename: str) -> None:
         """
         Set the output filename for the generated image.
@@ -40,6 +52,7 @@ class ComfyUIWorkflowBase:
         Initialize the ComfyUIWorkflowBase class.
         """
         self.workflow = base_workflow
+        self.workflow_summary = "output"
 
     def _set_fields(self, field_parameters: dict[int, dict[str, str]]) -> None:
         """
@@ -53,25 +66,39 @@ class ComfyUIWorkflowBase:
             # Check if the node exists in the workflow
             if index_str not in self.workflow:
                 raise ValueError(
-                    f"Node index {index_str} does not exist in the workflow."
+                    f"WRONG NODE INDEX: Node index {index_str} does not exist in the workflow."
                 )
 
             # Check if the "inputs" field exists for the node
             if "inputs" not in self.workflow[index_str]:
-                raise ValueError(f"Node {index_str} is missing the 'inputs' field.")
+                raise ValueError(
+                    f"WRONG NODE INDEX: Node {index_str} is missing the 'inputs' field."
+                )
 
             # Validate that all keys in `parameters` exist in the workflow's inputs
             for key in parameters.keys():
                 if key not in self.workflow[index_str]["inputs"]:
                     raise ValueError(
-                        f"Key '{key}' is missing in the 'inputs' of node {index_str}."
+                        f"WRONG NODE INDEX: Key '{key}' is missing in the 'inputs' of node {index_str}."
                     )
 
             # Set the values in the workflow
             for key, value in parameters.items():
                 self.workflow[index_str]["inputs"][key] = value
 
-    def get_json(self) -> dict:
+    def _set_workflow_summary(self, workflow_summary: str) -> None:
+        """
+        Set the workflow summary string for the workflow.
+        """
+        self.workflow_summary = workflow_summary
+
+    def _get_workflow_summary(self) -> str:
+        """
+        Get the workflow summary string for the workflow.
+        """
+        return self.workflow_summary
+
+    def _get_json(self) -> dict:
         """
         Get the JSON configuration.
         """
@@ -99,6 +126,10 @@ class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
         models_parameters = {stable_diffusion_node_index: {"ckpt_name": model_name}}
 
         super()._set_fields(models_parameters)
+        workflow_summary = (
+            f"StableDiffusionModel({model_name})/{self.get_workflow_summary()}"
+        )
+        self.set_workflow_summary(workflow_summary)
 
     def _set_models(self, model_index: list[int], model_names: list[str]) -> None:
         """
@@ -133,6 +164,8 @@ class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
             }
         }
         super()._set_fields(parameters)
+        workflow_summary = f"KSampler[seed({seed}),steps({steps}),cfg({cfg}),sampler({sampler_name}),scheduler({scheduler}),denoise({denoise})]/{self.get_workflow_summary()}"
+        self.set_workflow_summary(workflow_summary)
 
     def _set_positive_prompt(
         self,
@@ -145,10 +178,13 @@ class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
 
         parameters = {
             positive_prompt_node_index: {
-                "positive_prompt": positive_prompt,
+                "text": positive_prompt,
             }
         }
         super()._set_fields(parameters)
+        pp_list = positive_prompt.split(" ")
+        workflow_summary = f"PositivePrompt({pp_list[0]} {pp_list[1]}...)/{self.get_workflow_summary()}"
+        self.set_workflow_summary(workflow_summary)
 
     def _set_negative_prompt(
         self,
@@ -160,10 +196,13 @@ class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
         """
         parameters = {
             negative_prompt_node_index: {
-                "negative_prompt": negative_prompt,
+                "text": negative_prompt,
             }
         }
         super()._set_fields(parameters)
+        np_list = negative_prompt.split(" ")
+        workflow_summary = f"NegativePrompt({np_list[0]} {np_list[1]}...)/{self.get_workflow_summary()}"
+        self.set_workflow_summary(workflow_summary)
 
     def _set_image_resolution(
         self,
@@ -180,6 +219,10 @@ class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
             }
         }
         super()._set_fields(parameters)
+        workflow_summary = (
+            f"Resolution({resolution[0]},{resolution[1]})/{self.get_workflow_summary()}"
+        )
+        self.set_workflow_summary(workflow_summary)
 
     def _set_batch_size(
         self,
@@ -195,6 +238,8 @@ class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
             }
         }
         super()._set_fields(parameters)
+        workflow_summary = f"BatchSize({batch_size})/{self.get_workflow_summary()}"
+        self.set_workflow_summary(workflow_summary)
 
     def _set_latent_image(
         self,
@@ -218,10 +263,28 @@ class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
             }
         }
         super()._set_fields(parameters)
+        workflow_summary = (
+            f"{'/'.join(self.get_workflow_summary().split('/')[:-1])}/{filename}"
+        )
+        self.set_workflow_summary(workflow_summary)
+
+    @override
+    def set_workflow_summary(self, workflow_summary: str) -> None:
+        """
+        Set the workflow summary for the workflow.
+        """
+        super()._set_workflow_summary(workflow_summary)
+
+    @override
+    def get_workflow_summary(self) -> str:
+        """
+        Get the workflow summary for the workflow.
+        """
+        return super()._get_workflow_summary()
 
     @override
     def get_json(self) -> dict:
-        return ComfyUIWorkflowBase.get_json(self)
+        return ComfyUIWorkflowBase._get_json(self)
 
 
 class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
@@ -237,7 +300,7 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
     STABLE_DIFFUSION_LOADER_NODE_INDEX = 12
     SAVE_IMAGE_NODE_INDEX = 17
 
-    def __init__(self) -> None:
+    def __init__(self, load_best_config: bool = True) -> None:
         """
         Initialize the StableDiffusionWorkflow class.
         """
@@ -247,7 +310,8 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
         super().__init__(workflow)
 
         # Loading best configurations for the workflow
-        self._load_best_configurations()
+        if load_best_config:
+            self._load_best_configurations()
 
     def _load_best_configurations(self) -> None:
         self.set_latent_image([1024, 768], 1)
@@ -372,7 +436,7 @@ class AnimateDiffWorkflow(IComfyUIWorkflow, ComfyUIWorkflowBase):
     ANIMATEDIFF_LOADER_NODE_INDEX = 36
     VIDEO_COMBINE_NODE_INDEX = 37
 
-    def __init__(self) -> None:
+    def __init__(self, load_best_config: bool = True) -> None:
         """
         Initialize the StableDiffusionWorkflow class.
         """
@@ -380,6 +444,13 @@ class AnimateDiffWorkflow(IComfyUIWorkflow, ComfyUIWorkflowBase):
             workflow = json.load(file)
 
         super().__init__(workflow)
+
+        # Loading best configurations for the workflow
+        if load_best_config:
+            self._load_best_configurations()
+
+    def _load_best_configurations(self) -> None:
+        pass
 
     def set_animatediff_model(self, model_name: str) -> None:
         """
@@ -519,8 +590,22 @@ class AnimateDiffWorkflow(IComfyUIWorkflow, ComfyUIWorkflowBase):
         super()._set_fields(parameters)
 
     @override
+    def set_workflow_summary(self, workflow_summary: str) -> None:
+        """
+        Set the workflow summary for the workflow.
+        """
+        super()._set_workflow_summary(workflow_summary)
+
+    @override
+    def get_workflow_summary(self) -> str:
+        """
+        Get the workflow summary for the workflow.
+        """
+        return super()._get_workflow_summary()
+
+    @override
     def get_json(self) -> dict:
-        return ComfyUIWorkflowBase.get_json(self)
+        return ComfyUIWorkflowBase._get_json(self)
 
 
 class UnetWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
@@ -548,6 +633,10 @@ class UnetWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
         }
 
         super()._set_fields(models_parameters)
+        workflow_summary = (
+            f"DualClipLoader({clip_name1},{clip_name2})/{self.get_workflow_summary()}"
+        )
+        self.set_workflow_summary(workflow_summary)
 
     def _set_unet_model(self, node_index: int, model_name: str) -> None:
         """
@@ -556,6 +645,8 @@ class UnetWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
         models_parameters = {node_index: {"unet_name": model_name}}
 
         super()._set_fields(models_parameters)
+        workflow_summary = f"UNetModel({model_name})/{self.get_workflow_summary()}"
+        self.set_workflow_summary(workflow_summary)
 
     def _set_models(self, node_index: int, model_names: list[str]) -> None:
         """
@@ -578,6 +669,9 @@ class UnetWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
             }
         }
         super()._set_fields(parameters)
+        pp_list = positive_prompt.split(" ")
+        workflow_summary = f"PositivePrompt({pp_list[0]} {pp_list[1]}...)/{self.get_workflow_summary()}"
+        self.set_workflow_summary(workflow_summary)
 
     def _set_output_filename(self, node_index: int, filename: str) -> None:
         """
@@ -606,9 +700,42 @@ class UnetWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
 
+        workflow_summary = (
+            f"Resolution({resolution[0]},{resolution[1]})/{self.get_workflow_summary()}"
+        )
+        self.set_workflow_summary(workflow_summary)
+
+    def _set_random_noise(self, node_index: int, random_noise: int) -> None:
+        """
+        Set the random noise.
+        """
+        parameters = {
+            node_index: {
+                "noise_seed": random_noise,
+            }
+        }
+        super()._set_fields(parameters)
+
+        workflow_summary = f"RandomNoise({random_noise})/{self.get_workflow_summary()}"
+        self.set_workflow_summary(workflow_summary)
+
+    @override
+    def set_workflow_summary(self, workflow_summary: str) -> None:
+        """
+        Set the workflow summary for the workflow.
+        """
+        super()._set_workflow_summary(workflow_summary)
+
+    @override
+    def get_workflow_summary(self) -> str:
+        """
+        Get the workflow summary for the workflow.
+        """
+        return super()._get_workflow_summary()
+
     @override
     def get_json(self) -> dict:
-        return ComfyUIWorkflowBase.get_json(self)
+        return ComfyUIWorkflowBase._get_json(self)
 
 
 class FluxWorkflow(UnetWorkflowBase):
@@ -617,15 +744,15 @@ class FluxWorkflow(UnetWorkflowBase):
     """
 
     FLUX_WORKFLOW_PATH = f"{WORKFLOW_JSON_DIR}/FLUX.1_API.json"
+    SAVE_IMAGE_NODE_INDEX = 9
+    DUAL_CLIP_NODE_INDEX = 11
+    UNET_MODEL_NODE_INDEX = 12
+    RANDOM_NOISE_NODE_INDEX = 25
     POSITIVE_PROMPT_NODE_INDEX = 28
-    KSAMPLER_NODE_INDEX = 15
     WIDTH_NODE_INDEX = 70
     HEIGHT_NODE_INDEX = 71
-    UNET_MODEL_NODE_INDEX = 12
-    DUAL_CLIP_NODE_INDEX = 11
-    SAVE_IMAGE_NODE_INDEX = 17
 
-    def __init__(self) -> None:
+    def __init__(self, load_best_config: bool = True) -> None:
         """
         Initialize the FluxWorkflow class.
         """
@@ -635,10 +762,12 @@ class FluxWorkflow(UnetWorkflowBase):
         super().__init__(workflow)
 
         # Loading best configurations for the workflow
-        self._load_best_configurations()
+        if load_best_config:
+            self._load_best_configurations()
 
     def _load_best_configurations(self) -> None:
-        pass
+        self.set_random_noise(random.randint(0, 2**32 - 1))
+        self.set_output_filename("output")
 
     def set_unet_model(self, model_name: str) -> None:
         """
@@ -682,6 +811,20 @@ class FluxWorkflow(UnetWorkflowBase):
             (self.WIDTH_NODE_INDEX, self.HEIGHT_NODE_INDEX), resolution=resolution
         )
 
+    def set_random_noise(
+        self,
+        random_noise: int,
+    ) -> None:
+        """
+        Set the random noise.
+        """
+        super()._set_random_noise(
+            self.RANDOM_NOISE_NODE_INDEX, random_noise=random_noise
+        )
+
     @override
     def set_output_filename(self, filename):
-        return super().set_output_filename(filename)
+        """
+        Set the output filename.
+        """
+        super()._set_output_filename(self.SAVE_IMAGE_NODE_INDEX, filename)

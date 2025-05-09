@@ -4,7 +4,6 @@ Realistic Vision Sweep Automation for ComfyUI
 
 import sys
 
-from .features.environment_variables import CONFYUI_URL
 from .features.comfyui_workflow import StableDiffusionWorkflow
 from .features.comfyui_requests import ComfyUIRequests
 
@@ -13,10 +12,9 @@ def stable_diffusion_history_maker() -> None:
     """
     Automate the sweep process for Realistic Vision in ComfyUI.
     """
-    workflow = StableDiffusionWorkflow()
 
-    requests = ComfyUIRequests(CONFYUI_URL)
-    
+    requests = ComfyUIRequests()
+
     story = [
         (
             "Once upon a time, in a quiet village surrounded by hills, lived a curious little girl named Mia. She loved to explore and ask questions about everything she saw.",
@@ -59,10 +57,14 @@ def stable_diffusion_history_maker() -> None:
             "night scene, sad tone, broken animation, cold colors, lonely atmosphere, blurry characters, post-apocalyptic setting",
         ),
     ]
-    
+
+    req_list = []
     for s in story:
+        workflow = StableDiffusionWorkflow()
         workflow.set_positive_prompt(s[1])
-        requests.comfyui_send_prompt(workflow.get_json())
+        req_list.append(workflow)
+
+    requests.comfyui_ensure_send_all_prompts(req_list)
 
 
 if __name__ == "__main__":

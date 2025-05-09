@@ -5,7 +5,6 @@ ComfyUI Automation Sweep Module
 import copy
 import json
 from itertools import product
-from requests.exceptions import RequestException
 
 from .comfyui_workflow import StableDiffusionWorkflow, IComfyUIWorkflow
 from .comfyui_requests import ComfyUIRequests
@@ -17,12 +16,10 @@ class ComfyUISweeperBase:
     Base class for ComfyUI sweepers.
     """
 
-    def __init__(self, comfyui_url: str, output_name: str) -> None:
+    def __init__(self, comfyui_url: str) -> None:
         """
         Initialize the ComfyUISweeperBase class.
         """
-
-        self.logger_explanation = output_name
 
         self.req_list: list[tuple[IComfyUIWorkflow, str]] = []
 
@@ -60,16 +57,6 @@ class ComfyUISweeperBase:
 
         logger.info("--------------------------------------------------")
 
-    def _log_explanation(self) -> None:
-        """
-        Log the explanation of the current configuration.
-        """
-        log_explanation0 = self.logger_explanation.split("/")[-1]
-        log_explanation1 = self.logger_explanation.split("/")[:-1]
-        logger.info("%s == %s", log_explanation0, log_explanation1)
-
-        logger.info("--------------------------------------------------")
-
     def _set_output_nodes(self) -> None:
         """
         Set the output node in the JSON configuration.
@@ -82,7 +69,6 @@ class ComfyUISweeperBase:
         Send a request to ComfyUI with the current configuration.
         """
         self._save_first_and_last_requests()
-        self._log_explanation()
         self._set_output_nodes()
 
         self.requests.comfyui_ensure_send_all_prompts(self.req_list)
@@ -95,54 +81,44 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
 
     WORLFLOW_TYPE = StableDiffusionWorkflow
 
-    def __init__(
-        self,
-        comfyui_url: str,
-        output_name: str = "output",
-    ):
-        super().__init__(comfyui_url, output_name)
+    def __init__(self, comfyui_url: str):
+        super().__init__(comfyui_url)
 
-        self.req_list: list[tuple[StableDiffusionWorkflow, str]] = [
-            (self.WORLFLOW_TYPE(), output_name)
-        ]
+        self.req_list: list[StableDiffusionWorkflow] = [self.WORLFLOW_TYPE()]
 
     def add_animatediff_model_sweeper(self, model_name_list: list[str]) -> None:
         """
         Add the model sweeper to the JSON configuration.
         """
-        local_req_list: list[tuple[StableDiffusionWorkflow, str]] = []
+        local_req_list: list[StableDiffusionWorkflow] = []
         for model_name in model_name_list:
             for req in self.req_list:
-                local_prompt = copy.deepcopy(req[0])
+                local_prompt = copy.deepcopy(req)
 
                 local_prompt.set_animatediff_model(model_name)
 
                 output_model_name = model_name.split(".")[0]
-                output_file_name = f"{output_model_name}/{req[1]}"
+                worlkflow_summary = f"{output_model_name}/{req.get_workflow_summary()}"
 
-                local_req_list.append((local_prompt, output_file_name))
+                local_prompt.set_workflow_summary(worlkflow_summary)
+                local_req_list.append(local_prompt)
 
         self.req_list = local_req_list
-        self.logger_explanation = f"AnimateDiff_Model/{self.logger_explanation}"
 
     def add_stable_diffusion_model_sweeper(self, model_name_list: list[str]) -> None:
         """
         Add the model sweeper to the JSON configuration.
         """
-        local_req_list: list[tuple[StableDiffusionWorkflow, str]] = []
+        local_req_list: list[StableDiffusionWorkflow] = []
         for model_name in model_name_list:
             for req in self.req_list:
-                local_prompt = copy.deepcopy(req[0])
+                local_prompt = copy.deepcopy(req)
 
                 local_prompt.set_stable_diffusion_model(model_name)
 
-                output_model_name = model_name.split(".")[0]
-                output_file_name = f"{output_model_name}/{req[1]}"
-
-                local_req_list.append((local_prompt, output_file_name))
+                local_req_list.append(local_prompt)
 
         self.req_list = local_req_list
-        self.logger_explanation = f"StableDiffusion_Model/{self.logger_explanation}"
 
     def add_ksampler_sweeper(
         self,
@@ -157,7 +133,7 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
         Add the ksamper sweeper to the JSON configuration.
         """
         try:
-            local_req_list: list[tuple[StableDiffusionWorkflow, str]] = []
+            local_req_list: list[StableDiffusionWorkflow] = []
             for req in self.req_list:
                 for (
                     seed,
@@ -174,7 +150,7 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
                     scheduler_list,
                     denoise_list,
                 ):
-                    local_prompt = copy.deepcopy(req[0])
+                    local_prompt = copy.deepcopy(req)
 
                     local_prompt.set_ksampler(
                         seed=seed,
@@ -185,11 +161,9 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
                         denoise=denoise,
                     )
 
-                    output_file_name = f"KSampler({seed}_{steps}_{cfg}_{sampler_name}_{scheduler}_{denoise})/{req[1]}"
-                    local_req_list.append((local_prompt, output_file_name))
+                    local_req_list.append(local_prompt)
 
             self.req_list = local_req_list
-            self.logger_explanation = f"KSampler(seed_steps_cfg_sampler_name_scheduler_denoise)/{self.logger_explanation}"
         except Exception as e:
             logger.error("Error in add_ksampler_sweeper: %s", e)
             raise
@@ -205,15 +179,14 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
             logger.info("Adding positive prompt %s: %s", i, pp)
             logger.info("--------------------------------------------------")
 
-        local_req_list: list[tuple[StableDiffusionWorkflow, str]] = []
+        local_req_list: list[StableDiffusionWorkflow] = []
         for req in self.req_list:
             for i, positive_prompt in enumerate(positive_prompt_list):
-                local_prompt = copy.deepcopy(req[0])
+                local_prompt = copy.deepcopy(req)
 
                 local_prompt.set_positive_prompt(positive_prompt)
 
-                output_file_name = f"{req[1]}_pp{i}"
-                local_req_list.append((local_prompt, output_file_name))
+                local_req_list.append(local_prompt)
 
         self.req_list = local_req_list
         self.logger_explanation = f"{self.logger_explanation}_PositivePrompt"
@@ -229,18 +202,16 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
             logger.info("Adding negative prompt %s: %s", i, np)
             logger.info("--------------------------------------------------")
 
-        local_req_list: list[tuple[StableDiffusionWorkflow, str]] = []
+        local_req_list: list[StableDiffusionWorkflow] = []
         for req in self.req_list:
             for i, negative_prompt in enumerate(negative_prompt_list):
-                local_prompt = copy.deepcopy(req[0])
+                local_prompt = copy.deepcopy(req)
 
                 local_prompt.set_negative_prompt(negative_prompt)
 
-                output_file_name = f"{req[1]}_np{i}"
-                local_req_list.append((local_prompt, output_file_name))
+                local_req_list.append(local_prompt)
 
         self.req_list = local_req_list
-        self.logger_explanation = f"{self.logger_explanation}_NegativePrompt"
 
     def add_latent_image_sweeper(
         self,
@@ -254,21 +225,17 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
             logger.info("Adding batch size %s: %s", i, bs)
             logger.info("--------------------------------------------------")
 
-        local_req_list: list[tuple[StableDiffusionWorkflow, str]] = []
+        local_req_list: list[StableDiffusionWorkflow] = []
         for req in self.req_list:
             for i, (batch_size, resolution) in enumerate(
                 product(batch_size_list, resolution_list)
             ):
-                local_prompt = copy.deepcopy(req[0])
+                local_prompt = copy.deepcopy(req)
 
                 local_prompt.set_latent_image(
                     batch_size=batch_size, resolution=resolution
                 )
 
-                output_file_name = f"Latent_Image({resolution[0]},{resolution[1]},{batch_size})/{req[1]}"
-                local_req_list.append((local_prompt, output_file_name))
+                local_req_list.append(local_prompt)
 
         self.req_list = local_req_list
-        self.logger_explanation = (
-            f"Latent_Image(width,height,batch_size)/{self.logger_explanation}"
-        )

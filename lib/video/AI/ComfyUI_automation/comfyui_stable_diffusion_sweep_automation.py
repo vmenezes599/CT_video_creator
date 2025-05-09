@@ -39,18 +39,17 @@ def stable_diffusion_sweep_automation() -> None:
 
     sweeper = StableDiffusionComfyUISweeper(
         comfyui_url=CONFYUI_URL,
-        output_name="output",
     )
 
-    #sweeper.add_ksampler_sweeper(
+    # sweeper.add_ksampler_sweeper(
     #    seed_list=[random.randint(0, 2**32 - 1)],
     #    steps_list=list(range(15, 51, 5)),
     #    cfg_list=list(range(6, 11, 2)),
     #    sampler_name_list=["dpmpp_sde"],
     #    scheduler_list=["karras"],
     #    denoise_list=[0.45, 1.0],
-    #)
-    
+    # )
+
     sweeper.add_ksampler_sweeper(
         seed_list=[random.randint(0, 2**32 - 1)],
         steps_list=list(range(45, 51, 5)),
@@ -90,7 +89,7 @@ def stable_diffusion_sweep_automation() -> None:
         batch_size_list=[5],
     )
 
-    sweeper.send_requests(delay_seconds=15)
+    sweeper.send_requests()
 
 
 if __name__ == "__main__":

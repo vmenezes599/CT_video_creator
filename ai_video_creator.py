@@ -3,10 +3,15 @@ AI Video Generation Module
 """
 
 from lib.audio.audio_generation import AudioGenerator
+
+from lib.video.ai_image_generator import FluxAIImageGenerator
 from lib.video.video_generation import VideoGenerator
 
 
 def main():
+    """
+    Main function to generate a video from a story.
+    """
     story = [
         (
             "Once upon a time, in a quiet village surrounded by hills, lived a curious little girl named Mia. She loved to explore and ask questions about everything she saw.",
@@ -49,18 +54,47 @@ def main():
             "night scene, sad tone, broken animation, cold colors, lonely atmosphere, blurry characters, post-apocalyptic setting",
         ),
     ]
-    
-    
+
+    ai_image_generator = FluxAIImageGenerator()
+    video_generator = VideoGenerator()
     audio_generator = AudioGenerator()
+
+    output_ai_image_generator: list[str] = []
+    output_audio_generator: list[str] = []
+    subtitles: list[str] = []
+
+    flux_prompt_list: list[str] = []
     for index, s in enumerate(story):
         text_to_audio = s[0]
-        
+        text_to_image = s[1]
+
+        flux_prompt_list.append(text_to_image)
+
         audio_output_path = f"output_audio_{index}.mp3"
         audio_generator.text_to_audio(text_to_audio, audio_output_path)
-        
-        text_to_image = s[1]
-        image_output_path = f"test_pictures/{index}.png"
-        
+
+        output_audio_generator.append(audio_output_path)
+        subtitles.append(text_to_audio)
+
+    output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
+
+    _output_ai_image_generator = [
+        "lib/ComfyUI/output/MarkuryFLUX_00001_.png",
+        "lib/ComfyUI/output/MarkuryFLUX_00002_.png",
+        "lib/ComfyUI/output/MarkuryFLUX_00003_.png",
+        "lib/ComfyUI/output/MarkuryFLUX_00004_.png",
+        "lib/ComfyUI/output/MarkuryFLUX_00005_.png",
+        "lib/ComfyUI/output/MarkuryFLUX_00006_.png",
+        "lib/ComfyUI/output/MarkuryFLUX_00007_.png",
+        "lib/ComfyUI/output/MarkuryFLUX_00008_.png",
+    ]
+
+    video_generator.add_all_scenes(
+        # [output_ai_image_generator[0]], [output_audio_generator[0]], [subtitles[0]]
+        output_ai_image_generator, output_audio_generator, subtitles,
+    )
+
+    video_generator.compose("output_video.mp4")
 
 
 if __name__ == "__main__":

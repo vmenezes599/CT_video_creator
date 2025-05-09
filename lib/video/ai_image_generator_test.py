@@ -7,11 +7,8 @@ from .ai_image_generator import FluxAIImageGenerator
 
 # Example usage
 if __name__ == "__main__":
-    # Define the output folder
-    output_folder = "outputs/generated_images"
-
     # Create an instance of AIImageGenerator
-    generator = FluxAIImageGenerator(output_folder)
+    generator = FluxAIImageGenerator()
 
     # List of prompts to generate images for
     prompts = [

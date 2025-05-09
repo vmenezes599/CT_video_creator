@@ -4,7 +4,6 @@ flux_sweep_automation.py
 
 import sys
 
-from .features.environment_variables import CONFYUI_URL
 from .features.comfyui_workflow import FluxWorkflow
 from .features.comfyui_requests import ComfyUIRequests
 
@@ -13,14 +12,13 @@ def flux_sweep_automation():
     """
     Automate the sweep process for Realistic Vision in ComfyUI.
     """
-    workflow = FluxWorkflow()
 
     #workflow.set_positive_prompt(
         #positive_prompt="greece, ancient, pyramids, walking, old man, long hair, realistic, cinematic, sunrays, strong light, 8k, high quality, masterpiece, best quality, smile, happy"
         #positive_prompt="luffy from one piece, football, dribbling, ball control, skillful, action shot, dynamic pose, vibrant colors, high energy, stadium background, crowd cheering, sports photography, 8k resolution"
     #)
 
-    requests = ComfyUIRequests(CONFYUI_URL)
+    requests = ComfyUIRequests()
 
     story = [
         (
@@ -65,9 +63,13 @@ def flux_sweep_automation():
         ),
     ]
 
+    req_list = []
     for s in story:
+        workflow = FluxWorkflow()
         workflow.set_positive_prompt(s[1])
-        requests.comfyui_send_prompt(workflow.get_json())
+        req_list.append(workflow)
+
+    requests.comfyui_ensure_send_all_prompts(req_list)
 
 
 if __name__ == "__main__":
