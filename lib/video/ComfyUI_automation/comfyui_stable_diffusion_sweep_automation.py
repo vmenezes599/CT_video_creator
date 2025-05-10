@@ -5,8 +5,9 @@ Realistic Vision Sweep Automation for ComfyUI
 import sys
 import random
 
-from .features.comfyui_sweepers import StableDiffusionComfyUISweeper
-from .features.environment_variables import CONFYUI_URL, CONFYUI_OUTPUT_FOLDER
+from lib.ComfyUI_automation.comfyui_sweepers import StableDiffusionComfyUISweeper
+from lib.ComfyUI_automation.environment_variables import CONFYUI_URL
+
 
 SAMPLER_NAME_LIST = [
     "euler",
@@ -17,13 +18,6 @@ SAMPLER_NAME_LIST = [
 SCHEDULER_LIST = [
     "normal",
     "karras",
-]
-
-MODEL_NAME_LIST = [
-    "animatediff-motion-adapter-v1-5-3.safetensors",
-    "mm_sd_v15_v2.ckpt",
-    "mm-Stabilized_high.pth",
-    "temporaldiff-v1-animatediff.safetensors",
 ]
 
 STABLE_DIFFUSION_MODEL_NAME_LIST = [
@@ -37,28 +31,32 @@ STABLE_DIFFUSION_MODEL_NAME_LIST = [
 * Full Body: 896x896, 768x1024, 640x1152, 1024x768, 1152x640
 """
 
-def animate_diff_sweep_automation() -> None:
+
+def stable_diffusion_sweep_automation() -> None:
     """
     Automate the sweep process for Realistic Vision in ComfyUI.
     """
 
     sweeper = StableDiffusionComfyUISweeper(
-        comfyui_url=CONFYUI_URL
+        comfyui_url=CONFYUI_URL,
     )
+
+    # sweeper.add_ksampler_sweeper(
+    #    seed_list=[random.randint(0, 2**32 - 1)],
+    #    steps_list=list(range(15, 51, 5)),
+    #    cfg_list=list(range(6, 11, 2)),
+    #    sampler_name_list=["dpmpp_sde"],
+    #    scheduler_list=["karras"],
+    #    denoise_list=[0.45, 1.0],
+    # )
 
     sweeper.add_ksampler_sweeper(
         seed_list=[random.randint(0, 2**32 - 1)],
-        steps_list=list(range(15, 51, 5)),
+        steps_list=list(range(45, 51, 5)),
         cfg_list=list(range(6, 11, 2)),
         sampler_name_list=["dpmpp_sde"],
         scheduler_list=["karras"],
-        denoise_list=[0.45, 1.0],
-    )
-
-    sweeper.add_animatediff_model_sweeper(
-        model_name_list=[
-            "animatediff-motion-adapter-v1-5-3.safetensors",
-        ],
+        denoise_list=[1.0],
     )
 
     sweeper.add_stable_diffusion_model_sweeper(
@@ -83,12 +81,12 @@ def animate_diff_sweep_automation() -> None:
     sweeper.add_latent_image_sweeper(
         resolution_list=[
             (896, 896),
-            (768, 1024),
+            # (768, 1024),
             # (640, 1152),
             (1024, 768),
             # (1152, 640),
         ],
-        batch_size_list=[32],
+        batch_size_list=[5],
     )
 
     sweeper.send_requests()
@@ -96,10 +94,9 @@ def animate_diff_sweep_automation() -> None:
 
 if __name__ == "__main__":
     try:
-        animate_diff_sweep_automation()
+        stable_diffusion_sweep_automation()
     except KeyboardInterrupt:
         sys.exit(0)
     except Exception as e:
-        print(f"animate_diff_sweep_automation.py: An error occurred: {e}")
+        print(f"stable_diffusion_sweep_automation.py: An error occurred: {e}")
         sys.exit(1)
-    

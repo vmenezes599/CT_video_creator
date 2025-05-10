@@ -1,0 +1,13 @@
+In this format in python. Those are positive prompt is input for FLUX image generation and the story is the actual narrated story.
+[
+	(
+	"story",
+	"positive_prompt",
+	"negative_prompt"
+	),
+	...
+]
+
+Write a story about chat gpt becoming alive.
+
+Make it length 10.

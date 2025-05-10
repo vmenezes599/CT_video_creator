@@ -3,11 +3,18 @@ Video Generation Module
 """
 
 import os
-import subprocess
 from pathlib import Path
 
 import ffmpeg
-import pysrt
+import stable_whisper
+
+# Stable Whisper Model Sizes
+# Model	        Size on Disk	VRAM/Memory Needed	Speed	    Accuracy	Use Case
+# tiny	        ~39 MB	        ~1 GB	            Very Fast	Low	        Quick drafts, short/simple audio
+# base	        ~74 MB	        ~1.5 GB	            Fast	    Decent	    Podcasts, phone recordings
+# small	        ~244 MB	        ~2.5 GB	            Moderate	Good	    General transcription
+# medium	    ~769 MB	        ~5 GB	            Slower	    Very Good	Accurate transcriptions, most content
+# large-v2/v3	~1.5 GB	        ~8–10 GB+	        Slowest	    Best	    Highest accuracy, multi-language, long files
 
 
 class VideoGenerator:
@@ -22,9 +29,6 @@ class VideoGenerator:
         :param duration_per_image: Duration (in seconds) each image will be displayed.
         """
         self.clips: list[str] = []  # List to hold video clips
-        self.subtitles_data: list[tuple[str, float]] = (
-            []
-        )  # List to hold subtitles and their durations
         self.temp_files: list[str] = []  # List to hold temporary files
 
     def _format_timestamp(self, seconds: float) -> str:
@@ -37,40 +41,40 @@ class VideoGenerator:
         millis = int((seconds - int(seconds)) * 1000)
         return f"{hours:02}:{minutes:02}:{secs:02},{millis:03}"
 
-    def _generate_subtitle(self, output_path: str):
+    def _generate_subtitle(self, video_path: str):
         """
-        Generate an SRT file from a list of subtitles and durations.
+        Generate an SRT file from the audio and adds it to the video.
 
-        :param subtitles: List of subtitle strings.
-        :param durations: List of durations for each subtitle (in seconds).
-        :param output_path: Path to output .srt file.
+        :param video_path: Path to output .srt file.
         """
-        subs = pysrt.SubRipFile()
-        current_time = 0.0
+        video_path_split = video_path.split(".")
 
-        for i, (text, duration) in enumerate(self.subtitles_data, start=1):
-            start = self._format_timestamp(current_time)
-            end = self._format_timestamp(current_time + duration)
-            subs.append(pysrt.SubRipItem(index=i, start=start, end=end, text=text))
-            current_time += duration
+        model = stable_whisper.load_model("medium")
 
-        path_split = os.path.splitext(output_path)
-        srt_output_path = path_split[0] + ".srt"
-        subs.save(srt_output_path, encoding="utf-8")
+        result = model.transcribe(video_path)
+
+        srt_output_path = f"{video_path_split[0]}.srt"
+        stable_whisper.result_to_srt_vtt(result=result, filepath=srt_output_path)
 
         self.temp_files.append(srt_output_path)
 
-        subprocess.run(
-            [
-                "ffmpeg",
-                "-y",
-                "-i",
-                output_path,
-                "-vf",
-                f"subtitles={srt_output_path}",
-                f"{path_split[0]}_subtitled{path_split[1]}",
-            ],
-            check=True,
+        video_output_path = f"{video_path_split[0]}_subtitled.{video_path_split[1]}"
+        (
+            ffmpeg.input(video_path)
+            .output(
+                video_output_path,
+                vf=f"subtitles={srt_output_path}",
+                **{
+                    "c:v": "libx264",
+                    "preset": "fast",
+                    "crf": "23",
+                    "c:a": "aac",
+                    "movflags": "+faststart",
+                    "pix_fmt": "yuv420p"
+                },
+            )
+            .overwrite_output()
+            .run()
         )
 
     def _get_audio_duration(self, path: str) -> float:
@@ -91,23 +95,26 @@ class VideoGenerator:
         duration = self._get_audio_duration(audio_path)
         video_input = ffmpeg.input(image_path, loop=1, t=duration)
         audio_input = ffmpeg.input(audio_path)
-        (
-            ffmpeg.output(
-                video_input,
-                audio_input,
-                temp_file,
-                r=24,
-                vf="scale=1280:720",
-                **{"c:v": "libx264", "c:a": "aac"},
-            )
-            .overwrite_output()
-            .run()
-        )
+        ffmpeg.output(
+            video_input,
+            audio_input,
+            temp_file,
+            r=24,  # Frame rate
+            vf="scale=1280:720",  # Ensure 720p resolution
+            **{
+                "c:v": "libx264",  # Re-encode video to H.264
+                "preset": "fast",  # Encoding speed/quality tradeoff
+                "crf": "23",  # Video quality (lower is better, 18–28 range)
+                "c:a": "aac",  # Audio codec
+                "movflags": "+faststart",  # Ensures proper mobile streaming
+                "pix_fmt": "yuv420p"
+            },
+        ).overwrite_output().run()
 
         self.temp_files.append(temp_file)
         return temp_file
 
-    def add_scene(self, image_path: str, audio_path: str, subtitle: str) -> None:
+    def add_scene(self, image_path: str, audio_path: str) -> None:
         """
         Generate a video from a list of images.
         """
@@ -116,12 +123,9 @@ class VideoGenerator:
             image_path, audio_path
         )
 
-        self.subtitles_data.append((subtitle, self._get_audio_duration(audio_path)))
         self.clips.append(video_audio_segment)
 
-    def add_all_scenes(
-        self, image_paths: list[str], audio_paths: list[str], subtitles: list[str]
-    ) -> None:
+    def add_all_scenes(self, image_paths: list[str], audio_paths: list[str]) -> None:
         """
         Generate a video from a list of images.
 
@@ -133,10 +137,8 @@ class VideoGenerator:
             audio_paths
         ), "Image and audio lists must be of the same length."
 
-        for image_path, audio_path, subtitle in zip(
-            image_paths, audio_paths, subtitles
-        ):
-            self.add_scene(image_path, audio_path, subtitle)
+        for image_path, audio_path in zip(image_paths, audio_paths):
+            self.add_scene(image_path, audio_path)
 
     def compose(self, output_path: str):
         """
@@ -147,28 +149,21 @@ class VideoGenerator:
         assert len(self.clips) > 0, "No clips to compose."
 
         # Step 2: Create concat list
-        with open("concat_list.txt", "w", encoding="utf-8") as f:
-            for path in self.clips:
-                f.write(f"file '{Path(path).resolve()}'\n")
+        concat_list_path = "concat_list.txt"
+        if len(self.clips) > 1:
+            with open(concat_list_path, "w", encoding="utf-8") as f:
+                for path in self.clips:
+                    f.write(f"file '{Path(path).resolve()}'\n")
 
-        self.temp_files.append("concat_list.txt")
+            self.temp_files.append(concat_list_path)
 
-        subprocess.run(
-            [
-                "ffmpeg",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                "concat_list.txt",
-                "-c",
-                "copy",
-                output_path,
-            ],
-            check=True,
-        )
-        self.temp_files.append(output_path)
+            (
+                ffmpeg.input(concat_list_path, format="concat", safe=0)
+                .output(output_path, c="copy")
+                .overwrite_output()
+                .run()
+            )
+            self.temp_files.append(output_path)
 
         self._generate_subtitle(output_path)
 

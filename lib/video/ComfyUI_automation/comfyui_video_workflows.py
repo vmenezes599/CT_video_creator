@@ -1,111 +1,16 @@
 """
-ComfyUI workflow automation module.
+This module contains the video workflows for ComfyUI.
 """
 
 import json
 import random
-
-from abc import ABC, abstractmethod
-
 from typing_extensions import override
 
+from lib.ComfyUI_automation.comfyui_workflow import ComfyUIWorkflowBase
 from .environment_variables import WORKFLOW_JSON_DIR
 
 
-class IComfyUIWorkflow(ABC):
-    """
-    Interface for ComfyUI workflow automation.
-    """
-
-    @abstractmethod
-    def get_workflow_summary(self) -> str:
-        """
-        Get the workflow summary for the workflow.
-        """
-
-    @abstractmethod
-    def set_workflow_summary(self, workflow_summary: str) -> None:
-        """
-        Set the model sweeper to the JSON configuration.
-        """
-
-    @abstractmethod
-    def set_output_filename(self, filename: str) -> None:
-        """
-        Set the output filename for the generated image.
-        """
-
-    @abstractmethod
-    def get_json(self) -> dict:
-        """
-        Get the JSON configuration.
-        """
-
-
-class ComfyUIWorkflowBase:
-    """
-    Base class for ComfyUI
-    """
-
-    def __init__(self, base_workflow: dict):
-        """
-        Initialize the ComfyUIWorkflowBase class.
-        """
-        self.workflow = base_workflow
-        self.workflow_summary = "output"
-
-    def _set_fields(self, field_parameters: dict[int, dict[str, str]]) -> None:
-        """
-        Set the model sweeper to the JSON configuration.
-
-        Eg.: { 12 : { "unet_name": "flux1-dev-fp8.safetensors" }, { ... } }
-        """
-        for node_index, parameters in field_parameters.items():
-            index_str = str(node_index)
-
-            # Check if the node exists in the workflow
-            if index_str not in self.workflow:
-                raise ValueError(
-                    f"WRONG NODE INDEX: Node index {index_str} does not exist in the workflow."
-                )
-
-            # Check if the "inputs" field exists for the node
-            if "inputs" not in self.workflow[index_str]:
-                raise ValueError(
-                    f"WRONG NODE INDEX: Node {index_str} is missing the 'inputs' field."
-                )
-
-            # Validate that all keys in `parameters` exist in the workflow's inputs
-            for key in parameters.keys():
-                if key not in self.workflow[index_str]["inputs"]:
-                    raise ValueError(
-                        f"WRONG NODE INDEX: Key '{key}' is missing in the 'inputs' of node {index_str}."
-                    )
-
-            # Set the values in the workflow
-            for key, value in parameters.items():
-                self.workflow[index_str]["inputs"][key] = value
-
-    def _set_workflow_summary(self, workflow_summary: str) -> None:
-        """
-        Set the workflow summary string for the workflow.
-        """
-        self.workflow_summary = workflow_summary
-
-    def _get_workflow_summary(self) -> str:
-        """
-        Get the workflow summary string for the workflow.
-        """
-        return self.workflow_summary
-
-    def _get_json(self) -> dict:
-        """
-        Get the JSON configuration.
-        """
-        return self.workflow
-
-
-class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
+class StableDiffusionWorkflowBase(ComfyUIWorkflowBase):
     """
     Class to handle the workflow for Stable Diffusion in ComfyUI.
     """
@@ -268,24 +173,6 @@ class StableDiffusionWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
         )
         self.set_workflow_summary(workflow_summary)
 
-    @override
-    def set_workflow_summary(self, workflow_summary: str) -> None:
-        """
-        Set the workflow summary for the workflow.
-        """
-        super()._set_workflow_summary(workflow_summary)
-
-    @override
-    def get_workflow_summary(self) -> str:
-        """
-        Get the workflow summary for the workflow.
-        """
-        return super()._get_workflow_summary()
-
-    @override
-    def get_json(self) -> dict:
-        return ComfyUIWorkflowBase._get_json(self)
-
 
 class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
     """
@@ -422,7 +309,7 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
         )
 
 
-class AnimateDiffWorkflow(IComfyUIWorkflow, ComfyUIWorkflowBase):
+class AnimateDiffWorkflow(ComfyUIWorkflowBase):
     """
     Class to handle the workflow for Stable Diffusion in ComfyUI.
     """
@@ -589,26 +476,8 @@ class AnimateDiffWorkflow(IComfyUIWorkflow, ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
 
-    @override
-    def set_workflow_summary(self, workflow_summary: str) -> None:
-        """
-        Set the workflow summary for the workflow.
-        """
-        super()._set_workflow_summary(workflow_summary)
 
-    @override
-    def get_workflow_summary(self) -> str:
-        """
-        Get the workflow summary for the workflow.
-        """
-        return super()._get_workflow_summary()
-
-    @override
-    def get_json(self) -> dict:
-        return ComfyUIWorkflowBase._get_json(self)
-
-
-class UnetWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
+class UnetWorkflowBase(ComfyUIWorkflowBase):
     """
     Class to handle the workflow for Stable Diffusion in ComfyUI.
     """
@@ -718,24 +587,6 @@ class UnetWorkflowBase(IComfyUIWorkflow, ComfyUIWorkflowBase):
 
         workflow_summary = f"RandomNoise({random_noise})/{self.get_workflow_summary()}"
         self.set_workflow_summary(workflow_summary)
-
-    @override
-    def set_workflow_summary(self, workflow_summary: str) -> None:
-        """
-        Set the workflow summary for the workflow.
-        """
-        super()._set_workflow_summary(workflow_summary)
-
-    @override
-    def get_workflow_summary(self) -> str:
-        """
-        Get the workflow summary for the workflow.
-        """
-        return super()._get_workflow_summary()
-
-    @override
-    def get_json(self) -> dict:
-        return ComfyUIWorkflowBase._get_json(self)
 
 
 class FluxWorkflow(UnetWorkflowBase):

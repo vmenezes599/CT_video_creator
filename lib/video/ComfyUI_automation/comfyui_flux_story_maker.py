@@ -4,8 +4,8 @@ flux_sweep_automation.py
 
 import sys
 
-from .features.comfyui_workflow import FluxWorkflow
-from .features.comfyui_requests import ComfyUIRequests
+from .comfyui_video_workflows import FluxWorkflow
+from lib.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 
 
 def flux_sweep_automation():

@@ -1,0 +1,42 @@
+{
+  "1": {
+    "inputs": {
+      "text": "This is the SparkTTS voice creator node, you can enter text to synthesize. Currently we only support English and Chinese.",
+      "gender": "male",
+      "pitch": "low",
+      "speed": "moderate",
+      "batch_texts": ""
+    },
+    "class_type": "SparkTTS_VoiceCreator",
+    "_meta": {
+      "title": "SparkTTS Voice Creator 🔊"
+    }
+  },
+  "4": {
+    "inputs": {
+      "audioUI": "",
+      "audio": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "PreviewAudio",
+    "_meta": {
+      "title": "PreviewAudio"
+    }
+  },
+  "8": {
+    "inputs": {
+      "filename_prefix": "audio/output",
+      "audioUI": "",
+      "audio": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "SaveAudio",
+    "_meta": {
+      "title": "SaveAudio"
+    }
+  }
+}

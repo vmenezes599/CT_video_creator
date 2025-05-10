@@ -4,9 +4,9 @@ flux_sweep_automation.py
 
 import sys
 
-from .features.environment_variables import CONFYUI_URL
-from .features.comfyui_workflow import FluxWorkflow
-from .features.comfyui_requests import ComfyUIRequests
+from lib.ComfyUI_automation.environment_variables import CONFYUI_URL
+from lib.ComfyUI_automation.comfyui_workflow import FluxWorkflow
+from lib.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 
 
 MODEL_NAME_LIST = ["flux1-dev.safetensors", "flux1-dev-fp8.safetensors"]

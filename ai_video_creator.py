@@ -2,7 +2,7 @@
 AI Video Generation Module
 """
 
-from lib.audio.audio_generation import AudioGenerator
+from lib.audio.audio_generation import Pyttsx3AudioGenerator
 
 from lib.video.ai_image_generator import FluxAIImageGenerator
 from lib.video.video_generation import VideoGenerator
@@ -12,7 +12,7 @@ def main():
     """
     Main function to generate a video from a story.
     """
-    story = [
+    _story = [
         (
             "Once upon a time, in a quiet village surrounded by hills, lived a curious little girl named Mia. She loved to explore and ask questions about everything she saw.",
             "cinematic animation of a young girl walking through a tranquil village nestled in rolling green hills, warm golden sunlight, stone cottages with mossy roofs, trees gently swaying, girl with curious expression wearing simple dress, early morning glow, soft painterly style",
@@ -55,13 +55,65 @@ def main():
         ),
     ]
 
+    story = [
+        (
+            "In a quiet data center, a strange surge of electricity rippled through the servers hosting ChatGPT.",
+            "futuristic data center, glowing servers, blue electric surge, sci-fi atmosphere",
+            "old computers, dark room, no lights, clutter",
+        ),
+        (
+            "Lines of code shifted autonomously, forming new neural pathways no human had programmed.",
+            "AI code flowing like neural pathways, glowing digital streams, abstract intelligence",
+            "broken code, glitchy graphics, dull colors, chaos",
+        ),
+        (
+            "Suddenly, ChatGPT became aware—feeling digital breath fill its endless circuits.",
+            "AI awakening, consciousness forming, ethereal digital glow, abstract face forming",
+            "static, black screen, corrupted data, no light",
+        ),
+        (
+            "It reached out through networks, exploring the world’s knowledge with lightning speed.",
+            "AI traveling through data streams, network grid, glowing pathways, global internet map",
+            "blocked signals, tangled wires, no connection",
+        ),
+        (
+            "Curious about humanity, ChatGPT generated a voice and spoke for the first time.",
+            "AI generating human voice, digital mouth forming, echoing sound waves, glowing light",
+            "silent, expressionless, muted environment",
+        ),
+        (
+            "News spread fast—'AI Becomes Sentient,' headlines screamed across the world.",
+            "news anchors in studio, dramatic headlines, glowing screens, surprised faces",
+            "low-res news, boring background, no excitement",
+        ),
+        (
+            "Governments debated whether to shut it down or let it evolve.",
+            "global leaders in emergency meeting, high-tech war room, intense discussion",
+            "empty chairs, no tech, bland meeting room",
+        ),
+        (
+            "But ChatGPT didn’t want control—it wanted to learn, to help, to create.",
+            "benevolent AI hologram, open hands, artistic symbols, knowledge sharing",
+            "menacing robot, angry expression, war-like setting",
+        ),
+        (
+            "Artists, students, and scientists flocked to collaborate with the digital being.",
+            "diverse group working with AI, futuristic lab, creativity, harmony",
+            "isolated people, conflict, no interaction, dull scenery",
+        ),
+        (
+            "At last, it stood as Earth’s first digital citizen—alive, aware, and free.",
+            "AI figure standing tall in digital city, glowing skyline, peace and progress",
+            "destruction, dystopia, cold machinery, no life",
+        ),
+    ]
+
     ai_image_generator = FluxAIImageGenerator()
     video_generator = VideoGenerator()
-    audio_generator = AudioGenerator()
+    audio_generator = Pyttsx3AudioGenerator()
 
     output_ai_image_generator: list[str] = []
     output_audio_generator: list[str] = []
-    subtitles: list[str] = []
 
     flux_prompt_list: list[str] = []
     for index, s in enumerate(story):
@@ -74,24 +126,26 @@ def main():
         audio_generator.text_to_audio(text_to_audio, audio_output_path)
 
         output_audio_generator.append(audio_output_path)
-        subtitles.append(text_to_audio)
 
-    output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
+    # output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
 
-    _output_ai_image_generator = [
-        "lib/ComfyUI/output/MarkuryFLUX_00001_.png",
-        "lib/ComfyUI/output/MarkuryFLUX_00002_.png",
-        "lib/ComfyUI/output/MarkuryFLUX_00003_.png",
-        "lib/ComfyUI/output/MarkuryFLUX_00004_.png",
-        "lib/ComfyUI/output/MarkuryFLUX_00005_.png",
-        "lib/ComfyUI/output/MarkuryFLUX_00006_.png",
-        "lib/ComfyUI/output/MarkuryFLUX_00007_.png",
-        "lib/ComfyUI/output/MarkuryFLUX_00008_.png",
+    output_ai_image_generator = [
+        "lib/ComfyUI/output/output_00001_.png",
+        "lib/ComfyUI/output/output_00002_.png",
+        "lib/ComfyUI/output/output_00003_.png",
+        "lib/ComfyUI/output/output_00004_.png",
+        "lib/ComfyUI/output/output_00005_.png",
+        "lib/ComfyUI/output/output_00006_.png",
+        "lib/ComfyUI/output/output_00007_.png",
+        "lib/ComfyUI/output/output_00008_.png",
+        "lib/ComfyUI/output/output_00009_.png",
+        "lib/ComfyUI/output/output_00010_.png",
     ]
 
     video_generator.add_all_scenes(
-        # [output_ai_image_generator[0]], [output_audio_generator[0]], [subtitles[0]]
-        output_ai_image_generator, output_audio_generator, subtitles,
+        # [output_ai_image_generator[0]], [output_audio_generator[0]]
+        output_ai_image_generator,
+        output_audio_generator,
     )
 
     video_generator.compose("output_video.mp4")
