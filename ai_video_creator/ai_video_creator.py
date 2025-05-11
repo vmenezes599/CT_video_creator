@@ -2,10 +2,10 @@
 AI Video Generation Module
 """
 
-from lib.audio.audio_generation import Pyttsx3AudioGenerator
+from .audio.audio_generation import Pyttsx3AudioGenerator
 
-from lib.video.ai_image_generator import FluxAIImageGenerator
-from lib.video.video_generation import VideoGenerator
+from .video.ai_image_generator import FluxAIImageGenerator
+from .video.video_generation import VideoGenerator
 
 
 def main():
@@ -130,16 +130,16 @@ def main():
     # output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
 
     output_ai_image_generator = [
-        "lib/ComfyUI/output/output_00001_.png",
-        "lib/ComfyUI/output/output_00002_.png",
-        "lib/ComfyUI/output/output_00003_.png",
-        "lib/ComfyUI/output/output_00004_.png",
-        "lib/ComfyUI/output/output_00005_.png",
-        "lib/ComfyUI/output/output_00006_.png",
-        "lib/ComfyUI/output/output_00007_.png",
-        "lib/ComfyUI/output/output_00008_.png",
-        "lib/ComfyUI/output/output_00009_.png",
-        "lib/ComfyUI/output/output_00010_.png",
+        "ai_video_creator/ComfyUI/output/output_00001_.png",
+        "ai_video_creator/ComfyUI/output/output_00002_.png",
+        "ai_video_creator/ComfyUI/output/output_00003_.png",
+        "ai_video_creator/ComfyUI/output/output_00004_.png",
+        "ai_video_creator/ComfyUI/output/output_00005_.png",
+        "ai_video_creator/ComfyUI/output/output_00006_.png",
+        "ai_video_creator/ComfyUI/output/output_00007_.png",
+        "ai_video_creator/ComfyUI/output/output_00008_.png",
+        "ai_video_creator/ComfyUI/output/output_00009_.png",
+        "ai_video_creator/ComfyUI/output/output_00010_.png",
     ]
 
     video_generator.add_all_scenes(

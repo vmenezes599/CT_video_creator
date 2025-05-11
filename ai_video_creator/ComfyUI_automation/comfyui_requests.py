@@ -9,7 +9,7 @@ from datetime import datetime
 import requests
 from requests.exceptions import RequestException
 
-from .environment_variables import CONFYUI_URL
+from .environment_variables import CONFYUI_URL, COMFYUI_OUTPUT_FOLDER
 from .comfyui_helpers import comfyui_get_history_output_name
 from .comfyui_workflow import IComfyUIWorkflow
 
@@ -18,8 +18,6 @@ class ComfyUIRequests:
     """
     ComfyuiRequest is a class that handles HTTP requests to the ComfyUI API.
     """
-
-    COMFYUI_OUTPUT_FOLDER = "lib/ComfyUI/output"
 
     def __init__(self, comfyui_url: str = CONFYUI_URL, delay_seconds: int = 10) -> None:
         """
@@ -36,7 +34,7 @@ class ComfyUIRequests:
 
     def _send_post_request(
         self, url: str, data: dict = None, json: dict = None, timeout: int = 10
-    ):
+    ) -> requests.Response:
         """
         Sends a POST request using the configured session.
         """
@@ -49,11 +47,11 @@ class ComfyUIRequests:
         response = self._send_get_request(f"{self.comfyui_url}/prompt", timeout=10)
         return response.ok
 
-    def comfyui_send_prompt(self, json: dict, timeout: int = 10) -> tuple[bool, dict]:
+    def comfyui_send_prompt(self, json: dict, timeout: int = 10) -> requests.Response:
         """
         Send a prompt to the ComfyUI API.
 
-        :param prompt: The prompt data to send as a dictionary.
+        :param json: The prompt data to send as a dictionary.
         :param timeout: The timeout for the request in seconds.
         :return: A tuple containing a success flag (True/False) and the response data or an error message.
         """
@@ -123,7 +121,7 @@ class ComfyUIRequests:
                         output_name = output_names[-1]
 
                         full_path_name = os.path.join(
-                            self.COMFYUI_OUTPUT_FOLDER, output_name
+                            COMFYUI_OUTPUT_FOLDER, output_name
                         )
                         output_image_paths.append(full_path_name)
 

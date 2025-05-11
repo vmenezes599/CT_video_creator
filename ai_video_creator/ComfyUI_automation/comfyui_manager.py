@@ -9,7 +9,7 @@ from threading import Thread
 from .comfyui_requests import ComfyUIRequests
 from .environment_variables import CONFYUI_URL
 
-COMFYUI_COMMAND = "python lib/ComfyUI/main.py"
+COMFYUI_COMMAND = "python external/ComfyUI/main.py"
 
 def main() -> None:
     """
