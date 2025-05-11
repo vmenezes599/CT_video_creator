@@ -2,7 +2,7 @@
 AI Video Generation Module
 """
 
-from lib.ComfyUI_automation.comfyui_requests import ComfyUIRequests
+from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 from .ComfyUI_automation.comfyui_flux_story_maker import FluxWorkflow
 
 

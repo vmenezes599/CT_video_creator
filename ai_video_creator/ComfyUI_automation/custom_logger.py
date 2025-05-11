@@ -5,13 +5,13 @@ Custom logger for ComfyUI automation.
 import logging
 from datetime import datetime
 
-from .environment_variables import CONFYUI_OUTPUT_FOLDER
+from .environment_variables import COMFYUI_OUTPUT_FOLDER
 
 # Define the global logger
 # LOG_FILE = os.path.join(os.path.dirname(__file__), "automation.log")
 # LOG_FILE = "ComfyUI_automation.log"
 UNIQUE_SUFFIX = datetime.now().strftime("%Y-%m-%d_%Hh%Mm%Ss")
-LOG_FILE = f"{CONFYUI_OUTPUT_FOLDER}/{UNIQUE_SUFFIX}_comfyui_output_sweep.log"
+LOG_FILE = f"{COMFYUI_OUTPUT_FOLDER}/{UNIQUE_SUFFIX}_comfyui_output_sweep.log"
 logger = logging.getLogger("ComfyUIAutomationLogger")
 logger.setLevel(logging.INFO)
 
