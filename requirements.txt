@@ -12,5 +12,4 @@ Requests==2.32.3
 setuptools==65.5.0
 scikit-image
 stable_ts==2.19.0
-torchvision==0.21.0+cu126
 typing_extensions==4.13.2
