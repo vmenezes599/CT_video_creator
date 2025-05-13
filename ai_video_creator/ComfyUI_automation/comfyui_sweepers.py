@@ -5,7 +5,7 @@ ComfyUI Automation Sweep Module
 import json
 
 from .comfyui_requests import ComfyUIRequests
-from .custom_logger import logger
+from .custom_logger import SingletonLogger
 from .comfyui_workflow import IComfyUIWorkflow
 
 
@@ -22,9 +22,11 @@ class ComfyUISweeperBase:
         self.req_list: list[tuple[IComfyUIWorkflow, str]] = []
 
         self.requests = ComfyUIRequests(comfyui_url)
+        
+        self.logger = SingletonLogger()
 
         # Log initialization
-        logger.info("Initializing ComfyUISweep...")
+        self.logger.info("Initializing ComfyUISweep...")
 
     def _save_first_and_last_requests(self) -> None:
         """
@@ -41,7 +43,7 @@ class ComfyUISweeperBase:
             )
             with open(output_file_path, "w", encoding="utf-8") as file:
                 json.dump(first_request[0].get_json(), file, indent=4)
-            logger.info("First request saved to %s", output_file_path)
+            self.logger.info("First request saved to %s", output_file_path)
 
         if total_requests > 2:
             last_request = self.req_list[-1]
@@ -51,9 +53,9 @@ class ComfyUISweeperBase:
             )
             with open(output_file_path, "w", encoding="utf-8") as file:
                 json.dump(last_request[0].get_json(), file, indent=4)
-            logger.info("Last request saved to %s", output_file_path)
+            self.logger.info("Last request saved to %s", output_file_path)
 
-        logger.info("--------------------------------------------------")
+        self.logger.info("--------------------------------------------------")
 
     def _set_output_nodes(self) -> None:
         """

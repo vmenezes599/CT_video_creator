@@ -11,7 +11,7 @@ from requests.exceptions import RequestException
 
 from .comfyui_helpers import comfyui_get_history_output_name
 from .comfyui_workflow import IComfyUIWorkflow
-from .environment_variables import COMFYUI_OUTPUT_FOLDER
+from ..environment_variables import COMFYUI_OUTPUT_FOLDER
 
 
 class ComfyUIRequests:
@@ -70,7 +70,9 @@ class ComfyUIRequests:
         """
         Send all prompts in the list to ComfyUI and wait for them to finish.
         """
-        from .custom_logger import logger
+        from .custom_logger import SingletonLogger
+        
+        logger = SingletonLogger()
 
         output_image_paths: list[str] = []
         total_requests = len(req_list)

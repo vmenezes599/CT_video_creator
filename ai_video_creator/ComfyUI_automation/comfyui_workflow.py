@@ -1,6 +1,9 @@
 """
 ComfyUI workflow automation module.
 """
+
+import os
+import json
 from abc import ABC, abstractmethod
 from typing_extensions import override
 
@@ -44,7 +47,12 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
         """
         Initialize the ComfyUIWorkflowBase class.
         """
-        self.workflow = base_workflow
+        if not os.path.exists(base_workflow):
+            raise ValueError(f"Base workflow file {base_workflow} does not exist.")
+        
+        with open(base_workflow, "r", encoding="utf-8") as file:
+            self.workflow = json.load(file)
+
         self.workflow_summary = "output"
 
     def _set_fields(self, field_parameters: dict[int, dict[str, str]]) -> None:

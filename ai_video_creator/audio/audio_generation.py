@@ -2,15 +2,22 @@
 Audio Generation Module
 """
 
+import os
 from abc import ABC, abstractmethod
 from typing_extensions import override
+from ai_video_creator.utils.utils import get_next_available_filename
+from .environment_variables import ELEVENLABS_API_KEY, OUTPUT_DIRECTORY
 
-import pygame
+# Pyttsx3AudioGenerator
 import pyttsx3
+
+# ElevenLabsAudioGenerator
 from elevenlabs import save
 from elevenlabs.client import ElevenLabs
 
-from .environment_variables import ELEVENLABS_API_KEY
+# SparkTTSComfyUIAudioGenerator
+from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
+from .ComfyUI_automation.comfyui_audio_workflows import SparkTTSWorkflow
 
 
 class IAudioGenerator(ABC):
@@ -19,7 +26,7 @@ class IAudioGenerator(ABC):
     """
 
     @abstractmethod
-    def text_to_audio(self, text: str, output_path: str) -> None:
+    def text_to_audio(self, text_list: list[str], output_file_name: str) -> list[str]:
         """
         Convert the given text to audio and save it to the specified file.
 
@@ -34,6 +41,14 @@ class IAudioGenerator(ABC):
 
         :param text: The text to play as audio.
         """
+
+    def get_output_directory(self) -> str:
+        """
+        Get the output directory for generated audio files.
+
+        :return: The output directory path.
+        """
+        return OUTPUT_DIRECTORY
 
 
 class Pyttsx3AudioGenerator(IAudioGenerator):
@@ -54,15 +69,23 @@ class Pyttsx3AudioGenerator(IAudioGenerator):
         self.engine.setProperty("volume", 1.0)  # Set volume (0.0 to 1.0)
 
     @override
-    def text_to_audio(self, text: str, output_path: str) -> None:
+    def text_to_audio(self, text_list: list[str], output_file_name: str) -> list[str]:
         """
         Convert the given text to audio and save it to the specified file.
 
         :param text: The text to convert to audio.
         :param output_path: The path to save the generated audio file.
         """
-        self.engine.save_to_file(text, output_path)
-        self.engine.runAndWait()
+        output_file_name = os.path.splitext(output_file_name)[0] + ".mp3"
+
+        output_list: list[str] = []
+        for text in text_list:
+            name = get_next_available_filename(f"{OUTPUT_DIRECTORY}/{output_file_name}")
+            self.engine.save_to_file(text, name)
+            self.engine.runAndWait()
+            output_list.append(name)
+
+        return output_list
 
     @override
     def play(self, text: str) -> None:
@@ -105,24 +128,29 @@ class ElevenLabsAudioGenerator(IAudioGenerator):
         self.client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
     @override
-    def text_to_audio(self, text: str, output_path: str) -> None:
+    def text_to_audio(self, text_list: list[str], output_file_name: str) -> list[str]:
         """
         Convert the given text to audio and save it to the specified file.
-
-        :param text: The text to convert to audio.
-        :param output_path: The path to save the generated audio file.
         """
-        if not output_path.endswith(".mp3"):
-            raise ValueError("Output file must have an .mp3 extension.")
+        # Extract the file name without the extension
+        output_file_name = os.path.splitext(output_file_name)[0] + ".mp3"
 
-        audio = self.client.text_to_speech.convert(
-            text=text,
-            voice_id="JBFqnCBsd6RMkjVDRZzb",
-            model_id="eleven_multilingual_v2",
-            output_format="mp3_44100_128",
-        )
+        output_list: list[str] = []
+        for text in text_list:
+            # Generate a unique filename for each audio file
+            name = get_next_available_filename(f"{OUTPUT_DIRECTORY}/{output_file_name}")
 
-        save(audio, output_path)
+            audio = self.client.text_to_speech.convert(
+                text=text,
+                voice_id="JBFqnCBsd6RMkjVDRZzb",
+                model_id="eleven_multilingual_v2",
+                output_format="mp3_44100_128",
+            )
+
+            save(audio, name)
+            output_list.append(name)
+
+        return output_list
 
     @override
     def play(self, text: str) -> None:
@@ -134,6 +162,7 @@ class ElevenLabsAudioGenerator(IAudioGenerator):
         raise NotImplementedError(
             "Playing audio directly is not implemented in ElevenLabsAudioGenerator."
         )
+        # import pygame
         # self.text_to_audio(text, "temp_audio.mp3")
 
         # pygame.mixer.init()
@@ -143,3 +172,59 @@ class ElevenLabsAudioGenerator(IAudioGenerator):
         # Keep the script running until music finishes
         # while pygame.mixer.music.get_busy():
         #     pygame.time.Clock().tick(10)
+
+
+class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
+    """
+    A class to generate audio from text using Spark TTS ComfyUI.
+    """
+
+    def __init__(self):
+        """
+        Initialize the SparkTTSComfyUIAudioGenerator class.
+        """
+        self.requests = ComfyUIRequests()  # Initialize ComfyUI requests
+
+    @override
+    def text_to_audio(self, text_list: list[str], output_file_name: str) -> list[str]:
+        """
+        Convert the given text to audio and save it to the specified file.
+
+        :param text: The text to convert to audio.
+        :param output_path: The path to save the generated audio file.
+        """
+        output_file_name = os.path.splitext(output_file_name)[0]
+        workflow_list: list[SparkTTSWorkflow] = []
+
+        for text in text_list:
+            # Generate a unique filename for each audio file
+            workflow = SparkTTSWorkflow()
+            workflow.set_prompt(text)
+            workflow.set_output_filename(output_file_name)
+
+            workflow_list.append(workflow)
+
+        return self.requests.comfyui_ensure_send_all_prompts(workflow_list)
+
+    @override
+    def play(self, text: str) -> None:
+        """
+        Play the given text as audio.
+
+        :param text: The text to play as audio.
+        """
+
+        import pygame
+
+        result = self.text_to_audio([text], "temp_audio.mp3")
+
+        if len(result) == 0:
+            raise ValueError("No audio file generated.")
+
+        pygame.mixer.init()
+        pygame.mixer.music.load(result[0])
+        pygame.mixer.music.play()
+
+        # Keep the script running until music finishes
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)

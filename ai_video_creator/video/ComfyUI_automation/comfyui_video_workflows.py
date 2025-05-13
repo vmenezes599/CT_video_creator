@@ -2,11 +2,10 @@
 This module contains the video workflows for ComfyUI.
 """
 
-import json
 import random
 from typing_extensions import override
 
-from lib.ComfyUI_automation.comfyui_workflow import ComfyUIWorkflowBase
+from ai_video_creator.ComfyUI_automation.comfyui_workflow import ComfyUIWorkflowBase
 from .environment_variables import WORKFLOW_JSON_DIR
 
 
@@ -191,10 +190,7 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
         """
         Initialize the StableDiffusionWorkflow class.
         """
-        with open(self.STABLE_DIFFUSION_WORKFLOW_PATH, "r", encoding="utf-8") as file:
-            workflow = json.load(file)
-
-        super().__init__(workflow)
+        super().__init__(self.STABLE_DIFFUSION_WORKFLOW_PATH)
 
         # Loading best configurations for the workflow
         if load_best_config:
@@ -327,10 +323,7 @@ class AnimateDiffWorkflow(ComfyUIWorkflowBase):
         """
         Initialize the StableDiffusionWorkflow class.
         """
-        with open(self.ANIMATE_DIFF_WORKFLOW_PATH, "r", encoding="utf-8") as file:
-            workflow = json.load(file)
-
-        super().__init__(workflow)
+        super().__init__(self.ANIMATE_DIFF_WORKFLOW_PATH)
 
         # Loading best configurations for the workflow
         if load_best_config:
@@ -607,10 +600,7 @@ class FluxWorkflow(UnetWorkflowBase):
         """
         Initialize the FluxWorkflow class.
         """
-        with open(self.FLUX_WORKFLOW_PATH, "r", encoding="utf-8") as file:
-            workflow = json.load(file)
-
-        super().__init__(workflow)
+        super().__init__(self.FLUX_WORKFLOW_PATH)
 
         # Loading best configurations for the workflow
         if load_best_config:

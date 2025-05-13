@@ -5,8 +5,8 @@ This module contains the implementation of video sweepers for ComfyUI.
 import copy
 from itertools import product
 
-from lib.ComfyUI_automation.custom_logger import logger
-from lib.ComfyUI_automation.comfyui_sweepers import ComfyUISweeperBase
+from ai_video_creator.ComfyUI_automation.custom_logger import SingletonLogger
+from ai_video_creator.ComfyUI_automation.comfyui_sweepers import ComfyUISweeperBase
 
 from .comfyui_video_workflows import StableDiffusionWorkflow
 
@@ -22,6 +22,8 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
         super().__init__(comfyui_url)
 
         self.req_list: list[StableDiffusionWorkflow] = [self.WORLFLOW_TYPE()]
+
+        self.logger = SingletonLogger()
 
     def add_animatediff_model_sweeper(self, model_name_list: list[str]) -> None:
         """
@@ -102,7 +104,7 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
 
             self.req_list = local_req_list
         except Exception as e:
-            logger.error("Error in add_ksampler_sweeper: %s", e)
+            self.logger.error("Error in add_ksampler_sweeper: %s", e)
             raise
 
     def add_positive_prompt_sweeper(
@@ -113,8 +115,8 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
         Add the positive prompt sweeper to the JSON configuration.
         """
         for i, pp in enumerate(positive_prompt_list):
-            logger.info("Adding positive prompt %s: %s", i, pp)
-            logger.info("--------------------------------------------------")
+            self.logger.info("Adding positive prompt %s: %s", i, pp)
+            self.logger.info("--------------------------------------------------")
 
         local_req_list: list[StableDiffusionWorkflow] = []
         for req in self.req_list:
@@ -136,8 +138,8 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
         Add the negative prompt sweeper to the JSON configuration.
         """
         for i, np in enumerate(negative_prompt_list):
-            logger.info("Adding negative prompt %s: %s", i, np)
-            logger.info("--------------------------------------------------")
+            self.logger.info("Adding negative prompt %s: %s", i, np)
+            self.logger.info("--------------------------------------------------")
 
         local_req_list: list[StableDiffusionWorkflow] = []
         for req in self.req_list:
@@ -159,8 +161,8 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
         Add the batch size sweeper to the JSON configuration.
         """
         for i, bs in enumerate(batch_size_list):
-            logger.info("Adding batch size %s: %s", i, bs)
-            logger.info("--------------------------------------------------")
+            self.logger.info("Adding batch size %s: %s", i, bs)
+            self.logger.info("--------------------------------------------------")
 
         local_req_list: list[StableDiffusionWorkflow] = []
         for req in self.req_list:

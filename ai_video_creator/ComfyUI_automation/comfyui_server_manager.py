@@ -12,39 +12,95 @@ from threading import Thread
 from .comfyui_requests import ComfyUIRequests
 
 
+class _ComfyUIServerManagerSingleton:
+    """
+    Singleton wrapper for ComfyUIServerManager to ensure only one instance is created.
+    """
+
+    _instance = None
+    running = False
+
+    @staticmethod
+    def initialize(comfyui_command):
+        """
+        Initialize the singleton instance of ComfyUIServerManager.
+        """
+        if _ComfyUIServerManagerSingleton._instance is None:
+            _ComfyUIServerManagerSingleton._instance = ComfyUIServerManager(
+                comfyui_command
+            )
+
+    @staticmethod
+    def get_instance():
+        """
+        Get the singleton instance of ComfyUIServerManager.
+        """
+        if _ComfyUIServerManagerSingleton._instance is None:
+            raise ValueError(
+                "ComfyUIServerManager is not initialized. Call initialize() first."
+            )
+        return _ComfyUIServerManagerSingleton._instance
+
+    @staticmethod
+    def start_comfyui(comfyui_command):
+        """
+        Start the ComfyUI server using the singleton instance.
+        """
+        _ComfyUIServerManagerSingleton.initialize(comfyui_command)
+        instance = _ComfyUIServerManagerSingleton.get_instance()
+        instance.start_comfyui()
+        instance.start_monitoring()
+        _ComfyUIServerManagerSingleton.running = True
+
+    @staticmethod
+    def shutdown_comfyui():
+        """
+        Stop the ComfyUI server and clean up the singleton instance.
+        """
+        if _ComfyUIServerManagerSingleton._instance is not None:
+            _ComfyUIServerManagerSingleton._instance.shutdown()
+            _ComfyUIServerManagerSingleton._instance = None
+            _ComfyUIServerManagerSingleton.running = False
+
+
 def start_comfyui(comfyui_command: str) -> None:
     """
     Start the ComfyUI application and monitor its heartbeat.
     """
-    manager = ComfyUIServerManager(comfyui_command)
-    manager.start_comfyui()
-    manager.start_monitoring()
+    _ComfyUIServerManagerSingleton.start_comfyui(comfyui_command=comfyui_command)
 
     try:
-        while True:
-            time.sleep(1)
+        while _ComfyUIServerManagerSingleton.running:
+            time.sleep(3)
     except KeyboardInterrupt:
-        manager.shutdown()
+        _ComfyUIServerManagerSingleton.shutdown_comfyui()
+    except Exception:
+        sys.exit(1)
 
 
-def main(*kargs) -> None:
+def stop_comfyui() -> None:
     """
-    Main function to start the ComfyUI manager.
+    Stop the ComfyUI application.
+    """
+    _ComfyUIServerManagerSingleton.shutdown_comfyui()
+
+
+def cli() -> str:
+    """
+    Command-line interface for the ComfyUI manager.
     """
     parser = argparse.ArgumentParser(
         description="Manage the lifecycle of the ComfyUI application."
     )
-    default_comfyui_path = ""
     parser.add_argument(
         "--comfyui-path",
         type=str,
-        default=default_comfyui_path,
+        default=os.getenv("COMFYUI_PATH"),
         help="ComfyUI path to the main.py file. Not including the file name.",
     )
     parser.add_argument(
-        "--models-directory",
+        "--base-directory",
         type=str,
-        default="models",
         help="ComfyUI models directory.",
     )
     parser.add_argument(
@@ -53,23 +109,21 @@ def main(*kargs) -> None:
         default="outputs",
         help="Stop the ComfyUI application if it is running.",
     )
-    args = parser.parse_args(kargs)
+    args = parser.parse_args()
 
-    if args.comfyui_path == default_comfyui_path:
-        comfyui_path = os.getenv("COMFYUI_PATH")
-        if not comfyui_path:
-            print(
-                "use --comfyui-path option or set COMFYUI_PATH environment variable with ComfyUI path."
-            )
-            sys.exit(1)
+    if args.comfyui_path is None:
+        print(
+            "use --comfyui-path option or set COMFYUI_PATH environment variable with ComfyUI path."
+        )
+        sys.exit(1)
 
     comfyui_command = f"python {args.comfyui_path}/main.py"
 
-    if args.models_directory:
-        if not os.path.exists(args.models_directory):
-            print(f"Models directory {args.models_directory} does not exist.")
+    if args.base_directory:
+        if not os.path.exists(args.base_directory):
+            print(f"Models directory {args.base_directory} does not exist.")
             sys.exit(1)
-        comfyui_command += f" --models-directory {args.models_directory}"
+        comfyui_command += f" --base-directory {args.base_directory}"
 
     if args.output_directory:
         path = args.output_directory
@@ -80,6 +134,15 @@ def main(*kargs) -> None:
             os.makedirs(path, exist_ok=True)
 
         comfyui_command += f" --output-directory {path}"
+
+    return comfyui_command
+
+
+def main() -> None:
+    """
+    Main function to start the ComfyUI manager.
+    """
+    comfyui_command = cli()
 
     start_comfyui(comfyui_command)
 
@@ -195,4 +258,4 @@ class ComfyUIServerManager:
 
 # Example usage
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    main()

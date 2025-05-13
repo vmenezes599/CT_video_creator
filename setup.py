@@ -10,7 +10,7 @@ setup(
     packages=find_packages(),
     entry_points={
         "console_scripts": [
-            "comfyui_manager=ai_video_creator.ComfyUI_automation.comfyui_manager:main",
+            "comfyui_server_manager=ai_video_creator.ComfyUI_automation.comfyui_server_manager:main",
             "ai_video_creator=ai_video_creator.ai_video_creator:main",
         ],
     },

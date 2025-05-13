@@ -2,7 +2,7 @@
 AI Video Generation Module
 """
 
-from .audio.audio_generation import Pyttsx3AudioGenerator
+from .audio.audio_generation import Pyttsx3AudioGenerator, ElevenLabsAudioGenerator
 
 from .video.ai_image_generator import FluxAIImageGenerator
 from .video.video_generation import VideoGenerator
@@ -108,9 +108,17 @@ def main():
         ),
     ]
 
+    generate_video_from_story(story)
+
+
+def generate_video_from_story(story: list[tuple[str, str, str]]) -> None:
+    """
+    Generate a video from a story using AI-generated images and audio.
+    """
     ai_image_generator = FluxAIImageGenerator()
     video_generator = VideoGenerator()
     audio_generator = Pyttsx3AudioGenerator()
+    # audio_generator = ElevenLabsAudioGenerator()
 
     output_ai_image_generator: list[str] = []
     output_audio_generator: list[str] = []
@@ -127,9 +135,9 @@ def main():
 
         output_audio_generator.append(audio_output_path)
 
-    # output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
+    output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
 
-    output_ai_image_generator = [
+    _output_ai_image_generator = [
         "ai_video_creator/ComfyUI/output/output_00001_.png",
         "ai_video_creator/ComfyUI/output/output_00002_.png",
         "ai_video_creator/ComfyUI/output/output_00003_.png",
