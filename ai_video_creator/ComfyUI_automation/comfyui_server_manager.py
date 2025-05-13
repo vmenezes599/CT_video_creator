@@ -217,32 +217,38 @@ class ComfyUIServerManager:
 
     def monitor_heartbeat(self):
         """Monitor the heartbeat of the ComfyUI application and restart if necessary."""
-        failed = False
+        consecutive_failures = 0
 
         def restart_comfyui():
-            print("Heartbeat check failed. Restarting ComfyUI...")
+            print("Heartbeat check failed after 3 attempts. Restarting ComfyUI...")
             self.stop_comfyui()
             time.sleep(self.restart_delay)
             self.start_comfyui()
 
         while self.running:
             try:
-                if not self.requests.comfyui_get_heartbeat():
-                    restart_comfyui()
-                if self.restarts >= self.max_restarts:
-                    print(
-                        f"Max restarts reached: {self.max_restarts}. Stopping monitoring..."
-                    )
-                    break
-            except Exception:
-                if not failed:
-                    failed = True
-                    time.sleep(self.restart_delay * 6)
+                if self.requests.comfyui_get_heartbeat():
+                    consecutive_failures = 0  # Reset on success
                 else:
-                    failed = False
-                    restart_comfyui()
+                    consecutive_failures += 1
+                    print(f"Heartbeat failure {consecutive_failures}/3")
 
-            time.sleep(self.check_interval)
+                if consecutive_failures >= 3:
+                    restart_comfyui()
+                    consecutive_failures = 0
+                    self.restarts += 1
+
+                    if self.restarts >= self.max_restarts:
+                        print(
+                            f"Max restarts reached: {self.max_restarts}. Stopping monitoring..."
+                        )
+                        break
+
+            except Exception as e:
+                print(f"Exception during heartbeat check: {e}")
+                consecutive_failures += 1
+
+            time.sleep(2)  # 1 second between checks
 
     def start_monitoring(self):
         """Start monitoring the ComfyUI application in a separate thread."""
