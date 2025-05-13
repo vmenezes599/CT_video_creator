@@ -114,6 +114,13 @@ def main():
 def generate_video_from_story(story: list[tuple[str, str, str]]) -> None:
     """
     Generate a video from a story using AI-generated images and audio.
+
+    Input:
+        story (list[tuple[str, str, str]]): A list of tuples containing text for audio and image generation.
+            Each tuple contains:
+                - text_to_audio (str): Text to be converted to audio.
+                - text_to_image (str): Text to be converted to an image.
+                - negative_prompt (str): Negative prompt for image generation.
     """
     ai_image_generator = FluxAIImageGenerator()
     video_generator = VideoGenerator()
