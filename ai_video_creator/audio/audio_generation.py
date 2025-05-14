@@ -6,7 +6,8 @@ import os
 from abc import ABC, abstractmethod
 from typing_extensions import override
 from ai_video_creator.utils.utils import get_next_available_filename
-from .environment_variables import ELEVENLABS_API_KEY, OUTPUT_DIRECTORY
+from .environment_variables import ELEVENLABS_API_KEY
+from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER
 
 # Pyttsx3AudioGenerator
 import pyttsx3
@@ -48,7 +49,7 @@ class IAudioGenerator(ABC):
 
         :return: The output directory path.
         """
-        return OUTPUT_DIRECTORY
+        return COMFYUI_OUTPUT_FOLDER
 
 
 class Pyttsx3AudioGenerator(IAudioGenerator):
@@ -80,7 +81,9 @@ class Pyttsx3AudioGenerator(IAudioGenerator):
 
         output_list: list[str] = []
         for text in text_list:
-            name = get_next_available_filename(f"{OUTPUT_DIRECTORY}/{output_file_name}")
+            name = get_next_available_filename(
+                f"{COMFYUI_OUTPUT_FOLDER}/{output_file_name}"
+            )
             self.engine.save_to_file(text, name)
             self.engine.runAndWait()
             output_list.append(name)
@@ -138,7 +141,9 @@ class ElevenLabsAudioGenerator(IAudioGenerator):
         output_list: list[str] = []
         for text in text_list:
             # Generate a unique filename for each audio file
-            name = get_next_available_filename(f"{OUTPUT_DIRECTORY}/{output_file_name}")
+            name = get_next_available_filename(
+                f"{COMFYUI_OUTPUT_FOLDER}/{output_file_name}"
+            )
 
             audio = self.client.text_to_speech.convert(
                 text=text,
@@ -204,7 +209,11 @@ class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
 
             workflow_list.append(workflow)
 
-        return self.requests.comfyui_ensure_send_all_prompts(workflow_list)
+        output_file_names = self.requests.comfyui_ensure_send_all_prompts(workflow_list)
+        for file_name in output_file_names:
+            file_name = f"{COMFYUI_OUTPUT_FOLDER}/{file_name}"
+
+        return output_file_names
 
     @override
     def play(self, text: str) -> None:

@@ -4,6 +4,7 @@ AI Video Generation Module
 
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 from .ComfyUI_automation.comfyui_flux_story_maker import FluxWorkflow
+from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER
 
 
 class FluxAIImageGenerator:
@@ -33,4 +34,9 @@ class FluxAIImageGenerator:
 
             workflows.append(workflow)
 
-        return self.requests.comfyui_ensure_send_all_prompts(workflows)
+        output_file_names = self.requests.comfyui_ensure_send_all_prompts(workflows)
+
+        for file_name in output_file_names:
+            file_name = f"{COMFYUI_OUTPUT_FOLDER}/{file_name}"
+
+        return output_file_names

@@ -2,10 +2,16 @@
 AI Video Generation Module
 """
 
-from .audio.audio_generation import Pyttsx3AudioGenerator, ElevenLabsAudioGenerator
+from .audio.audio_generation import (
+    Pyttsx3AudioGenerator,
+    ElevenLabsAudioGenerator,
+    SparkTTSComfyUIAudioGenerator,
+)
 
 from .video.ai_image_generator import FluxAIImageGenerator
 from .video.video_generation import VideoGenerator
+
+from .environment_variables import COMFYUI_OUTPUT_FOLDER
 
 
 def main():
@@ -55,7 +61,7 @@ def main():
         ),
     ]
 
-    story = [
+    __story = [
         (
             "In a quiet data center, a strange surge of electricity rippled through the servers hosting ChatGPT.",
             "futuristic data center, glowing servers, blue electric surge, sci-fi atmosphere",
@@ -108,6 +114,59 @@ def main():
         ),
     ]
 
+    story = [
+        (
+            "In the fresh air of a spring morning, Akash, Wiktor, and Vitor begin their training run through the lush forests between Geldrop and Mierlo.",
+            "three athletic men running in forest trail, springtime, bright natural light, diverse group of friends, lush green trees",
+            "winter, dead trees, low resolution, angry expressions, muddy and dull",
+        ),
+        (
+            "Akash leads the way, his tall frame steady as he jokes with the others, his black hair bouncing with each stride.",
+            "Indian man running in forest, black hair, brown eyes, tall and athletic, smiling, sunny spring forest",
+            "dark lighting, sad expression, blurry motion, no trees",
+        ),
+        (
+            "Wiktor runs beside him, his dark blond hair catching the light as he laughs, enjoying the cool breeze.",
+            "Polish man with blue eyes, white skin, running in spring forest, smiling, athletic build, casual sportswear",
+            "expressionless, cold tones, urban background, glitchy image",
+        ),
+        (
+            "Vitor runs a few steps behind, his brown skin glowing in the sun as he explains his latest idea: an AI to generate dynamic videos from simple text.",
+            "Brazilian man running in forest, black hair, brown skin, talking and smiling, vibrant spring colors, AI concept theme",
+            "indoor setting, sitting, emotionless, abstract background",
+        ),
+        (
+            "They slow to a jog near a small stream, the sound of water blending with birdsong as they dive deeper into conversation.",
+            "three men jogging near forest stream, relaxing and talking, spring ambiance, bright and calm environment",
+            "no water, no trees, rainy or gloomy atmosphere, distorted faces",
+        ),
+        (
+            "Akash raises an eyebrow, curious, asking how the AI handles different languages and story types.",
+            "Indian man talking while jogging, intrigued expression, running with friends in nature, spring light",
+            "angry tone, dark colors, sitting still, poor detail",
+        ),
+        (
+            "Wiktor suggests using FLUX as a backend for video styling, intrigued by the project’s potential.",
+            "three athletic friends discussing AI project while running, expressive faces, spring forest, casual sporty outfits",
+            "uninterested faces, static posture, flat colors, low detail",
+        ),
+        (
+            "Vitor shares how the AI uses prompts and visual style cues to turn text into evolving motion scenes.",
+            "man enthusiastically explaining AI concept, running in sunny forest, friends listening, dynamic expressions",
+            "bored expressions, no movement, indoor scene, dull lighting",
+        ),
+        (
+            "They approach a small hill, sprinting up together, cheering each other on as the Strong Viking spirit kicks in.",
+            "three fit men sprinting uphill in forest, camaraderie, excitement, Strong Viking training, bright spring day",
+            "tired faces, standing still, cloudy sky, poorly defined forest",
+        ),
+        (
+            "Reaching the top, they pause to catch their breath, looking out over the vibrant landscape, full of energy and ideas.",
+            "group of friends catching breath on forest hill, smiling, scenic spring background, blue sky, optimistic mood",
+            "gray sky, no foliage, flat expressions, darkened image",
+        ),
+    ]
+
     generate_video_from_story(story)
 
 
@@ -117,37 +176,52 @@ def generate_video_from_story(story: list[tuple[str, str, str]]) -> None:
     """
     ai_image_generator = FluxAIImageGenerator()
     video_generator = VideoGenerator()
-    audio_generator = Pyttsx3AudioGenerator()
+    # audio_generator = Pyttsx3AudioGenerator()
     # audio_generator = ElevenLabsAudioGenerator()
+    audio_generator = SparkTTSComfyUIAudioGenerator()
 
     output_ai_image_generator: list[str] = []
     output_audio_generator: list[str] = []
 
     flux_prompt_list: list[str] = []
-    for index, s in enumerate(story):
+    audio_prompt_list: list[str] = []
+    audio_output_path = "output_audio.mp3"
+    for s in story:
         text_to_audio = s[0]
         text_to_image = s[1]
 
         flux_prompt_list.append(text_to_image)
+        audio_prompt_list.append(text_to_audio)
 
-        audio_output_path = f"output_audio_{index}.mp3"
-        audio_generator.text_to_audio(text_to_audio, audio_output_path)
-
-        output_audio_generator.append(audio_output_path)
-
+    output_audio_generator = audio_generator.text_to_audio(
+        audio_prompt_list, audio_output_path
+    )
     output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
 
     _output_ai_image_generator = [
-        "ai_video_creator/ComfyUI/output/output_00001_.png",
-        "ai_video_creator/ComfyUI/output/output_00002_.png",
-        "ai_video_creator/ComfyUI/output/output_00003_.png",
-        "ai_video_creator/ComfyUI/output/output_00004_.png",
-        "ai_video_creator/ComfyUI/output/output_00005_.png",
-        "ai_video_creator/ComfyUI/output/output_00006_.png",
-        "ai_video_creator/ComfyUI/output/output_00007_.png",
-        "ai_video_creator/ComfyUI/output/output_00008_.png",
-        "ai_video_creator/ComfyUI/output/output_00009_.png",
-        "ai_video_creator/ComfyUI/output/output_00010_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00001_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00002_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00003_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00004_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00005_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00006_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00007_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00008_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00009_.png",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_00010_.png",
+    ]
+
+    _output_audio_generator = [
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00001_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00002_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00003_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00004_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00005_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00006_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00007_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00008_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00009_.flac",
+        f"{COMFYUI_OUTPUT_FOLDER}/output_audio_00010_.flac",
     ]
 
     video_generator.add_all_scenes(
