@@ -209,11 +209,8 @@ class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
 
             workflow_list.append(workflow)
 
-        output_file_names = self.requests.comfyui_ensure_send_all_prompts(workflow_list)
-        for file_name in output_file_names:
-            file_name = f"{COMFYUI_OUTPUT_FOLDER}/{file_name}"
-
-        return output_file_names
+        return self.requests.comfyui_ensure_send_all_prompts(workflow_list)
+        
 
     @override
     def play(self, text: str) -> None:

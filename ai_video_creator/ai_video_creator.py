@@ -192,16 +192,16 @@ def generate_video_from_story(story: list[tuple[str, str, str]]) -> None:
 
     flux_prompt_list: list[str] = []
     audio_prompt_list: list[str] = []
-    audio_output_path = "output_audio.mp3"
+    audio_output_file_name = "output_audio"
     for s in story:
         text_to_audio = s[0]
         text_to_image = s[1]
 
-        flux_prompt_list.append(text_to_image)
         audio_prompt_list.append(text_to_audio)
+        flux_prompt_list.append(text_to_image)
 
     output_audio_generator = audio_generator.text_to_audio(
-        audio_prompt_list, audio_output_path
+        audio_prompt_list, audio_output_file_name
     )
     output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
 

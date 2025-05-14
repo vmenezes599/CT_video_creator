@@ -121,7 +121,7 @@ class ComfyUIRequests:
                     output_names = comfyui_get_history_output_name(history_entry)
 
                     if len(output_names) > 0:
-                        output_name = output_names[-1]
+                        output_name = output_names[0]
 
                         full_path_name = os.path.join(
                             COMFYUI_OUTPUT_FOLDER, output_name

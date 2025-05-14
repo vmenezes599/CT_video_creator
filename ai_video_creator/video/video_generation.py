@@ -70,7 +70,7 @@ class VideoGenerator:
                     "crf": "23",
                     "c:a": "aac",
                     "movflags": "+faststart",
-                    "pix_fmt": "yuv420p"
+                    "pix_fmt": "yuv420p",
                 },
             )
             .overwrite_output()
@@ -107,7 +107,7 @@ class VideoGenerator:
                 "crf": "23",  # Video quality (lower is better, 18–28 range)
                 "c:a": "aac",  # Audio codec
                 "movflags": "+faststart",  # Ensures proper mobile streaming
-                "pix_fmt": "yuv420p"
+                "pix_fmt": "yuv420p",
             },
         ).overwrite_output().run()
 
@@ -164,8 +164,11 @@ class VideoGenerator:
                 .run()
             )
             self.temp_files.append(output_path)
+        elif len(self.clips) == 1:
+            os.rename(self.clips[0], output_path)
 
         self._generate_subtitle(output_path)
 
         for f in self.temp_files:
-            os.remove(f)
+            if os.path.exists(f):
+                os.remove(f)
