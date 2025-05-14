@@ -190,7 +190,7 @@ def generate_video_from_story(story: list[tuple[str, str, str]]) -> None:
     output_ai_image_generator: list[str] = []
     output_audio_generator: list[str] = []
 
-    flux_prompt_list: list[str] = []
+    video_prompt_list: list[str] = []
     audio_prompt_list: list[str] = []
     audio_output_file_name = "output_audio"
     for s in story:
@@ -198,12 +198,12 @@ def generate_video_from_story(story: list[tuple[str, str, str]]) -> None:
         text_to_image = s[1]
 
         audio_prompt_list.append(text_to_audio)
-        flux_prompt_list.append(text_to_image)
+        video_prompt_list.append(text_to_image)
 
     output_audio_generator = audio_generator.text_to_audio(
         audio_prompt_list, audio_output_file_name
     )
-    output_ai_image_generator = ai_image_generator.generate_images(flux_prompt_list)
+    output_ai_image_generator = ai_image_generator.generate_images(video_prompt_list)
 
     _output_ai_image_generator = [
         f"{COMFYUI_OUTPUT_FOLDER}/output_00001_.png",
