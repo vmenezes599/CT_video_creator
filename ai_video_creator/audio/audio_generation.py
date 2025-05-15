@@ -137,6 +137,8 @@ class ElevenLabsAudioGenerator(IAudioGenerator):
         """
         # Extract the file name without the extension
         output_file_name = os.path.splitext(output_file_name)[0] + ".mp3"
+        
+        os.makedirs(COMFYUI_OUTPUT_FOLDER, exist_ok=True)  # Ensure the output directory exists
 
         output_list: list[str] = []
         for text in text_list:

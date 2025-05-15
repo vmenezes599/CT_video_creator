@@ -184,8 +184,8 @@ def generate_video_from_story(story: list[tuple[str, str, str]]) -> None:
     ai_image_generator = FluxAIImageGenerator()
     video_generator = VideoGenerator()
     # audio_generator = Pyttsx3AudioGenerator()
-    # audio_generator = ElevenLabsAudioGenerator()
-    audio_generator = SparkTTSComfyUIAudioGenerator()
+    audio_generator = ElevenLabsAudioGenerator()
+    # audio_generator = SparkTTSComfyUIAudioGenerator()
 
     output_ai_image_generator: list[str] = []
     output_audio_generator: list[str] = []
