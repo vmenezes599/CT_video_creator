@@ -1,0 +1,28 @@
+# pyproject.toml
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai_video_creator"
+version = "0.4"
+dependencies = [
+	"elevenlabs",
+	"ffmpeg",
+	"ffmpeg_python",
+	"lpips",
+	"numpy",
+	"opencv_python",
+	"Pillow",
+	"pygame",
+	"python-dotenv",
+	"pyttsx3",
+	"Requests",
+	"setuptools",
+	"scikit-image",
+	"stable_ts",
+	"typing_extensions"
+]
+
+[tool.setuptools]
+packages = ["ai_video_creator"]
