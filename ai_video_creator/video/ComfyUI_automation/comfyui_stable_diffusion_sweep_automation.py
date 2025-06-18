@@ -5,8 +5,7 @@ Realistic Vision Sweep Automation for ComfyUI
 import sys
 import random
 
-from lib.ComfyUI_automation.comfyui_sweepers import StableDiffusionComfyUISweeper
-from lib.ComfyUI_automation.environment_variables import CONFYUI_URL
+from .comfyui_video_sweepers import StableDiffusionComfyUISweeper
 
 
 SAMPLER_NAME_LIST = [
@@ -37,9 +36,7 @@ def stable_diffusion_sweep_automation() -> None:
     Automate the sweep process for Realistic Vision in ComfyUI.
     """
 
-    sweeper = StableDiffusionComfyUISweeper(
-        comfyui_url=CONFYUI_URL,
-    )
+    sweeper = StableDiffusionComfyUISweeper()
 
     # sweeper.add_ksampler_sweeper(
     #    seed_list=[random.randint(0, 2**32 - 1)],

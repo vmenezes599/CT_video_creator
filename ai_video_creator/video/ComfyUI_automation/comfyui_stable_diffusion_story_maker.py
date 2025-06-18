@@ -4,8 +4,9 @@ Realistic Vision Sweep Automation for ComfyUI
 
 import sys
 
+from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
+
 from .comfyui_video_workflows import StableDiffusionWorkflow
-from lib.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 
 
 def stable_diffusion_history_maker() -> None:

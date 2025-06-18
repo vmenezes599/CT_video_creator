@@ -14,14 +14,14 @@ class ComfyUISweeperBase:
     Base class for ComfyUI sweepers.
     """
 
-    def __init__(self, comfyui_url: str) -> None:
+    def __init__(self) -> None:
         """
         Initialize the ComfyUISweeperBase class.
         """
 
         self.req_list: list[tuple[IComfyUIWorkflow, str]] = []
 
-        self.requests = ComfyUIRequests(comfyui_url)
+        self.requests = ComfyUIRequests()
         
         self.logger = SingletonLogger()
 

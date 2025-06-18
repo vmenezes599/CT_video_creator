@@ -18,8 +18,8 @@ class StableDiffusionComfyUISweeper(ComfyUISweeperBase):
 
     WORLFLOW_TYPE = StableDiffusionWorkflow
 
-    def __init__(self, comfyui_url: str):
-        super().__init__(comfyui_url)
+    def __init__(self):
+        super().__init__()
 
         self.req_list: list[StableDiffusionWorkflow] = [self.WORLFLOW_TYPE()]
 

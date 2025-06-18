@@ -4,14 +4,12 @@ ComfyUI Automation Sweep Module
 
 import random
 
-from lib.ComfyUI_automation.environment_variables import CONFYUI_URL
-
 from .comfyui_video_sweepers import StableDiffusionComfyUISweeper
 
 if __name__ == "__main__":
 
     VIDEO_COMBINE_NODE_INDEX = 37
-    sweeper = StableDiffusionComfyUISweeper(comfyui_url=CONFYUI_URL)
+    sweeper = StableDiffusionComfyUISweeper()
 
     sweeper.add_ksampler_sweeper(
         seed_list=[random.randint(0, 2**32 - 1)],

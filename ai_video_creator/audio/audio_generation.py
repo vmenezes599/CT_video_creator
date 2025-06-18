@@ -137,8 +137,10 @@ class ElevenLabsAudioGenerator(IAudioGenerator):
         """
         # Extract the file name without the extension
         output_file_name = os.path.splitext(output_file_name)[0] + ".mp3"
-        
-        os.makedirs(COMFYUI_OUTPUT_FOLDER, exist_ok=True)  # Ensure the output directory exists
+
+        os.makedirs(
+            COMFYUI_OUTPUT_FOLDER, exist_ok=True
+        )  # Ensure the output directory exists
 
         output_list: list[str] = []
         for text in text_list:
@@ -169,16 +171,6 @@ class ElevenLabsAudioGenerator(IAudioGenerator):
         raise NotImplementedError(
             "Playing audio directly is not implemented in ElevenLabsAudioGenerator."
         )
-        # import pygame
-        # self.text_to_audio(text, "temp_audio.mp3")
-
-        # pygame.mixer.init()
-        # pygame.mixer.music.load("temp_audio.mp3")
-        # pygame.mixer.music.play()
-
-        # Keep the script running until music finishes
-        # while pygame.mixer.music.get_busy():
-        #     pygame.time.Clock().tick(10)
 
 
 class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
@@ -212,7 +204,6 @@ class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
             workflow_list.append(workflow)
 
         return self.requests.comfyui_ensure_send_all_prompts(workflow_list)
-        
 
     @override
     def play(self, text: str) -> None:
@@ -221,18 +212,6 @@ class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
 
         :param text: The text to play as audio.
         """
-
-        import pygame
-
-        result = self.text_to_audio([text], "temp_audio.mp3")
-
-        if len(result) == 0:
-            raise ValueError("No audio file generated.")
-
-        pygame.mixer.init()
-        pygame.mixer.music.load(result[0])
-        pygame.mixer.music.play()
-
-        # Keep the script running until music finishes
-        while pygame.mixer.music.get_busy():
-            pygame.time.Clock().tick(10)
+        raise NotImplementedError(
+            "Playing audio directly is not implemented in ElevenLabsAudioGenerator."
+        )

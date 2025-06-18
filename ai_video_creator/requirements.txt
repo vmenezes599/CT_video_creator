@@ -1,5 +1,6 @@
 elevenlabs
-ffmpeg
+ffmpeg-python
+pytest
 python-dotenv
 pyttsx3
 Requests
