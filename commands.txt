@@ -8,6 +8,7 @@ python -m ai_video_creator.video.ComfyUI_automation.comfyui_animate_diff_sweep_a
 python -m ai_video_creator.video.ComfyUI_automation.comfyui_stable_diffusion_sweep_automation
 python -m ai_video_creator.video.ComfyUI_automation.comfyui_stable_diffusion_story_maker
 
+python -m ai_video_creator.ComfyUI_automation.comfyui_server_manager --comfyui-path "C:/Projects/ComfyUI" --base-directory "C:/Projects/ComfyUI-User-Settings" --output-directory "outputs/ComfyUI"
 comfyui_server_manager --comfyui-path "C:/Projects/ComfyUI" --base-directory "C:/Projects/ComfyUI-User-Settings" --output-directory "outputs/ComfyUI"
 ai_video_creator
 
