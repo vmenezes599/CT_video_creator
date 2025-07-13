@@ -4,6 +4,7 @@
 *.flac
 
 
+input_data/
 .vscode
 
 # Byte-compiled / optimized / DLL files
