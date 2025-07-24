@@ -18,7 +18,7 @@ from elevenlabs.client import ElevenLabs
 
 # SparkTTSComfyUIAudioGenerator
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
-from .ComfyUI_automation.comfyui_audio_workflows import SparkTTSWorkflow
+from .ComfyUI_automation.comfyui_audio_workflows import SparkTTSVoiceCloneWorkflow
 
 
 class IAudioGenerator(ABC):
@@ -193,11 +193,11 @@ class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
         :param output_path: The path to save the generated audio file.
         """
         output_file_name = os.path.splitext(output_file_name)[0]
-        workflow_list: list[SparkTTSWorkflow] = []
+        workflow_list: list[SparkTTSVoiceCloneWorkflow] = []
 
         for text in text_list:
             # Generate a unique filename for each audio file
-            workflow = SparkTTSWorkflow()
+            workflow = SparkTTSVoiceCloneWorkflow()
             workflow.set_prompt(text)
             workflow.set_output_filename(output_file_name)
 

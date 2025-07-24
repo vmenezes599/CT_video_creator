@@ -8,6 +8,7 @@ import time
 import os
 import sys
 from threading import Thread
+from pathlib import Path
 
 from .comfyui_requests import ComfyUIRequests
 
@@ -120,17 +121,20 @@ def cli() -> str:
     comfyui_command = f"python {args.comfyui_path}/main.py"
 
     if args.base_directory:
-        if not os.path.exists(args.base_directory):
-            print(f"Models directory {args.base_directory} does not exist.")
+        path = Path(args.base_directory)
+        if not path.is_absolute():
+            path = path.resolve()
+        if not path.exists():
+            print(f"Models directory {path} does not exist.")
             sys.exit(1)
-        comfyui_command += f" --base-directory {args.base_directory}"
+        comfyui_command += f" --base-directory {path}"
 
     if args.output_directory:
-        path = args.output_directory
-        if not os.path.isabs(path):
-            path = os.path.abspath(path)
+        path = Path(args.output_directory)
+        if not path.is_absolute():
+            path = path.resolve()
 
-        if not os.path.exists(path):
+        if not path.exists():
             os.makedirs(path, exist_ok=True)
 
         comfyui_command += f" --output-directory {path}"

@@ -23,7 +23,7 @@ def main():
     # Initialize generators
     image_generator = FluxAIImageGenerator()
     video_generator = VideoGenerator()
-    audio_generator = ElevenLabsAudioGenerator()
+    audio_generator = SparkTTSComfyUIAudioGenerator()
     
     # Create VideoCreator instance
     creator = VideoCreator(image_generator, audio_generator, video_generator)

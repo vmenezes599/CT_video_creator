@@ -1,3 +1,5 @@
+// Run Workflows
+
 python -m ai_video_creator.video.video_generation_test
 
 python -m ai_video_creator.video.ComfyUI_automation.comfyui_flux_sweep_automation
@@ -8,11 +10,14 @@ python -m ai_video_creator.video.ComfyUI_automation.comfyui_animate_diff_sweep_a
 python -m ai_video_creator.video.ComfyUI_automation.comfyui_stable_diffusion_sweep_automation
 python -m ai_video_creator.video.ComfyUI_automation.comfyui_stable_diffusion_story_maker
 
-python -m ai_video_creator.ComfyUI_automation.comfyui_server_manager --comfyui-path "C:/Projects/ComfyUI" --base-directory "C:/Projects/ComfyUI-User-Settings" --output-directory "outputs/ComfyUI"
-comfyui_server_manager --comfyui-path "C:/Projects/ComfyUI" --base-directory "C:/Projects/ComfyUI-User-Settings" --output-directory "outputs/ComfyUI"
-ai_video_creator
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------
 
+// Run ComfyUI
 
- pipreqs . --ignore ComfyUI,.venv,__pycache__,.vscode,ai_video_creator.egg-info,fonts,outputs --force
- 
- pip install -e .
+//// Windows
+python -m ai_video_creator.ComfyUI_automation.comfyui_server_manager --comfyui-path "C:/Projects/ComfyUI" --base-directory "C:/Projects/ComfyUI-Base-Directory" --input-directory "inputs/ComfyUI" --output-directory "outputs/ComfyUI"
+
+//// Linux
+python3 -m ai_video_creator.ComfyUI_automation.comfyui_server_manager --comfyui-path ~/projects/AI-Story-Video-Creator/ComfyUI --base-directory ~/projects/DATABASES.ComfyUI-Base-Directory --input-directory ~/projects/DATABASES/ComfyUI-Input --output-directory ~/projects/DATABASES/ComfyUI-Output
