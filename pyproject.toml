@@ -8,6 +8,11 @@ name = "ai_video_creator"
 version = "0.4"
 dynamic = ["dependencies"]
 
+[tool.setuptools.package-data]
+"ai_video_creator.image.ComfyUI_automation" = ["workflows/*.json"]
+"ai_video_creator.video.ComfyUI_automation" = ["workflows/*.json"]
+"ai_video_creator.audio.ComfyUI_automation" = ["workflows/*.json"]
+
 [tool.setuptools.packages.find]
 where   = ["."]
 include = ["ai_video_creator*"]

@@ -1,4 +1,7 @@
+"""Utility functions for AI Video Creator project."""
+
 import os
+
 
 def get_next_available_filename(file_path: str) -> str:
     """

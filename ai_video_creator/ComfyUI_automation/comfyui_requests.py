@@ -66,12 +66,12 @@ class ComfyUIRequests:
 
     def comfyui_ensure_send_all_prompts(
         self, req_list: list[IComfyUIWorkflow]
-    ) -> list[str]:
+    ) -> list[str]:  # 28
         """
         Send all prompts in the list to ComfyUI and wait for them to finish.
         """
         from .custom_logger import SingletonLogger
-        
+
         logger = SingletonLogger()
 
         output_image_paths: list[str] = []
@@ -93,7 +93,8 @@ class ComfyUIRequests:
                     f"Sending request {i + 1}/{total_requests}: {smaller_workflow_summary}"
                 )
 
-                response = self.comfyui_send_prompt(json=req.get_json(), timeout=10)
+                json_req = req.get_json()
+                response = self.comfyui_send_prompt(json=json_req, timeout=10)
                 if not response.ok:
                     raise RuntimeError(f"Bad prompt: {response.status_code}")
 

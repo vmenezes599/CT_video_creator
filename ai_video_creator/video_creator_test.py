@@ -11,7 +11,7 @@ from .audio.audio_generation import (
 from .video.ai_image_generator import FluxAIImageGenerator
 from .video.video_generation import VideoGenerator
 from .prompt.prompt import Prompt
-from .video_creator import VideoCreator
+from .video_assembler import VideoAssembler
 
 from .environment_variables import COMFYUI_OUTPUT_FOLDER
 
@@ -30,7 +30,7 @@ def main():
     return
 
     # Create VideoCreator instance
-    creator = VideoCreator(image_generator, audio_generator, video_generator)
+    creator = VideoAssembler(image_generator, audio_generator, video_generator)
 
     # Create video directly from JSON file
     creator.create_video_from_json(

@@ -1,0 +1,129 @@
+{
+    "12": {
+        "inputs": {
+            "ckpt_name": "Realistic_Vision_V6.0_NV_B1.safetensors"
+        },
+        "class_type": "CheckpointLoaderSimple",
+        "_meta": {
+            "title": "Load Checkpoint"
+        }
+    },
+    "13": {
+        "inputs": {
+            "text": "1girl, solo, cherry blossom, pink flower, white flower, spring season, wisteria, petals, flower, plum blossoms, outdoors, falling petals, black eyes, upper body, from side",
+            "clip": [
+                "19",
+                0
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP Text Encode (Prompt)"
+        }
+    },
+    "14": {
+        "inputs": {
+            "text": "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime), text, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck",
+            "clip": [
+                "19",
+                0
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP Text Encode (Prompt)"
+        }
+    },
+    "15": {
+        "inputs": {
+            "seed": 544770885992171,
+            "steps": 25,
+            "cfg": 7,
+            "sampler_name": "dpmpp_sde_gpu",
+            "scheduler": "karras",
+            "denoise": 0.30000000000000004,
+            "model": [
+                "12",
+                0
+            ],
+            "positive": [
+                "13",
+                0
+            ],
+            "negative": [
+                "14",
+                0
+            ],
+            "latent_image": [
+                "18",
+                0
+            ]
+        },
+        "class_type": "KSampler",
+        "_meta": {
+            "title": "KSampler"
+        }
+    },
+    "16": {
+        "inputs": {
+            "samples": [
+                "15",
+                0
+            ],
+            "vae": [
+                "20",
+                0
+            ]
+        },
+        "class_type": "VAEDecode",
+        "_meta": {
+            "title": "VAE Decode"
+        }
+    },
+    "17": {
+        "inputs": {
+            "filename_prefix": "Test",
+            "images": [
+                "16",
+                0
+            ]
+        },
+        "class_type": "SaveImage",
+        "_meta": {
+            "title": "Save Image"
+        }
+    },
+    "18": {
+        "inputs": {
+            "width": 512,
+            "height": 512,
+            "batch_size": 1
+        },
+        "class_type": "EmptyLatentImage",
+        "_meta": {
+            "title": "Empty Latent Image"
+        }
+    },
+    "19": {
+        "inputs": {
+            "stop_at_clip_layer": -2,
+            "clip": [
+                "12",
+                1
+            ]
+        },
+        "class_type": "CLIPSetLastLayer",
+        "_meta": {
+            "title": "CLIP Set Last Layer"
+        }
+    },
+    "20": {
+        "inputs": {
+            "vae_name": "vae-ft-mse-840000-ema-pruned.safetensors"
+        },
+        "class_type": "VAELoader",
+        "_meta": {
+            "title": "Load VAE"
+        }
+    }
+}

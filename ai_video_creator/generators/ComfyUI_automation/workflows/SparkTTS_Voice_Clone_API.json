@@ -1,0 +1,48 @@
+{
+	"1": {
+		"inputs": {
+			"text": "",
+			"reference_text": "Hi there! You’re listening to an AI-generated voice that can be selected and used in your own projects.This voice is designed to sound natural, clear, and expressive — perfect for storytelling, dialogue, narration, or interactive applications.",
+			"pitch": "low",
+			"speed": "low",
+			"max_tokens": 5000,
+			"batch_texts": "",
+			"temperature": 0.8,
+			"top_k": 50,
+			"top_p": 0.95,
+			"reference_audio": [
+				"2",
+				0
+			]
+		},
+		"class_type": "SparkTTS_AdvVoiceClone",
+		"_meta": {
+			"title": "SparkTTS Advanced Voice Clone 🔊"
+		}
+	},
+	"2": {
+		"inputs": {
+			"audio": "/ComfyUI-Input/default_assets/voices/voice_001.mp3",
+			"audioUI": ""
+		},
+		"class_type": "LoadAudio",
+		"_meta": {
+			"title": "LoadAudio"
+		}
+	},
+	"3": {
+		"inputs": {
+			"filename_prefix": "audio/generated_audio",
+			"quality": "320k",
+			"audioUI": "",
+			"audio": [
+				"1",
+				0
+			]
+		},
+		"class_type": "SaveAudioMP3",
+		"_meta": {
+			"title": "Save Audio (MP3)"
+		}
+	}
+}

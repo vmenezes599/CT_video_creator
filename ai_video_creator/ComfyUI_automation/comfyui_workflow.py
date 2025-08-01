@@ -20,7 +20,7 @@ class IComfyUIWorkflow(ABC):
         """
 
     @abstractmethod
-    def set_workflow_summary(self, workflow_summary: str) -> None:
+    def _set_workflow_summary(self, workflow_summary: str) -> None:
         """
         Set the model sweeper to the JSON configuration.
         """
@@ -49,7 +49,7 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
         """
         if not os.path.exists(base_workflow):
             raise ValueError(f"Base workflow file {base_workflow} does not exist.")
-        
+
         with open(base_workflow, "r", encoding="utf-8") as file:
             self.workflow = json.load(file)
 
@@ -88,7 +88,7 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
                 self.workflow[index_str]["inputs"][key] = value
 
     @override
-    def set_workflow_summary(self, workflow_summary: str) -> None:
+    def _set_workflow_summary(self, workflow_summary: str) -> None:
         """
         Set the workflow summary string for the workflow.
         """
