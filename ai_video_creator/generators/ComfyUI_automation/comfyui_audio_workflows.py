@@ -120,7 +120,7 @@ class SparkTTSVoiceCloneWorkflow(ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
         workflow_summary = (
-            f"Prompt({prompt[0]} {prompt[1]}...)/{self.get_workflow_summary()}"
+            f"Prompt({prompt[:15]}...)/{self.get_workflow_summary()}"
         )
         self._set_workflow_summary(workflow_summary)
 

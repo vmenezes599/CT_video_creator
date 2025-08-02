@@ -448,7 +448,7 @@ class FluxWorkflow(UnetWorkflowBase):
             self._load_best_configurations()
 
     def _load_best_configurations(self) -> None:
-        self.set_random_noise(random.randint(0, 2**32 - 1))
+        self.set_seed(random.randint(0, 2**64 - 1))
         self.set_output_filename("output")
 
     def set_unet_model(self, model_name: str) -> None:
@@ -493,7 +493,7 @@ class FluxWorkflow(UnetWorkflowBase):
             (self.WIDTH_NODE_INDEX, self.HEIGHT_NODE_INDEX), resolution=resolution
         )
 
-    def set_random_noise(
+    def set_seed(
         self,
         random_noise: int,
     ) -> None:
@@ -503,6 +503,12 @@ class FluxWorkflow(UnetWorkflowBase):
         super()._set_random_noise(
             self.RANDOM_NOISE_NODE_INDEX, random_noise=random_noise
         )
+
+    def get_seed(self) -> int:
+        """
+        Get the random noise seed.
+        """
+        return self._get_fields(self.RANDOM_NOISE_NODE_INDEX, "noise_seed")
 
     @override
     def set_output_filename(self, filename):

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from .video_assembler import VideoAssembler
-from .video_recipe import VideoRecipeCreator
+from .video_recipe import VideoRecipeBuilder
 from .prompt import Prompt
 
 from .generators import FluxAIImageGenerator
@@ -30,9 +30,9 @@ class VideoCreator:
         Returns:
             None
         """
-        video_recipe_creator = VideoRecipeCreator(
+        video_recipe_creator = VideoRecipeBuilder(
             prompt_file=video_prompt_path,
-            story_path=story_path,
+            story_folder=story_path,
         )
         video_recipe = video_recipe_creator.create_video_recipe()
 

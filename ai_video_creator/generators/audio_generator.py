@@ -2,13 +2,9 @@
 Audio Generation Module
 """
 
-from pathlib import Path
 import os
 from abc import ABC, abstractmethod
-from typing_extensions import override
-from ai_video_creator.utils.utils import get_next_available_filename
-from .environment_variables import ELEVENLABS_API_KEY
-from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER
+from pathlib import Path
 
 # Pyttsx3AudioGenerator
 import pyttsx3
@@ -16,10 +12,31 @@ import pyttsx3
 # ElevenLabsAudioGenerator
 from elevenlabs import save
 from elevenlabs.client import ElevenLabs
+from typing_extensions import override
 
 # SparkTTSComfyUIAudioGenerator
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
+from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER
+from ai_video_creator.utils.utils import get_next_available_filename
+
 from .ComfyUI_automation import SparkTTSVoiceCloneWorkflow
+from .environment_variables import ELEVENLABS_API_KEY
+
+
+class AudioRecipeBase:
+    """Base class for audio recipes."""
+
+    prompt: str
+    recipe_type = "AudioRecipeBase"
+
+    def __init__(
+        self,
+        prompt: str,
+        recipe_type: str,
+    ):
+        """Initialize AudioRecipeBase with a name."""
+        self.prompt = prompt
+        self.recipe_type = recipe_type
 
 
 class IAudioGenerator(ABC):
@@ -38,7 +55,7 @@ class IAudioGenerator(ABC):
 
     @abstractmethod
     def clone_text_to_speech(
-        self, text_list: list[str], output_file_name: str, voice_reference: Path
+        self, recipe: AudioRecipeBase, output_file_name: str
     ) -> list[str]:
         """
         Convert the given text to audio and save it to the specified file.
@@ -190,6 +207,8 @@ class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
     A class to generate audio from text using Spark TTS ComfyUI.
     """
 
+    TEXT_MAX_LENGTH = 3000
+
     def __init__(self):
         """
         Initialize the SparkTTSComfyUIAudioGenerator class.
@@ -207,29 +226,50 @@ class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
         """
         raise NotImplementedError("Spark only supports voice cloning.")
 
+    def _subdivide_text_for_cloning(self, text: str) -> str:
+        """
+        Subdivide the text into smaller chunks for voice cloning.
+
+        :param text: The text to subdivide.
+        :return: A list of text chunks.
+        """
+        text_list = text.split(".")
+
+        result = []
+        text = ""
+        while len(text) < self.TEXT_MAX_LENGTH and text_list:
+            next_chunk = text_list.pop(0)
+            if len(text) + len(next_chunk) + 1 > self.TEXT_MAX_LENGTH:
+                result.append(text.strip())
+                text = ""
+            text += next_chunk + ". "
+
+        if text:
+            result.append(text.strip())
+
+        return "\n\n".join(result) if result else text.strip()
+
     @override
     def clone_text_to_speech(
-        self, text_list: list[str], output_file_name: str, voice_reference: Path
-    ) -> list[str]:
+        self, recipe: "SparkTTSRecipe", output_file_name: str
+    ) -> Path:
         """
         Convert the given text to audio and save it to the specified file.
 
         :param text: The text to convert to audio.
         :param output_path: The path to save the generated audio file.
         """
-        output_file_name = os.path.splitext(output_file_name)[0]
-        workflow_list: list[SparkTTSVoiceCloneWorkflow] = []
 
-        for text in text_list:
-            # Generate a unique filename for each audio file
-            workflow = SparkTTSVoiceCloneWorkflow()
-            workflow.set_prompt(text)
-            workflow.set_output_filename(output_file_name)
-            workflow.set_voice_reference(voice_reference)
+        workflow = SparkTTSVoiceCloneWorkflow()
+        processed_text = self._subdivide_text_for_cloning(recipe.prompt)
 
-            workflow_list.append(workflow)
+        workflow.set_prompt(processed_text)
+        workflow.set_output_filename(output_file_name)
+        workflow.set_voice_reference(str(recipe.clone_voice_path))
 
-        return self.requests.comfyui_ensure_send_all_prompts(workflow_list)
+        output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
+
+        return Path(output_file_names[0])
 
     @override
     def play(self, text: str) -> None:
@@ -240,4 +280,71 @@ class SparkTTSComfyUIAudioGenerator(IAudioGenerator):
         """
         raise NotImplementedError(
             "Playing audio directly is not implemented in ElevenLabsAudioGenerator."
+        )
+
+
+class SparkTTSRecipe(AudioRecipeBase):
+    """Audio recipe for creating audio from text."""
+
+    GENERATOR = SparkTTSComfyUIAudioGenerator
+
+    recipe_type = "SparkTTSRecipeType"
+    clone_voice_path = ""
+
+    def __init__(self, prompt: str, clone_voice_path: str):
+        """Initialize AudioRecipe with audio data.
+
+        Args:
+            audio_path: Path to the audio file
+        """
+        super().__init__(prompt, recipe_type=self.recipe_type)
+        self.clone_voice_path = clone_voice_path
+
+    def to_dict(self) -> dict:
+        """Convert AudioRecipe to dictionary.
+
+        Returns:
+            Dictionary representation of the AudioRecipe
+        """
+        return {
+            "prompt": self.prompt,
+            "clone_voice_path": self.clone_voice_path,
+            "recipe_type": self.recipe_type,
+        }
+
+    @classmethod
+    def from_dict(
+        cls, data: dict
+    ) -> "AudioRecipe":  # pyright: ignore[reportUndefinedVariable]
+        """Create AudioRecipe from dictionary.
+
+        Args:
+            data: Dictionary containing AudioRecipe data
+
+        Returns:
+            AudioRecipe  instance
+
+        Raises:
+            KeyError: If required keys are missing from data
+            ValueError: If data format is invalid
+        """
+        # Validate required keys
+        required_keys = ["prompt", "clone_voice_path", "recipe_type"]
+        for key in required_keys:
+            if key not in data:
+                raise KeyError(f"Missing required key: {key}")
+
+        if not isinstance(data["prompt"], str):
+            raise ValueError("prompt must be a string")
+        if not isinstance(data["clone_voice_path"], str):
+            raise ValueError("clone_voice_path must be a string")
+        if not isinstance(data["recipe_type"], str):
+            raise ValueError("recipe_type must be a string")
+
+        if data["recipe_type"] != cls.recipe_type:
+            raise ValueError(f"Invalid recipe_type: {data['recipe_type']}")
+
+        return cls(
+            prompt=data["prompt"],
+            clone_voice_path=data["clone_voice_path"],
         )

@@ -3,7 +3,12 @@ Environment variables for ComfyUI automation module.
 """
 
 import os
+from dotenv import load_dotenv
 
-COMFYUI_OUTPUT_FOLDER = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "../outputs/ComfyUI")
-)
+load_dotenv()
+
+COMFYUI_OUTPUT_FOLDER = os.getenv("COMFYUI_OUTPUT_FOLDER")
+if not COMFYUI_OUTPUT_FOLDER:
+    raise ValueError(
+        "COMFYUI_OUTPUT_FOLDER environment variable is not set. Please set it in your .env file."
+    )

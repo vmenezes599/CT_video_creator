@@ -1,0 +1,2 @@
+# Private GitHub Repository (requires GITHUB_TOKEN in .env file)
+logging_utils @ git+https://github.com/vmenezes599/Logging-Utils@master

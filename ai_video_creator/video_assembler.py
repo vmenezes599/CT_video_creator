@@ -8,7 +8,7 @@ by coordinating image generation, audio generation, and video composition.
 from pathlib import Path
 import ffmpeg
 
-from .video_recipe import VideoRecipe
+from .video_asset_manager import VideoAssetManager
 
 
 class VideoAssembler:
@@ -17,12 +17,11 @@ class VideoAssembler:
     image generation, audio generation, and video composition.
     """
 
-    def __init__(
-        self,
-    ):
+    def __init__(self, asset_manager: VideoAssetManager):
         """
         Initialize VideoCreator with the required generators.
         """
+        self.asset_manager = asset_manager
         self._temp_files = []
 
     def __get_audio_duration(self, path: str) -> float:
@@ -100,9 +99,7 @@ class VideoAssembler:
             if file_path.exists():
                 file_path.unlink()
 
-    def create_video_from_recipe(
-        self, video_recipe: VideoRecipe, output_path: Path, output_filename: str
-    ) -> None:
+    def create_video_from_recipe(self, output_filename: str) -> None:
         """
         Create a video from a video recipe.
 
