@@ -5,13 +5,14 @@ Video executor for create_video command.
 import json
 from pathlib import Path
 
-from .prompt import Prompt
+from ai_video_creator.prompt import Prompt
 
-from .video_recipe_paths import VideoRecipePaths
-from .generators import (
+from ai_video_creator.generators import (
     SparkTTSRecipe,
     FluxImageRecipe,
 )
+
+from .video_recipe_paths import VideoRecipePaths
 
 
 class VideoRecipeDefaultSettings:

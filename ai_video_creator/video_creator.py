@@ -2,47 +2,47 @@
 AI Video Generation Module
 """
 
-import json
 from pathlib import Path
 
-from .video_assembler import VideoAssembler
-from .video_recipe import VideoRecipeBuilder
-from .prompt import Prompt
-
-from .generators import FluxAIImageGenerator
+from .modules.video_assembler import VideoAssembler
+from .modules.video_asset_manager import VideoAssetManager
+from .modules.video_recipe import VideoRecipeBuilder
 
 
-class VideoCreator:
-    """A class to create videos from prompts using the VideoAssembler."""
+def create_chapter_video_recipe(story_path: Path, chapter_index: Path) -> None:
+    """
+    Create a video from a video prompt file.
 
-    DEFAULT_IMAGE_GENERATOR = FluxAIImageGenerator
+    Args:
+        video_prompt_path: Path to the video prompt file.
 
-    @classmethod
-    def create_video_from_prompt(
-        cls, story_path: Path, video_prompt_path: Path
-    ) -> None:
-        """
-        Create a video from a video prompt file.
+    Returns:
+        None
+    """
+    video_recipe_builder = VideoRecipeBuilder(
+        story_folder=story_path, chapter_prompt_index=chapter_index
+    )
+    video_recipe_builder.create_video_recipe()
 
-        Args:
-            video_prompt_path: Path to the video prompt file.
+    video_asset_manager = VideoAssetManager(
+        story_folder=story_path, chapter_index=chapter_index
+    )
+    video_asset_manager.generate_recipe_output()
 
-        Returns:
-            None
-        """
-        video_recipe_creator = VideoRecipeBuilder(
-            prompt_file=video_prompt_path,
-            story_folder=story_path,
-        )
-        video_recipe = video_recipe_creator.create_video_recipe()
 
-        # Define output path and filename
-        output_path = Path("output_videos")
-        output_path.mkdir(parents=True, exist_ok=True)
-        output_filename = "generated_video"
+def assemble_chapter_video(story_path: Path, chapter_index: int) -> None:
+    """
+    Assemble a chapter video from the recipe.
 
-        # Create the video
-        video_creator = VideoAssembler()
-        video_creator.create_video_from_recipe(
-            video_recipe, output_path, output_filename
-        )
+    Args:
+        story_path: Path to the story folder.
+        chapter_index: Chapter index to assemble video for.
+
+    Returns:
+        None
+    """
+    video_assembler = VideoAssembler(
+        story_folder=story_path,
+        chapter_index=chapter_index,
+    )
+    video_assembler.assemble_video()

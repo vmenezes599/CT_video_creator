@@ -3,9 +3,9 @@ Subtitle Generation Module
 """
 
 import os
-from typing import Optional
+from pathlib import Path
 import ffmpeg
-import stable_whisper
+import whisper
 
 
 class SubtitleGenerator:
@@ -13,7 +13,7 @@ class SubtitleGenerator:
     A class to generate subtitles from video files and add them to videos.
     """
 
-    def __init__(self, model_size: str = "medium"):
+    def __init__(self, model_size: str = "turbo"):
         """
         Initialize the SubtitleGenerator class.
 
@@ -25,7 +25,7 @@ class SubtitleGenerator:
     def _load_model(self):
         """Load the Whisper model if not already loaded."""
         if self._model is None:
-            self._model = stable_whisper.load_model(self.model_size)
+            self._model = whisper.load_model(self.model_size)
         return self._model
 
     def _format_timestamp(self, seconds: float) -> str:
@@ -41,9 +41,24 @@ class SubtitleGenerator:
         millis = int((seconds - int(seconds)) * 1000)
         return f"{hours:02}:{minutes:02}:{secs:02},{millis:03}"
 
-    def generate_srt_file(
-        self, video_path: str, output_srt_path: Optional[str] = None
-    ) -> str:
+    def write_srt(self, segments, output_path: Path):
+        """Write subtitles to an SRT file."""
+
+        def format_time(t):
+            hours = int(t // 3600)
+            minutes = int((t % 3600) // 60)
+            seconds = int(t % 60)
+            milliseconds = int((t - int(t)) * 1000)
+            return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            for i, segment in enumerate(segments, 1):
+                start = format_time(segment["start"])
+                end = format_time(segment["end"])
+                text = segment["text"].strip()
+                f.write(f"{i}\n{start} --> {end}\n{text}\n\n")
+
+    def generate_srt_file(self, video_path: Path) -> Path:
         """
         Generate an SRT file from the audio track of a video.
 
@@ -51,19 +66,18 @@ class SubtitleGenerator:
         :param output_srt_path: Path for the output SRT file (optional)
         :return: Path to the generated SRT file
         """
-        if output_srt_path is None:
-            video_path_split = video_path.split(".")
-            output_srt_path = f"{video_path_split[0]}.srt"
+        output_srt_path = video_path.with_suffix(".srt")
+        if not output_srt_path.exists():
+            model = self._load_model()
 
-        model = self._load_model()
-        result = model.transcribe(video_path)
-        stable_whisper.result_to_srt_vtt(result=result, filepath=output_srt_path)
+            result = model.transcribe(str(video_path), word_timestamps=True)
+            self.write_srt(segments=result["segments"], output_path=output_srt_path)
 
         return output_srt_path
 
     def add_subtitles_to_video(
-        self, video_path: str, srt_path: str, output_video_path: Optional[str] = None
-    ) -> str:
+        self, video_path: Path, srt_path: Path, output_video_path: Path
+    ) -> Path:
         """
         Add subtitles to a video file.
 
@@ -72,18 +86,14 @@ class SubtitleGenerator:
         :param output_video_path: Path for the output video file (optional)
         :return: Path to the output video with subtitles
         """
-        if output_video_path is None:
-            video_path_split = video_path.split(".")
-            output_video_path = f"{video_path_split[0]}_subtitled.{video_path_split[1]}"
-
         (
-            ffmpeg.input(video_path)
+            ffmpeg.input(str(video_path))
             .output(
-                output_video_path,
-                vf=f"subtitles={srt_path}",
+                str(output_video_path),
+                vf=f"subtitles={str(srt_path)}",
                 **{
-                    "c:v": "libx264",
-                    "preset": "fast",
+                    "c:v": "h264_nvenc",
+                    "preset": "p5",
                     "crf": "23",
                     "c:a": "aac",
                     "movflags": "+faststart",
@@ -98,10 +108,9 @@ class SubtitleGenerator:
 
     def generate_and_add_subtitles(
         self,
-        video_path: str,
-        output_video_path: Optional[str] = None,
+        video_path: Path,
         cleanup_srt: bool = True,
-    ) -> tuple[str, str]:
+    ) -> tuple[Path, Path]:
         """
         Generate subtitles and add them to the video in one step.
 
@@ -114,17 +123,15 @@ class SubtitleGenerator:
         srt_path = self.generate_srt_file(video_path)
 
         # Add subtitles to video
-        if output_video_path is None:
-            video_path_split = video_path.split(".")
-            output_video_path = f"{video_path_split[0]}_subtitled.{video_path_split[1]}"
+        output_video_path = video_path.with_stem(f"{video_path.stem}_subtitled")
 
         final_video_path = self.add_subtitles_to_video(
             video_path, srt_path, output_video_path
         )
 
         # Cleanup SRT file if requested
-        if cleanup_srt and os.path.exists(srt_path):
-            os.remove(srt_path)
+        if cleanup_srt and srt_path.exists():
+            srt_path.unlink()
             srt_path = None
 
         return final_video_path, srt_path

@@ -33,7 +33,10 @@ class VideoRecipePaths:
 
         # Recipe file path
         self.recipe_file = self.video_path / f"{self.recipe_name}.json"
-        self.video_asset_file = self.video_path / f"{self.recipe_name}_video_assets.json"
+        self.video_asset_file = (
+            self.video_path / f"{self.recipe_name}_video_assets.json"
+        )
+        self.video_output_file = self.video_path / f"{self.recipe_name}_output.mp4"
 
     @classmethod
     def create_from_story_and_index(
