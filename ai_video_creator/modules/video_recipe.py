@@ -28,8 +28,8 @@ class VideoRecipe:
     def __init__(self, recipe_path: Path):
         """Initialize VideoRecipe with default settings."""
         self.recipe_path = recipe_path
-        self.narrator_data = []
 
+        self.narrator_data = []
         self.image_data = []
 
         self.__load_from_file(recipe_path)
@@ -37,10 +37,12 @@ class VideoRecipe:
     def add_narrator_data(self, narrator_data) -> None:
         """Add narrator data to the recipe."""
         self.narrator_data.append(narrator_data)
+        self.save_current_state()
 
     def add_image_data(self, image_data) -> None:
         """Add image data to the recipe."""
         self.image_data.append(image_data)
+        self.save_current_state()
 
     def __load_from_file(self, file_path: Path) -> None:
         """Load video recipe from a JSON file."""

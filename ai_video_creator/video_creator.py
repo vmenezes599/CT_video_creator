@@ -9,7 +9,7 @@ from .modules.video_asset_manager import VideoAssetManager
 from .modules.video_recipe import VideoRecipeBuilder
 
 
-def create_chapter_video_recipe(story_path: Path, chapter_index: Path) -> None:
+def create_chapter_video_recipe(story_path: Path, chapter_index: int) -> None:
     """
     Create a video from a video prompt file.
 
