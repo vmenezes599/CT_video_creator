@@ -1,15 +1,15 @@
 """This module manages the creation of video assets for a given story chapter."""
 
 import json
+import shutil
 from pathlib import Path
-
-from .video_recipe import VideoRecipe
-from .video_recipe_paths import VideoRecipePaths
-
 from ai_video_creator.generators import (
     IAudioGenerator,
     IImageGenerator,
 )
+
+from .video_recipe import VideoRecipe
+from .video_recipe_paths import VideoRecipePaths
 
 
 class VideoAssets:
@@ -144,7 +144,7 @@ class VideoAssetManager:
             raise FileNotFoundError(f"Asset file does not exist: {asset_path}")
 
         target_path = self.__paths.assets_path / asset_path.name
-        asset_path.rename(target_path)
+        shutil.move(asset_path, target_path)
         return target_path
 
     def _generate_scene_assets(self, scene_index: int):
