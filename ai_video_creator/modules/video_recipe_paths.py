@@ -21,7 +21,6 @@ class VideoRecipePaths:
         # Initialize paths
         self.video_path = story_folder / "video"
         self.assets_path = self.video_path / "assets"
-        self.prompts_path = story_folder / "prompts"
 
         # Create directories if they don't exist
         self.assets_path.mkdir(parents=True, exist_ok=True)
@@ -137,9 +136,6 @@ class VideoRecipePaths:
             raise ValueError(
                 f"Chapter prompt file does not exist: {self.chapter_prompt_path}"
             )
-
-        if not self.prompts_path.exists():
-            raise ValueError(f"Prompts folder does not exist: {self.prompts_path}")
 
     def __str__(self) -> str:
         """String representation of VideoRecipePaths."""
