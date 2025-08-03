@@ -10,7 +10,7 @@ import requests
 from logging_utils import logger
 from requests.exceptions import RequestException
 
-from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER
+from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER, COMFYUI_URL
 
 from .comfyui_helpers import comfyui_get_history_output_name
 from .comfyui_workflow import IComfyUIWorkflow
@@ -20,8 +20,6 @@ class ComfyUIRequests:
     """
     ComfyuiRequest is a class that handles HTTP requests to the ComfyUI API.
     """
-
-    CONFYUI_URL = "http://127.0.0.1:8188/"  # Default ComfyUI local API
 
     def __init__(self, delay_seconds: int = 10) -> None:
         """
@@ -47,7 +45,7 @@ class ComfyUIRequests:
         """
         Check if ComfyUI is running by sending a GET request to the heartbeat endpoint.
         """
-        response = self._send_get_request(f"{self.CONFYUI_URL}/prompt", timeout=10)
+        response = self._send_get_request(f"{COMFYUI_URL}/prompt", timeout=10)
         return response.ok
 
     def comfyui_send_prompt(self, json: dict, timeout: int = 10) -> requests.Response:
@@ -61,7 +59,7 @@ class ComfyUIRequests:
         if not isinstance(json, dict):
             raise ValueError("The prompt must be a dictionary.")
 
-        url = f"{self.CONFYUI_URL}/prompt"
+        url = f"{COMFYUI_URL}/prompt"
         prompt = {"prompt": json}
 
         return self._send_post_request(url=url, json=prompt, timeout=timeout)
@@ -151,7 +149,7 @@ class ComfyUIRequests:
         """
         Get the queue information from ComfyUI.
         """
-        response = self._send_get_request(f"{self.CONFYUI_URL}/prompt", timeout=10)
+        response = self._send_get_request(f"{COMFYUI_URL}/prompt", timeout=10)
 
         if response.ok:
             queue_data = response.json()
@@ -164,7 +162,7 @@ class ComfyUIRequests:
         """
         Get the history information from ComfyUI.
         """
-        response = self._send_get_request(f"{self.CONFYUI_URL}/history", timeout=10)
+        response = self._send_get_request(f"{COMFYUI_URL}/history", timeout=10)
 
         if response.ok:
             history_data = response.json()
@@ -176,7 +174,7 @@ class ComfyUIRequests:
         """
         Get the history information from ComfyUI.
         """
-        response = self._send_get_request(f"{self.CONFYUI_URL}/history", timeout=10)
+        response = self._send_get_request(f"{COMFYUI_URL}/history", timeout=10)
 
         if response.ok:
             history_data = response.json()
