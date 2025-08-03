@@ -8,7 +8,7 @@ from pathlib import Path
 class VideoRecipePaths:
     """Handles path management for video recipe creation."""
 
-    def __init__(self, story_folder: Path, chapter_prompt_path: Path):
+    def __init__(self, story_folder: Path, chapter_prompt_index: int):
         """Initialize VideoRecipePaths with story folder and chapter prompt path.
 
         Args:
@@ -16,7 +16,7 @@ class VideoRecipePaths:
             chapter_prompt_path: Path to the chapter prompt file
         """
         self.story_folder = story_folder
-        self.chapter_prompt_path = chapter_prompt_path
+        self.chapter_prompt_path = self._find_prompt_by_index(chapter_prompt_index)
 
         # Initialize paths
         self.video_path = story_folder / "video"
@@ -38,29 +38,7 @@ class VideoRecipePaths:
         )
         self.video_output_file = self.video_path / f"{self.recipe_name}_output.mp4"
 
-    @classmethod
-    def create_from_story_and_index(
-        cls, story_folder: Path, chapter_prompt_index: int
-    ) -> "VideoRecipePaths":
-        """Create VideoRecipePaths from story folder and chapter index.
-
-        Args:
-            story_folder: Path to the story folder
-            chapter_prompt_index: Index of the chapter prompt
-
-        Returns:
-            VideoRecipePaths instance
-
-        Raises:
-            ValueError: If no prompt found for the given index
-        """
-        chapter_prompt_path = cls._find_prompt_by_index(
-            story_folder, chapter_prompt_index
-        )
-        return cls(story_folder, chapter_prompt_path)
-
-    @staticmethod
-    def _find_prompt_by_index(story_folder: Path, index: int) -> Path:
+    def _find_prompt_by_index(self, chapter_prompt_index: int) -> Path:
         """Find prompt by chapter index.
 
         Args:
@@ -74,13 +52,13 @@ class VideoRecipePaths:
             ValueError: If no prompt found for the given index
         """
         # Adjust index to match file naming convention
-        adjusted_index = index + 1
+        adjusted_index = chapter_prompt_index + 1
 
-        prompts_path = story_folder / "prompts"
-        if not prompts_path.exists():
-            raise ValueError(f"Prompts folder does not exist: {prompts_path}")
+        prompts_folder = self.story_folder / "prompts"
+        if not prompts_folder.exists():
+            raise ValueError(f"Prompts folder does not exist: {prompts_folder}")
 
-        for prompt_file in prompts_path.iterdir():
+        for prompt_file in prompts_folder.iterdir():
             if (
                 prompt_file.suffix == ".json"
                 and prompt_file.stem.find(f"{adjusted_index:03}") != -1
@@ -88,7 +66,7 @@ class VideoRecipePaths:
                 return prompt_file
 
         raise ValueError(
-            f"No prompt found for chapter index {index} (adjusted: {adjusted_index})"
+            f"No prompt found for chapter index {chapter_prompt_index} (adjusted: {adjusted_index})"
         )
 
     def get_audio_name(self, index: int) -> str:

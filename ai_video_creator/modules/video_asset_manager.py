@@ -116,9 +116,7 @@ class VideoAssetManager:
         self.output_file_prefix = f"chapter_{self.chapter_index:03}"
 
         # Initialize path management
-        self.__paths = VideoRecipePaths.create_from_story_and_index(
-            story_folder, chapter_index
-        )
+        self.__paths = VideoRecipePaths(story_folder, chapter_index)
 
         self.recipe = VideoRecipe(self.__paths.recipe_file)
         self.video_assets = VideoAssets(self.__paths.video_asset_file)

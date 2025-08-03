@@ -24,9 +24,7 @@ class VideoAssembler:
         """
         Initialize VideoCreator with the required generators.
         """
-        self.__paths = VideoRecipePaths.create_from_story_and_index(
-            story_folder, chapter_index
-        )
+        self.__paths = VideoRecipePaths(story_folder, chapter_index)
         self.__subtitle_generator = SubtitleGenerator()
 
         self.assets = VideoAssets(self.__paths.video_asset_file)

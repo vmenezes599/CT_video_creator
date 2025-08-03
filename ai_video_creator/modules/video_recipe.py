@@ -110,9 +110,7 @@ class VideoRecipeBuilder:
             seeds: List of seeds for each generation (None elements use default behavior)
         """
         # Initialize path management
-        self.__paths = VideoRecipePaths.create_from_story_and_index(
-            story_folder, chapter_prompt_index
-        )
+        self.__paths = VideoRecipePaths(story_folder, chapter_prompt_index)
         self.__chapter_prompt_path = self.__paths.chapter_prompt_path
 
         # Load video prompt
