@@ -2,7 +2,6 @@
 Subtitle Generation Module
 """
 
-import os
 from pathlib import Path
 import ffmpeg
 import whisper
