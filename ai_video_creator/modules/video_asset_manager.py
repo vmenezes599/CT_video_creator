@@ -31,8 +31,8 @@ class VideoAssets:
                 self.narrator_list = [asset.get("narrator", "") for asset in assets]
                 self.image_list = [asset.get("image", "") for asset in assets]
         except FileNotFoundError:
-            self.narrator_list = [""]
-            self.image_list = [""]
+            self.narrator_list = []
+            self.image_list = []
 
     def save_assets_to_file(self) -> None:
         """Save the current state of the video assets to a file."""
@@ -113,13 +113,30 @@ class VideoAssetManager:
         """Initialize VideoAssetManager with story folder and chapter index."""
         self.story_folder = story_folder
         self.chapter_index = chapter_index
-        self.output_file_prefix = f"chapter_{self.chapter_index:03}"
+        self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
         # Initialize path management
         self.__paths = VideoRecipePaths(story_folder, chapter_index)
 
         self.recipe = VideoRecipe(self.__paths.recipe_file)
         self.video_assets = VideoAssets(self.__paths.video_asset_file)
+
+        # Ensure video_assets lists have the same size as recipe
+        self._synchronize_assets_with_recipe()
+
+    def _synchronize_assets_with_recipe(self):
+        """Ensure video_assets lists have the same size as recipe."""
+        recipe_size = len(self.recipe.narrator_data)
+
+        # Extend or truncate narrator_list to match recipe size
+        while len(self.video_assets.narrator_list) < recipe_size:
+            self.video_assets.narrator_list.append("")
+        self.video_assets.narrator_list = self.video_assets.narrator_list[:recipe_size]
+
+        # Extend or truncate image_list to match recipe size
+        while len(self.video_assets.image_list) < recipe_size:
+            self.video_assets.image_list.append("")
+        self.video_assets.image_list = self.video_assets.image_list[:recipe_size]
 
     def _move_asset_to_database(self, asset_path: Path) -> Path:
         """Move asset to the database folder and return the new path."""

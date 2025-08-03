@@ -148,7 +148,7 @@ class VideoRecipeBuilder:
                 prompt=prompt.narrator,
                 clone_voice_path=VideoRecipeDefaultSettings.NARRATOR_VOICE,
             )
-            self._recipe.narrator_data.append(recipe)
+            self._recipe.add_narrator_data(recipe)
 
     def create_video_recipe(self) -> None:
         """Create video recipe from story folder and chapter prompt index."""
