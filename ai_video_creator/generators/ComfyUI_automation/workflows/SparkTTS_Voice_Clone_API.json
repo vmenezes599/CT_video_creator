@@ -44,5 +44,35 @@
 		"_meta": {
 			"title": "Save Audio (MP3)"
 		}
+	},
+	"4": {
+		"inputs": {
+			"offload_model": true,
+			"offload_cache": true,
+			"anything": [
+				"1",
+				0
+			]
+		},
+		"class_type": "VRAMCleanup",
+		"_meta": {
+			"title": "🎈VRAM-Cleanup"
+		}
+	},
+	"5": {
+		"inputs": {
+			"clean_file_cache": true,
+			"clean_processes": true,
+			"clean_dlls": true,
+			"retry_times": 3,
+			"anything": [
+				"4",
+				0
+			]
+		},
+		"class_type": "RAMCleanup",
+		"_meta": {
+			"title": "🎈RAM-Cleanup"
+		}
 	}
 }

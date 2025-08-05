@@ -12,20 +12,7 @@
 			"title": "SparkTTS Voice Creator 🔊"
 		}
 	},
-	"4": {
-		"inputs": {
-			"audioUI": "",
-			"audio": [
-				"1",
-				0
-			]
-		},
-		"class_type": "PreviewAudio",
-		"_meta": {
-			"title": "PreviewAudio"
-		}
-	},
-	"8": {
+	"2": {
 		"inputs": {
 			"filename_prefix": "audio/output",
 			"audioUI": "",
@@ -37,6 +24,36 @@
 		"class_type": "SaveAudio",
 		"_meta": {
 			"title": "SaveAudio"
+		}
+	},
+	"3": {
+		"inputs": {
+			"offload_model": true,
+			"offload_cache": true,
+			"anything": [
+				"1",
+				0
+			]
+		},
+		"class_type": "VRAMCleanup",
+		"_meta": {
+			"title": "🎈VRAM-Cleanup"
+		}
+	},
+	"4": {
+		"inputs": {
+			"clean_file_cache": true,
+			"clean_processes": true,
+			"clean_dlls": true,
+			"retry_times": 3,
+			"anything": [
+				"3",
+				0
+			]
+		},
+		"class_type": "RAMCleanup",
+		"_meta": {
+			"title": "🎈RAM-Cleanup"
 		}
 	}
 }
