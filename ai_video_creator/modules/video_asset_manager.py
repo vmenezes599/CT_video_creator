@@ -3,13 +3,11 @@
 import json
 import shutil
 from pathlib import Path
-from ai_video_creator.generators import (
-    IAudioGenerator,
-    IImageGenerator,
-)
+
+from ai_video_creator.generators import IAudioGenerator, IImageGenerator
+from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
 
 from .video_recipe import VideoRecipe
-from .video_recipe_paths import VideoRecipePaths
 
 
 class VideoAssets:

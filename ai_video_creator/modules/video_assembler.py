@@ -5,14 +5,15 @@ This module contains the VideoCreator class that orchestrates the entire video c
 by coordinating image generation, audio generation, and video composition.
 """
 
-from pathlib import Path
-import ffmpeg
 import subprocess
+from pathlib import Path
 
+import ffmpeg
 from logging_utils import begin_console_logging, logger
-from ai_video_creator.generators import SubtitleGenerator
 
-from .video_recipe_paths import VideoRecipePaths
+from ai_video_creator.generators import SubtitleGenerator
+from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
+
 from .video_asset_manager import VideoAssets
 
 

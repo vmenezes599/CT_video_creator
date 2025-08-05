@@ -2,10 +2,11 @@
 AI Video Generation Module
 """
 
-from pathlib import Path
 import random
-from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 from abc import ABC, abstractmethod
+from pathlib import Path
+
+from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 
 from .ComfyUI_automation.comfyui_image_workflows import FluxWorkflow
 
