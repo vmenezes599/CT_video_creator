@@ -26,16 +26,12 @@ class VideoRecipePaths:
         self.assets_path.mkdir(parents=True, exist_ok=True)
 
         # Generate recipe name
-        self.recipe_name = (
-            f"{self.video_path.name}_{self.chapter_prompt_path.stem}_recipe"
-        )
+        self.name_stem = f"{story_folder.stem}_{self.chapter_prompt_path.stem}"
 
         # Recipe file path
-        self.recipe_file = self.video_path / f"{self.recipe_name}.json"
-        self.video_asset_file = (
-            self.video_path / f"{self.recipe_name}_video_assets.json"
-        )
-        self.video_output_file = self.video_path / f"{self.recipe_name}_output.mp4"
+        self.recipe_file = self.video_path / f"{self.name_stem}_recipe.json"
+        self.video_asset_file = self.video_path / f"{self.name_stem}_video_assets.json"
+        self.video_output_file = self.video_path / f"{self.name_stem}_output.mp4"
 
     def _find_prompt_by_index(self, chapter_prompt_index: int) -> Path:
         """Find prompt by chapter index.
@@ -77,7 +73,7 @@ class VideoRecipePaths:
         Returns:
             Audio file name
         """
-        return f"{self.recipe_name}_narration_index{index}"
+        return f"{self.name_stem}_narration_index{index}"
 
     def get_image_name(self, index: int) -> str:
         """Get image file name for the given index.
@@ -88,7 +84,7 @@ class VideoRecipePaths:
         Returns:
             Image file name
         """
-        return f"{self.recipe_name}_visual_index{index}"
+        return f"{self.name_stem}_visual_index{index}"
 
     def move_assets_to_story_folder(self, asset_list: list[Path]) -> list[Path]:
         """Move generated assets to the story assets folder.
@@ -139,7 +135,9 @@ class VideoRecipePaths:
 
     def __str__(self) -> str:
         """String representation of VideoRecipePaths."""
-        return f"VideoRecipePaths(story='{self.story_folder}', recipe='{self.recipe_name}')"
+        return (
+            f"VideoRecipePaths(story='{self.story_folder}', recipe='{self.name_stem}')"
+        )
 
     def __repr__(self) -> str:
         """Detailed string representation of VideoRecipePaths."""
@@ -147,6 +145,6 @@ class VideoRecipePaths:
             f"VideoRecipePaths("
             f"story_folder={self.story_folder}, "
             f"chapter_prompt_path={self.chapter_prompt_path}, "
-            f"recipe_name='{self.recipe_name}'"
+            f"recipe_name='{self.name_stem}'"
             f")"
         )
