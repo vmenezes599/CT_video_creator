@@ -103,7 +103,7 @@ class VideoRecipe:
         try:
             logger.debug(f"Saving video recipe state to: {self.recipe_path.name}")
             with open(self.recipe_path, "w", encoding="utf-8") as file:
-                json.dump(self.to_dict(), file, indent=4)
+                json.dump(self.to_dict(), file, ensure_ascii=False, indent=4)
             logger.trace(f"Recipe saved with {len(self.narrator_data)} narrator items and {len(self.image_data)} image items")
         except IOError as e:
             logger.error(f"Error saving video recipe to {self.recipe_path.name}: {e}")
