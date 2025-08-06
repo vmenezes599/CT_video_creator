@@ -21,10 +21,13 @@ class ComfyUIRequests:
     ComfyuiRequest is a class that handles HTTP requests to the ComfyUI API.
     """
 
-    def __init__(self, delay_seconds: int = 10) -> None:
+    def __init__(
+        self, max_retries_per_request: int = 5, delay_seconds: int = 10
+    ) -> None:
         """
         Initializes the ComfyuiRequest with a configurable retry mechanism.
         """
+        self.max_retries_per_request = max_retries_per_request
         self.delay_seconds = delay_seconds
 
     def _send_get_request(self, url: str, timeout: int = 10):
@@ -39,7 +42,9 @@ class ComfyUIRequests:
         """
         Sends a POST request using the configured session.
         """
-        return requests.post(url=url, data=data, json=json, timeout=timeout)
+        response = requests.post(url=url, data=data, json=json, timeout=timeout)
+        response.raise_for_status()
+        return response
 
     def comfyui_get_heartbeat(self) -> bool:
         """
@@ -64,88 +69,171 @@ class ComfyUIRequests:
 
         return self._send_post_request(url=url, json=prompt, timeout=timeout)
 
-    def comfyui_ensure_send_all_prompts(
-        self, req_list: list[IComfyUIWorkflow]
-    ) -> list[str]:  # 28
+    def _create_progress_summary(
+        self, workflow: IComfyUIWorkflow, max_length: int = 100
+    ) -> tuple[str, str]:
         """
-        Send all prompts in the list to ComfyUI and wait for them to finish.
+        Create a progress summary for displaying workflow information.
+
+        :param workflow: The workflow to summarize
+        :param max_length: Maximum length for display summary
+        :return: Tuple of (full_summary, display_summary)
         """
+        full_summary = workflow.get_workflow_summary()
+        if len(full_summary) > max_length:
+            display_summary = full_summary[:max_length] + "..."
+        else:
+            display_summary = full_summary
+        return full_summary, display_summary
 
-        output_image_paths: list[str] = []
-        total_requests = len(req_list)
-        i = 0
-        while i < total_requests:
-            req = req_list[i]
+    def _submit_single_prompt(self, workflow: IComfyUIWorkflow) -> requests.Response:
+        """
+        Submit a single prompt to ComfyUI.
 
+        :param workflow: The workflow to submit
+        :return: Response from ComfyUI
+        :raises RuntimeError: If the prompt submission fails
+        """
+        json_req = workflow.get_json()
+        response = self.comfyui_send_prompt(json=json_req, timeout=10)
+        return response
+
+    def _wait_for_completion(self, prompt_id: str, check_interval: int = 5) -> int:
+        """
+        Wait for ComfyUI to complete processing the current request.
+
+        :param prompt_id: The ID of the prompt to check
+        :param check_interval: Seconds between queue checks
+        :return: Processing time in seconds
+        """
+        start_time = datetime.now()
+
+        while True:
+            history = self.comfyui_get_history()
+            if prompt_id in history:
+                break
+            time.sleep(check_interval)
+
+        return (datetime.now() - start_time).seconds
+
+    def _get_output_path(self, history_entry: dict) -> str | None:
+        """
+        Get the output file path for a completed workflow.
+
+        :param workflow: The workflow that was processed
+        :param index: Index of the workflow in the batch
+        :return: Full path to output file or None if not found
+        """
+        output_names = comfyui_get_history_output_name(history_entry)
+        if output_names:
+            actual_output_name = output_names[0]
+            return os.path.join(COMFYUI_OUTPUT_FOLDER, actual_output_name)
+
+        return None
+
+    def _check_for_output_success(self, response: dict):
+        """
+        Check if the response contains a successful output.
+
+        :param response: The response dictionary from ComfyUI
+        :return: True if output is successful, False otherwise
+        """
+        if response["status"]["status_str"] != "success":
+            logger.error("ComfyUI request failed: %s", response["status"]["status_str"])
+            raise RuntimeError(
+                f"ComfyUI request failed: {response['status']['status_str']}"
+            )
+        if response["completed"] is False:
+            logger.error("ComfyUI request not completed successfully.")
+            raise RuntimeError(
+                f"ComfyUI request failed: {response['status']['status_str']}"
+            )
+
+    def _process_single_workflow(self, workflow: IComfyUIWorkflow) -> str | None:
+        """
+        Process a single workflow through the complete pipeline.
+
+        :param workflow: The workflow to process
+        :param index: Current workflow index (0-based)
+        :param total: Total number of workflows
+        :return: Output file path or None if processing failed
+        """
+        _, display_summary = self._create_progress_summary(workflow)
+
+        tries = 0
+        while tries < self.max_retries_per_request:
             try:
-                print_summary_max_length = 100
-                full_summary = req.get_workflow_summary()
-                smaller_workflow_summary = full_summary[
-                    : min(print_summary_max_length, len(full_summary))
-                ]
-                if len(full_summary) > print_summary_max_length:
-                    smaller_workflow_summary += "..."
+                # Submit the prompt
+                response = self._submit_single_prompt(workflow)
+                response_data = response.json()
 
-                print(
-                    f"Sending request {i + 1}/{total_requests}: {smaller_workflow_summary}"
-                )
+                prompt_id = response_data["prompt_id"]
 
-                json_req = req.get_json()
-                response = self.comfyui_send_prompt(json=json_req, timeout=10)
-                if not response.ok:
-                    raise RuntimeError(f"Bad prompt: {response.status_code}")
-
-                current_time = datetime.now()
-
-                # Wait for the request to finish
-                while True:
-                    server_reply = self.comfyui_get_queue()
-
-                    if server_reply[1] == 0:
-                        break
-
-                    time.sleep(5)
-
-                # Log success
-                proccess_time_seconds = (datetime.now() - current_time).seconds
-                print(
-                    f"Request finished successfully after {proccess_time_seconds}s: {smaller_workflow_summary}"
-                )
-
-                output_name = f"{full_summary.split('/')[-1]}_{str(i).zfill(5)}"
-
-                history_status, history_entry = self.comfyui_get_last_history_entry()
-                if history_status:
-                    output_names = comfyui_get_history_output_name(history_entry)
-
-                    if len(output_names) > 0:
-                        output_name = output_names[0]
-
-                        full_path_name = os.path.join(
-                            COMFYUI_OUTPUT_FOLDER, output_name
-                        )
-                        output_image_paths.append(full_path_name)
+                # Wait for completion and track timing
+                processing_time = self._wait_for_completion(prompt_id)
 
                 logger.info(
-                    "%s == %s (%ds)",
-                    output_name,
-                    full_summary.split("/")[:-1],
-                    proccess_time_seconds,
+                    "Request finished successfully after %ds: %s",
+                    processing_time,
+                    display_summary,
                 )
 
-                # Move to the next request
-                i += 1
-            except RuntimeError as e:
-                raise e
-            except RequestException as e:
-                print(e)
-                logger.error("Connection error: %s", e)
+                # Get output path
+                history_entry = self.comfyui_get_last_history_entry()
 
+                if history_entry:
+                    self._check_for_output_success(history_entry)
+                    output_path = self._get_output_path(history_entry)
+
+                    return output_path
+                tries += 1
+
+            except RuntimeError:
+                tries += 1
+                logger.error(
+                    "Failed to run workflow on attempt %d/%d for request: %s",
+                    tries,
+                    self.max_retries_per_request,
+                    display_summary,
+                )
+                if tries < self.max_retries_per_request:
+                    time.sleep(self.delay_seconds)
+            except RequestException as e:
+                logger.error(
+                    "Connection error during request %s: %s", display_summary, e
+                )
+                time.sleep(self.delay_seconds)
+
+        # If all retries exhausted
+        logger.error(
+            "Failed to process workflow after %d attempts: %s",
+            self.max_retries_per_request,
+            display_summary,
+        )
+        return None
+
+    def comfyui_ensure_send_all_prompts(
+        self, req_list: list[IComfyUIWorkflow]
+    ) -> list[str]:
+        """
+        Send all prompts in the list to ComfyUI and wait for them to finish.
+
+        :param req_list: List of workflows to process
+        :return: List of output file paths for successful requests
+        """
+        output_image_paths: list[str] = []
+
+        for workflow in req_list:
+            output_path = self._process_single_workflow(workflow)
+            if output_path:
+                output_image_paths.append(output_path)
+
+            # Add delay between requests
             time.sleep(self.delay_seconds)
 
         return output_image_paths
 
-    def comfyui_get_queue(self) -> tuple[bool, int]:
+    def comfyui_get_processing_queue(self) -> int:
         """
         Get the queue information from ComfyUI.
         """
@@ -153,12 +241,12 @@ class ComfyUIRequests:
 
         if response.ok:
             queue_data = response.json()
-            return (True, queue_data["exec_info"]["queue_remaining"])
+            return queue_data["exec_info"]["queue_remaining"]
 
-        print(f"Failed to fetch queue. Status code: {response.status_code}")
-        return (False, -1)
+        logger.error("Failed to fetch queue.")
+        return -1
 
-    def comfyui_get_history(self) -> tuple[bool, list]:
+    def comfyui_get_history(self) -> dict:
         """
         Get the history information from ComfyUI.
         """
@@ -166,20 +254,19 @@ class ComfyUIRequests:
 
         if response.ok:
             history_data = response.json()
-            return (True, history_data)
+            return history_data
 
-        print(f"Failed to fetch history. Status code: {response.status_code}")
+        logger.error("Failed to fetch history.")
+        return {}
 
-    def comfyui_get_last_history_entry(self) -> tuple[bool, list]:
+    def comfyui_get_last_history_entry(self) -> dict:
         """
-        Get the history information from ComfyUI.
+        Get the last history entry from ComfyUI.
         """
-        response = self._send_get_request(f"{COMFYUI_URL}/history", timeout=10)
+        history = self.comfyui_get_history()
 
-        if response.ok:
-            history_data = response.json()
-            last_key = list(history_data.keys())[-1]
-            return (True, history_data[last_key])
+        if history:
+            return history[-1]
 
-        print(f"Failed to fetch history. Status code: {response.status_code}")
-        return (False, [])
+        logger.error("Failed to fetch last history entry.")
+        return {}

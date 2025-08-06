@@ -6,11 +6,11 @@ from .video_creator import create_chapter_video_recipe, assemble_chapter_video
 
 def main():
     """Main function to run the AI Video Creator application."""
-    story_path = Path("stories/story_example")
-    video_prompt_path = story_path / "prompts" / "chapter_001.json"
+    story_path = Path("stories/The retainer")
+    chapter_index = 0
 
-    create_chapter_video_recipe(story_path, video_prompt_path)
-    assemble_chapter_video(story_path, chapter_index=0)
+    create_chapter_video_recipe(story_path, chapter_index=chapter_index)
+    assemble_chapter_video(story_path, chapter_index=chapter_index)
 
 
 if __name__ == "__main__":
