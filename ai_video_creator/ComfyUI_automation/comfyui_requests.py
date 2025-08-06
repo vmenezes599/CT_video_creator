@@ -143,7 +143,7 @@ class ComfyUIRequests:
             raise RuntimeError(
                 f"ComfyUI request failed: {response['status']['status_str']}"
             )
-        if response["completed"] is False:
+        if response["status"]["completed"] is False:
             logger.error("ComfyUI request not completed successfully.")
             raise RuntimeError(
                 f"ComfyUI request failed: {response['status']['status_str']}"
@@ -266,7 +266,9 @@ class ComfyUIRequests:
         history = self.comfyui_get_history()
 
         if history:
-            return history[-1]
+            # Get the last key from the dictionary
+            last_key = list(history.keys())[-1]
+            return history[last_key]
 
         logger.error("Failed to fetch last history entry.")
         return {}

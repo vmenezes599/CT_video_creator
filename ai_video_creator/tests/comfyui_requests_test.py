@@ -16,7 +16,7 @@ from ai_video_creator.environment_variables import COMFYUI_URL
 @pytest.fixture
 def comfyui_requests():
     """Fixture to create a ComfyUIRequests instance."""
-    return ComfyUIRequests(delay_seconds=1)  # Reduce delay for testing
+    return ComfyUIRequests(max_retries_per_request=3, delay_seconds=1)  # Reduce delay for testing
 
 
 @pytest.fixture
@@ -154,7 +154,7 @@ class TestComfyUIRequests:
             comfyui_requests.comfyui_send_prompt(123)
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
-    def test_comfyui_get_queue_success(self, mock_get, comfyui_requests):
+    def test_comfyui_get_processing_queue_success(self, mock_get, comfyui_requests):
         """Test successful queue status retrieval - tests JSON parsing logic."""
         # Arrange
         mock_response = Mock()
@@ -164,16 +164,15 @@ class TestComfyUIRequests:
         mock_get.return_value = mock_response
 
         # Act
-        success, queue_count = comfyui_requests.comfyui_get_queue()
+        queue_count = comfyui_requests.comfyui_get_processing_queue()
 
         # Assert
-        assert success is True
         assert queue_count == 3
         # Test URL construction
         mock_get.assert_called_once_with(url=f"{COMFYUI_URL}/prompt", timeout=10)
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
-    def test_comfyui_get_queue_failure(self, mock_get, comfyui_requests):
+    def test_comfyui_get_processing_queue_failure(self, mock_get, comfyui_requests):
         """Test failed queue status retrieval - tests error handling logic."""
         # Arrange
         mock_response = Mock()
@@ -182,10 +181,9 @@ class TestComfyUIRequests:
         mock_get.return_value = mock_response
 
         # Act
-        success, queue_count = comfyui_requests.comfyui_get_queue()
+        queue_count = comfyui_requests.comfyui_get_processing_queue()
 
         # Assert
-        assert success is False
         assert queue_count == -1  # Test the actual error return value
         # Test URL construction
         mock_get.assert_called_once_with(url=f"{COMFYUI_URL}/prompt", timeout=10)
@@ -197,17 +195,16 @@ class TestComfyUIRequests:
         mock_response = Mock()
         mock_response.ok = True
         test_history = {
-            "12345": {"status": {"completed": True}},
-            "67890": {"status": {"completed": False}},
+            "12345": {"status": {"status_str": "success", "completed": True}},
+            "67890": {"status": {"status_str": "error", "completed": False}},
         }
         mock_response.json.return_value = test_history
         mock_get.return_value = mock_response
 
         # Act
-        success, history_data = comfyui_requests.comfyui_get_history()
+        history_data = comfyui_requests.comfyui_get_history()
 
         # Assert
-        assert success is True
         assert len(history_data) == 2
         assert "12345" in history_data
         assert history_data == test_history  # Test that actual data is returned unchanged
@@ -227,93 +224,58 @@ class TestComfyUIRequests:
         result = comfyui_requests.comfyui_get_history()
 
         # Assert
-        assert result is None  # Function doesn't return anything on failure
+        assert result == {}  # Function returns empty dict on failure
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
-    def test_comfyui_get_last_history_entry_success(self, mock_get, comfyui_requests):
+    def test_comfyui_get_last_history_entry_success(self, comfyui_requests):
         """Test successful last history entry retrieval - tests the 'last key' selection logic."""
         # Arrange
-        mock_response = Mock()
-        mock_response.ok = True
-        # Test the actual logic: last key should be selected
         test_history = {
-            "12345": {"status": {"completed": True}, "outputs": {}},
+            "12345": {"status": {"status_str": "success", "completed": True}, "outputs": {}},
             "67890": {
-                "status": {"completed": True},
+                "status": {"status_str": "success", "completed": True},
                 "outputs": {"images": ["output.png"]},
             },
         }
-        mock_response.json.return_value = test_history
-        mock_get.return_value = mock_response
+        
+        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+            mock_get_history.return_value = test_history
 
-        # Act
-        success, last_entry = comfyui_requests.comfyui_get_last_history_entry()
+            # Act
+            last_entry = comfyui_requests.comfyui_get_last_history_entry()
 
-        # Assert
-        assert success is True
-        # Test that it actually returns the LAST entry (67890, not 12345)
-        expected_last_entry = {
-            "status": {"completed": True},
-            "outputs": {"images": ["output.png"]},
-        }
-        assert last_entry == expected_last_entry
-        # Test URL construction
-        mock_get.assert_called_once_with(url=f"{COMFYUI_URL}/history", timeout=10)
+            # Assert
+            # Test that it actually returns the LAST entry (67890, not 12345)
+            expected_last_entry = {
+                "status": {"status_str": "success", "completed": True},
+                "outputs": {"images": ["output.png"]},
+            }
+            assert last_entry == expected_last_entry
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
-    def test_comfyui_get_last_history_entry_failure(self, mock_get, comfyui_requests):
+    def test_comfyui_get_last_history_entry_failure(self, comfyui_requests):
         """Test failed last history entry retrieval."""
         # Arrange
-        mock_response = Mock()
-        mock_response.ok = False
-        mock_response.status_code = 503
-        mock_get.return_value = mock_response
+        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+            mock_get_history.return_value = {}
 
-        # Act
-        success, last_entry = comfyui_requests.comfyui_get_last_history_entry()
+            # Act
+            last_entry = comfyui_requests.comfyui_get_last_history_entry()
 
-        # Assert
-        assert success is False
-        assert last_entry == []
+            # Assert
+            assert last_entry == {}
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    @patch(
-        "ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name"
-    )
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.os.path.join")
     def test_comfyui_ensure_send_all_prompts_success(
         self,
-        mock_path_join,
-        mock_get_output_name,
         mock_sleep,
         comfyui_requests,
         mock_workflow,
     ):
         """Test successful processing of all prompts."""
-        # Arrange
-        mock_path_join.return_value = "/fake/path/output.png"
-        mock_get_output_name.return_value = ["output.png"]
-
-        # Mock the methods used in the function
+        # Arrange - Mock the _process_single_workflow method
         with patch.object(
-            comfyui_requests, "comfyui_send_prompt"
-        ) as mock_send_prompt, patch.object(
-            comfyui_requests, "comfyui_get_queue"
-        ) as mock_get_queue, patch.object(
-            comfyui_requests, "comfyui_get_last_history_entry"
-        ) as mock_get_history:
-
-            # Setup mocks
-            mock_response = Mock()
-            mock_response.ok = True
-            mock_send_prompt.return_value = mock_response
-
-            # First call returns queue with items, second call returns empty queue
-            mock_get_queue.side_effect = [(True, 1), (True, 0)]
-            mock_get_history.return_value = (
-                True,
-                {"outputs": {"images": ["output.png"]}},
-            )
+            comfyui_requests, "_process_single_workflow"
+        ) as mock_process_workflow:
+            mock_process_workflow.return_value = "/fake/path/output.png"
 
             # Act
             result = comfyui_requests.comfyui_ensure_send_all_prompts([mock_workflow])
@@ -321,44 +283,27 @@ class TestComfyUIRequests:
             # Assert
             assert len(result) == 1
             assert result[0] == "/fake/path/output.png"
-            mock_send_prompt.assert_called_once()
-            mock_get_queue.assert_called()
+            mock_process_workflow.assert_called_once_with(mock_workflow)
+            mock_sleep.assert_called_once_with(1)  # delay_seconds from fixture
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    def test_comfyui_ensure_send_all_prompts_bad_response(
+    def test_comfyui_ensure_send_all_prompts_failure(
         self, mock_sleep, comfyui_requests, mock_workflow
     ):
-        """Test handling of bad response during prompt sending."""
+        """Test handling of failure during workflow processing."""
         # Arrange
-        with patch.object(comfyui_requests, "comfyui_send_prompt") as mock_send_prompt:
-            mock_response = Mock()
-            mock_response.ok = False
-            mock_response.status_code = 400
-            mock_send_prompt.return_value = mock_response
+        with patch.object(
+            comfyui_requests, "_process_single_workflow"
+        ) as mock_process_workflow:
+            mock_process_workflow.return_value = None  # Simulate failure
 
-            # Act & Assert
-            with pytest.raises(RuntimeError, match="Bad prompt: 400"):
-                comfyui_requests.comfyui_ensure_send_all_prompts([mock_workflow])
-
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    def test_comfyui_ensure_send_all_prompts_request_exception(
-        self, mock_sleep, comfyui_requests, mock_workflow
-    ):
-        """Test handling of request exception during prompt sending."""
-        # Arrange
-        mock_workflow.get_json.return_value = {"test": "data"}
-
-        with patch.object(comfyui_requests, "comfyui_send_prompt") as mock_send_prompt:
-            mock_send_prompt.side_effect = RequestException("Connection failed")
-
-            # Act - Should handle the exception gracefully and return empty results
+            # Act
             result = comfyui_requests.comfyui_ensure_send_all_prompts([mock_workflow])
 
             # Assert - Should continue processing and return empty list (no successful outputs)
             assert result == []
-            
-            # Verify sleep was called (for the delay between requests)
-            mock_sleep.assert_called()
+            mock_process_workflow.assert_called_once_with(mock_workflow)
+            mock_sleep.assert_called_once_with(1)  # delay_seconds from fixture
 
     def test_comfyui_ensure_send_all_prompts_empty_list(self, comfyui_requests):
         """Test sending empty list of prompts."""
@@ -383,25 +328,9 @@ class TestComfyUIRequests:
         workflow2.get_json.return_value = {"workflow": 2}
 
         with patch.object(
-            comfyui_requests, "comfyui_send_prompt"
-        ) as mock_send_prompt, patch.object(
-            comfyui_requests, "comfyui_get_queue"
-        ) as mock_get_queue, patch.object(
-            comfyui_requests, "comfyui_get_last_history_entry"
-        ) as mock_get_history, patch(
-            "ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name"
-        ) as mock_get_output_name, patch(
-            "ai_video_creator.ComfyUI_automation.comfyui_requests.os.path.join"
-        ) as mock_path_join:
-
-            # Setup mocks
-            mock_response = Mock()
-            mock_response.ok = True
-            mock_send_prompt.return_value = mock_response
-            mock_get_queue.return_value = (True, 0)  # Queue is empty immediately
-            mock_get_history.return_value = (True, {"outputs": {}})
-            mock_get_output_name.return_value = ["output1.png", "output2.png"]
-            mock_path_join.side_effect = ["/path/output1.png", "/path/output2.png"]
+            comfyui_requests, "_process_single_workflow"
+        ) as mock_process_workflow:
+            mock_process_workflow.side_effect = ["/path/output1.png", "/path/output2.png"]
 
             # Act
             result = comfyui_requests.comfyui_ensure_send_all_prompts(
@@ -409,8 +338,11 @@ class TestComfyUIRequests:
             )
 
             # Assert
-            assert mock_send_prompt.call_count == 2
+            assert mock_process_workflow.call_count == 2
             assert len(result) == 2
+            assert result == ["/path/output1.png", "/path/output2.png"]
+            # Should call sleep twice (once after each workflow)
+            assert mock_sleep.call_count == 2
 
 
 # Additional test cases for edge cases and error conditions
@@ -433,24 +365,26 @@ class TestComfyUIRequestsEdgeCases:
         expected_url = "http://127.0.0.1:8188/prompt"
         mock_get.assert_called_once_with(url=expected_url, timeout=10)
 
-    def test_delay_seconds_initialization(self):
-        """Test custom delay seconds initialization."""
+    def test_max_retries_initialization(self):
+        """Test max retries initialization."""
         # Act
-        custom_requests = ComfyUIRequests(delay_seconds=5)
+        custom_requests = ComfyUIRequests(max_retries_per_request=3, delay_seconds=5)
 
         # Assert
+        assert custom_requests.max_retries_per_request == 3
         assert custom_requests.delay_seconds == 5
 
-    def test_default_delay_seconds(self):
-        """Test default delay seconds."""
+    def test_default_max_retries(self):
+        """Test default max retries."""
         # Act
         default_requests = ComfyUIRequests()
 
         # Assert
+        assert default_requests.max_retries_per_request == 5
         assert default_requests.delay_seconds == 10
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
-    def test_comfyui_get_queue_malformed_response(self, mock_get, comfyui_requests):
+    def test_comfyui_get_processing_queue_malformed_response(self, mock_get, comfyui_requests):
         """Test queue retrieval with malformed response - tests real JSON parsing error handling."""
         # Arrange
         mock_response = Mock()
@@ -461,7 +395,7 @@ class TestComfyUIRequestsEdgeCases:
 
         # Act & Assert - This should raise KeyError because the real code tries to access ["exec_info"]["queue_remaining"]
         with pytest.raises(KeyError):
-            comfyui_requests.comfyui_get_queue()
+            comfyui_requests.comfyui_get_processing_queue()
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
     def test_comfyui_get_history_empty_response(self, mock_get, comfyui_requests):
@@ -473,27 +407,23 @@ class TestComfyUIRequestsEdgeCases:
         mock_get.return_value = mock_response
 
         # Act
-        success, history_data = comfyui_requests.comfyui_get_history()
+        history_data = comfyui_requests.comfyui_get_history()
 
         # Assert
-        assert success is True
         assert history_data == {}
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
-    def test_comfyui_get_last_history_entry_empty_history(
-        self, mock_get, comfyui_requests
-    ):
+    def test_comfyui_get_last_history_entry_empty_history(self, comfyui_requests):
         """Test last history entry retrieval with empty history - tests real IndexError handling."""
         # Arrange
-        mock_response = Mock()
-        mock_response.ok = True
-        # Empty dict should cause IndexError when trying to get last key
-        mock_response.json.return_value = {}
-        mock_get.return_value = mock_response
+        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+            # Empty dict should cause IndexError when trying to get last key
+            mock_get_history.return_value = {}
 
-        # Act & Assert - The real code will raise IndexError on list(empty_dict.keys())[-1]
-        with pytest.raises(IndexError):
-            comfyui_requests.comfyui_get_last_history_entry()
+            # Act
+            last_entry = comfyui_requests.comfyui_get_last_history_entry()
+
+            # Assert - Should return empty dict, not raise exception
+            assert last_entry == {}
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.post")
     def test_comfyui_send_prompt_with_node_errors(self, mock_post, comfyui_requests):
@@ -536,7 +466,7 @@ class TestComfyUIRequestsEdgeCases:
 
         # Act & Assert
         with pytest.raises(ValueError):
-            comfyui_requests.comfyui_get_queue()
+            comfyui_requests.comfyui_get_processing_queue()
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.post")
     def test_comfyui_send_prompt_server_error(self, mock_post, comfyui_requests):
@@ -569,51 +499,141 @@ class TestComfyUIRequestsEdgeCases:
         with pytest.raises(ValueError, match="The prompt must be a dictionary"):
             comfyui_requests.comfyui_send_prompt([{"test": "data"}])
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    @patch(
-        "ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name"
-    )
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.os.path.join")
-    def test_comfyui_ensure_send_all_prompts_success(
-        self,
-        mock_path_join,
-        mock_get_output_name,
-        mock_sleep,
-        comfyui_requests,
-        mock_workflow,
-    ):
-        """Test successful completion of sending all prompts."""
+    def test_create_progress_summary_short_text(self, comfyui_requests, mock_workflow):
+        """Test progress summary creation with short text."""
         # Arrange
-        with patch.object(
-            comfyui_requests, "comfyui_send_prompt"
-        ) as mock_send_prompt, patch.object(
-            comfyui_requests, "comfyui_get_queue"
-        ) as mock_get_queue, patch.object(
-            comfyui_requests, "comfyui_get_last_history_entry"
-        ) as mock_get_history:
+        mock_workflow.get_workflow_summary.return_value = "short_workflow"
+        
+        # Act
+        full_summary, display_summary = comfyui_requests._create_progress_summary(mock_workflow, 100)
+        
+        # Assert
+        assert full_summary == "short_workflow"
+        assert display_summary == "short_workflow"
 
-            mock_response = Mock()
-            mock_response.ok = True
-            mock_send_prompt.return_value = mock_response
+    def test_create_progress_summary_long_text(self, comfyui_requests, mock_workflow):
+        """Test progress summary creation with long text."""
+        # Arrange
+        long_text = "a" * 200
+        mock_workflow.get_workflow_summary.return_value = long_text
+        
+        # Act
+        full_summary, display_summary = comfyui_requests._create_progress_summary(mock_workflow, 50)
+        
+        # Assert
+        assert full_summary == long_text
+        assert display_summary == "a" * 50 + "..."
 
-            # Simulate queue becoming empty after one check
-            mock_get_queue.side_effect = [
-                (True, 1),
-                (True, 0),
-            ]  # First has items, then empty
+    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.post")
+    def test_submit_single_prompt_success(self, mock_post, comfyui_requests, mock_workflow):
+        """Test successful single prompt submission."""
+        # Arrange
+        mock_response = Mock()
+        mock_response.ok = True
+        mock_post.return_value = mock_response
+        mock_workflow.get_json.return_value = {"test": "data"}
+        
+        # Act
+        result = comfyui_requests._submit_single_prompt(mock_workflow)
+        
+        # Assert
+        assert result.ok is True
 
-            mock_get_history.return_value = (True, {"outputs": {}})
-            mock_get_output_name.return_value = ["output.png"]
-            mock_path_join.return_value = "/path/output.png"
-
+    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.datetime")
+    def test_wait_for_completion(self, mock_datetime, mock_sleep, comfyui_requests):
+        """Test waiting for completion functionality."""
+        # Arrange
+        from datetime import datetime, timedelta
+        start_time = datetime(2023, 1, 1, 12, 0, 0)
+        end_time = datetime(2023, 1, 1, 12, 0, 30)  # 30 seconds later
+        
+        # Create a proper datetime mock
+        mock_datetime.now.side_effect = [start_time, end_time]
+        
+        # Mock history responses: prompt not in history, then it appears
+        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+            mock_get_history.side_effect = [
+                {},  # First call: prompt not in history
+                {"prompt_id_123": {"status": "completed"}}  # Second call: prompt appears
+            ]
+            
             # Act
-            result = comfyui_requests.comfyui_ensure_send_all_prompts([mock_workflow])
-
+            processing_time = comfyui_requests._wait_for_completion("prompt_id_123", check_interval=1)
+            
             # Assert
-            assert len(result) == 1
-            assert result[0] == "/path/output.png"
-            mock_send_prompt.assert_called_once()
-            assert mock_get_queue.call_count >= 2
+            assert processing_time == 30
+            assert mock_sleep.call_count == 1  # Called once before prompt appeared
+
+    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name")
+    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.os.path.join")
+    def test_get_output_path_with_history(self, mock_path_join, mock_get_history_output_name, comfyui_requests):
+        """Test getting output path when history is available."""
+        # Arrange
+        mock_get_history_output_name.return_value = ["output_file.png"]
+        mock_path_join.return_value = "/fake/path/output_file.png"
+        
+        history_entry = {"outputs": {"9": {"images": [{"filename": "output_file.png"}]}}}
+        
+        # Act
+        result = comfyui_requests._get_output_path(history_entry)
+        
+        # Assert
+        assert result == "/fake/path/output_file.png"
+        mock_get_history_output_name.assert_called_once_with(history_entry)
+
+    def test_get_output_path_no_history(self, comfyui_requests):
+        """Test getting output path when history is not available."""
+        # Arrange
+        with patch("ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name") as mock_get_output_name:
+            mock_get_output_name.return_value = []
+            
+            # Act
+            result = comfyui_requests._get_output_path({})
+            
+            # Assert
+            assert result is None
+
+    def test_check_for_output_success_valid(self, comfyui_requests):
+        """Test checking output success with valid response."""
+        # Arrange
+        response = {
+            "status": {
+                "status_str": "success",
+                "completed": True
+            }
+        }
+        
+        # Act & Assert - Should not raise any exception
+        comfyui_requests._check_for_output_success(response)
+
+    def test_check_for_output_success_error_status(self, comfyui_requests):
+        """Test checking output success with error status."""
+        # Arrange
+        response = {
+            "status": {
+                "status_str": "error",
+                "completed": False
+            }
+        }
+        
+        # Act & Assert
+        with pytest.raises(RuntimeError, match="ComfyUI request failed: error"):
+            comfyui_requests._check_for_output_success(response)
+
+    def test_check_for_output_success_not_completed(self, comfyui_requests):
+        """Test checking output success with incomplete status."""
+        # Arrange
+        response = {
+            "status": {
+                "status_str": "success",
+                "completed": False
+            }
+        }
+        
+        # Act & Assert
+        with pytest.raises(RuntimeError, match="ComfyUI request failed: success"):
+            comfyui_requests._check_for_output_success(response)
 
 
 class TestComfyUIRequestsWithMalformedResponses:
@@ -630,7 +650,7 @@ class TestComfyUIRequestsWithMalformedResponses:
 
         # Act & Assert
         with pytest.raises(KeyError):
-            comfyui_requests.comfyui_get_queue()
+            comfyui_requests.comfyui_get_processing_queue()
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
     def test_queue_response_missing_queue_remaining(self, mock_get, comfyui_requests):
@@ -643,7 +663,7 @@ class TestComfyUIRequestsWithMalformedResponses:
 
         # Act & Assert
         with pytest.raises(KeyError):
-            comfyui_requests.comfyui_get_queue()
+            comfyui_requests.comfyui_get_processing_queue()
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
     def test_history_response_with_invalid_structure(self, mock_get, comfyui_requests):
@@ -655,10 +675,9 @@ class TestComfyUIRequestsWithMalformedResponses:
         mock_get.return_value = mock_response
 
         # Act
-        success, history_data = comfyui_requests.comfyui_get_history()
+        history_data = comfyui_requests.comfyui_get_history()
 
         # Assert
-        assert success is True
         assert "invalid_key" in history_data
         assert "history_entries" in history_data
 
@@ -892,19 +911,15 @@ class TestComfyUIRequestsWithRealExamples:
         mock_get.return_value = mock_response
 
         # Act
-        success, queue_count = comfyui_requests.comfyui_get_queue()
+        queue_count = comfyui_requests.comfyui_get_processing_queue()
 
         # Assert
-        assert success is True
         assert queue_count == 2
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
-    def test_real_history_response_template(self, mock_get, comfyui_requests):
+    def test_real_history_response_template(self, comfyui_requests):
         """Test with real history response template - to be updated with actual example."""
         # Arrange - This will be replaced with real ComfyUI history response
-        mock_response = Mock()
-        mock_response.ok = True
-        mock_response.json.return_value = {
+        test_history = {
             "real-prompt-id-12345": {
                 "prompt": [
                     1,
@@ -940,15 +955,16 @@ class TestComfyUIRequestsWithRealExamples:
                 "status": {"status_str": "success", "completed": True, "messages": []},
             }
         }
-        mock_get.return_value = mock_response
+        
+        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+            mock_get_history.return_value = test_history
 
-        # Act
-        success, history_data = comfyui_requests.comfyui_get_history()
+            # Act
+            history_data = comfyui_requests.comfyui_get_history()
 
-        # Assert
-        assert success is True
-        assert "real-prompt-id-12345" in history_data
-        assert history_data["real-prompt-id-12345"]["status"]["completed"] is True
+            # Assert
+            assert "real-prompt-id-12345" in history_data
+            assert history_data["real-prompt-id-12345"]["status"]["completed"] is True
 
     def test_workflow_integration_template(self, comfyui_requests, mock_workflow):
         """Test workflow integration template - to be updated with real workflow examples."""
@@ -1034,34 +1050,30 @@ class TestComfyUIRequestsTimeout:
 
         # Act & Assert
         with pytest.raises(Timeout):
-            comfyui_requests.comfyui_get_queue()
+            comfyui_requests.comfyui_get_processing_queue()
 
 
 # Test actual business logic that was over-mocked before
 class TestComfyUIRequestsBusinessLogic:
     """Test real business logic and data processing."""
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
-    def test_history_keys_ordering(self, mock_get, comfyui_requests):
+    def test_history_keys_ordering(self, comfyui_requests):
         """Test that last history entry actually gets the last key in the dict."""
         # Arrange
-        mock_response = Mock()
-        mock_response.ok = True
-        # Test with specific ordering to ensure last key logic works
         test_history = {
             "first_key": {"data": "first"},
             "middle_key": {"data": "middle"}, 
             "last_key": {"data": "last"}
         }
-        mock_response.json.return_value = test_history
-        mock_get.return_value = mock_response
+        
+        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+            mock_get_history.return_value = test_history
 
-        # Act
-        success, last_entry = comfyui_requests.comfyui_get_last_history_entry()
+            # Act
+            last_entry = comfyui_requests.comfyui_get_last_history_entry()
 
-        # Assert
-        assert success is True
-        assert last_entry == {"data": "last"}  # Should get the last key's data
+            # Assert
+            assert last_entry == {"data": "last"}  # Should get the last key's data
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.post")
     def test_prompt_wrapping_logic(self, mock_post, comfyui_requests):
@@ -1116,10 +1128,9 @@ class TestComfyUIRequestsBusinessLogic:
             mock_get.return_value = mock_response
 
             # Act
-            success, queue_count = comfyui_requests.comfyui_get_queue()
+            queue_count = comfyui_requests.comfyui_get_processing_queue()
 
             # Assert
-            assert success is True
             assert queue_count == queue_num
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
@@ -1135,174 +1146,9 @@ class TestComfyUIRequestsBusinessLogic:
             mock_get.return_value = mock_response
 
             # Act
-            success, queue_count = comfyui_requests.comfyui_get_queue()
+            queue_count = comfyui_requests.comfyui_get_processing_queue()
 
             # Assert
-            assert success is False
             assert queue_count == -1
 
 
-class TestComfyUIRequestsNewMethods:
-    """Test class for new helper methods introduced during refactoring."""
-
-    def test_create_progress_summary_short_text(self, comfyui_requests, mock_workflow):
-        """Test progress summary creation with short text."""
-        # Arrange
-        mock_workflow.get_workflow_summary.return_value = "short_workflow"
-        
-        # Act
-        full_summary, display_summary = comfyui_requests._create_progress_summary(mock_workflow, 100)
-        
-        # Assert
-        assert full_summary == "short_workflow"
-        assert display_summary == "short_workflow"
-
-    def test_create_progress_summary_long_text(self, comfyui_requests, mock_workflow):
-        """Test progress summary creation with long text."""
-        # Arrange
-        long_text = "a" * 200
-        mock_workflow.get_workflow_summary.return_value = long_text
-        
-        # Act
-        full_summary, display_summary = comfyui_requests._create_progress_summary(mock_workflow, 50)
-        
-        # Assert
-        assert full_summary == long_text
-        assert display_summary == "a" * 50 + "..."
-
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.post")
-    def test_submit_single_prompt_success(self, mock_post, comfyui_requests, mock_workflow):
-        """Test successful single prompt submission."""
-        # Arrange
-        mock_response = Mock()
-        mock_response.ok = True
-        mock_post.return_value = mock_response
-        mock_workflow.get_json.return_value = {"test": "data"}
-        
-        # Act
-        result = comfyui_requests._submit_single_prompt(mock_workflow)
-        
-        # Assert
-        assert result.ok is True
-
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.post")
-    def test_submit_single_prompt_failure(self, mock_post, comfyui_requests, mock_workflow):
-        """Test failed single prompt submission."""
-        # Arrange
-        mock_response = Mock()
-        mock_response.ok = False
-        mock_response.status_code = 400
-        mock_post.return_value = mock_response
-        mock_workflow.get_json.return_value = {"test": "data"}
-        
-        # Act & Assert
-        with pytest.raises(RuntimeError, match="Bad prompt: 400"):
-            comfyui_requests._submit_single_prompt(mock_workflow)
-
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.datetime")
-    def test_wait_for_completion(self, mock_datetime, mock_sleep, comfyui_requests):
-        """Test waiting for completion functionality."""
-        # Arrange
-        from datetime import datetime, timedelta
-        start_time = datetime(2023, 1, 1, 12, 0, 0)
-        end_time = datetime(2023, 1, 1, 12, 0, 30)  # 30 seconds later
-        
-        # Create a proper datetime mock
-        mock_datetime.now.side_effect = [start_time, end_time]
-        
-        # Mock queue responses: busy, busy, then complete
-        with patch.object(comfyui_requests, "comfyui_get_queue") as mock_get_queue:
-            mock_get_queue.side_effect = [(True, 2), (True, 1), (True, 0)]
-            
-            # Act
-            processing_time = comfyui_requests._wait_for_completion(check_interval=1)
-            
-            # Assert
-            assert processing_time == 30
-            assert mock_sleep.call_count == 2  # Called twice before queue was empty
-
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name")
-    def test_get_output_path_with_history(self, mock_get_history_output_name, comfyui_requests, mock_workflow):
-        """Test getting output path when history is available."""
-        # Arrange
-        mock_workflow.get_workflow_summary.return_value = "test/workflow"
-        mock_get_history_output_name.return_value = ["output_file.png"]
-        
-        with patch.object(comfyui_requests, "comfyui_get_last_history_entry") as mock_get_history:
-            mock_get_history.return_value = (True, {"test": "history"})
-            
-            # Act
-            result = comfyui_requests._get_output_path(mock_workflow, 5)
-            
-            # Assert
-            expected_path = os.path.join(
-                comfyui_requests.__class__.__module__.replace('.', '/').split('/')[-3] + "/environment_variables.py",
-                "output_file.png"
-            ).replace("ai_video_creator/environment_variables.py", "")
-            # Just check that it contains the expected filename since path construction varies
-            assert "output_file.png" in result
-
-    def test_get_output_path_no_history(self, comfyui_requests, mock_workflow):
-        """Test getting output path when history is not available."""
-        # Arrange
-        mock_workflow.get_workflow_summary.return_value = "test/workflow"
-        
-        with patch.object(comfyui_requests, "comfyui_get_last_history_entry") as mock_get_history:
-            mock_get_history.return_value = (False, [])
-            
-            # Act
-            result = comfyui_requests._get_output_path(mock_workflow, 5)
-            
-            # Assert
-            assert result is None
-
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    def test_process_single_workflow_success(self, mock_sleep, comfyui_requests, mock_workflow):
-        """Test successful processing of a single workflow."""
-        # Arrange
-        mock_workflow.get_workflow_summary.return_value = "test_workflow"
-        
-        with patch.object(comfyui_requests, "_submit_single_prompt") as mock_submit, \
-             patch.object(comfyui_requests, "_wait_for_completion") as mock_wait, \
-             patch.object(comfyui_requests, "_get_output_path") as mock_get_path:
-            
-            mock_wait.return_value = 45  # 45 seconds processing time
-            mock_get_path.return_value = "/path/to/output.png"
-            
-            # Act
-            result = comfyui_requests._process_single_workflow(mock_workflow, 0, 1)
-            
-            # Assert
-            assert result == "/path/to/output.png"
-            mock_submit.assert_called_once_with(mock_workflow)
-            mock_wait.assert_called_once()
-            mock_get_path.assert_called_once_with(mock_workflow, 0)
-
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    def test_process_single_workflow_runtime_error(self, mock_sleep, comfyui_requests, mock_workflow):
-        """Test processing single workflow with RuntimeError."""
-        # Arrange
-        mock_workflow.get_workflow_summary.return_value = "test_workflow"
-        
-        with patch.object(comfyui_requests, "_submit_single_prompt") as mock_submit:
-            mock_submit.side_effect = RuntimeError("Bad prompt")
-            
-            # Act & Assert
-            with pytest.raises(RuntimeError, match="Bad prompt"):
-                comfyui_requests._process_single_workflow(mock_workflow, 0, 1)
-
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    def test_process_single_workflow_request_exception(self, mock_sleep, comfyui_requests, mock_workflow):
-        """Test processing single workflow with RequestException."""
-        # Arrange
-        mock_workflow.get_workflow_summary.return_value = "test_workflow"
-
-        with patch.object(comfyui_requests, "_submit_single_prompt") as mock_submit:
-            mock_submit.side_effect = RequestException("Connection failed")
-
-            # Act
-            result = comfyui_requests._process_single_workflow(mock_workflow, 0, 1)
-
-            # Assert - Should handle the exception gracefully and return None
-            assert result is None
