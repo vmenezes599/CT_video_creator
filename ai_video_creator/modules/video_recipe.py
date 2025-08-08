@@ -62,7 +62,7 @@ class VideoRecipe:
                 )
 
         except FileNotFoundError:
-            logger.debug(
+            logger.error(
                 f"Recipe file not found: {file_path.name} - starting with empty recipe"
             )
         except (IOError, json.JSONDecodeError) as e:

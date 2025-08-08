@@ -31,6 +31,11 @@ class VideoAssembler:
         self.__subtitle_generator = SubtitleGenerator()
 
         self.assets = VideoAssets(self.__paths.video_asset_file)
+        if not self.assets.is_complete():
+            raise ValueError(
+                "Video assets are incomplete. Please ensure all required assets are present."
+            )
+
         self.output_path = self.__paths.video_output_file
         self._temp_files = []
 
