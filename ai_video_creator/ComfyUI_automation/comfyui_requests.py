@@ -69,7 +69,7 @@ class ComfyUIRequests:
 
         return self._send_post_request(url=url, json=prompt, timeout=timeout)
 
-    def _create_progress_summary(
+    def _create_workflow_summary(
         self, workflow: IComfyUIWorkflow, max_length: int = 100
     ) -> tuple[str, str]:
         """
@@ -158,7 +158,7 @@ class ComfyUIRequests:
         :param total: Total number of workflows
         :return: Output file path or None if processing failed
         """
-        _, display_summary = self._create_progress_summary(workflow)
+        _, display_summary = self._create_workflow_summary(workflow)
 
         tries = 0
         while tries < self.max_retries_per_request:
@@ -199,10 +199,16 @@ class ComfyUIRequests:
                 if tries < self.max_retries_per_request:
                     time.sleep(self.delay_seconds)
             except RequestException as e:
+                tries += 1
                 logger.error(
-                    "Connection error during request %s: %s", display_summary, e
+                    "Connection error during request %s (attempt %d/%d): %s",
+                    display_summary,
+                    tries,
+                    self.max_retries_per_request,
+                    e,
                 )
-                time.sleep(self.delay_seconds)
+                if tries < self.max_retries_per_request:
+                    time.sleep(self.delay_seconds)
 
         # If all retries exhausted
         logger.error(
@@ -225,8 +231,7 @@ class ComfyUIRequests:
 
         for workflow in req_list:
             output_path = self._process_single_workflow(workflow)
-            if output_path:
-                output_image_paths.append(output_path)
+            output_image_paths.append(output_path)
 
             # Add delay between requests
             time.sleep(self.delay_seconds)
