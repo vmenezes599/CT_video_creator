@@ -139,7 +139,7 @@ class ComfyUIRequests:
         :return: True if output is successful, False otherwise
         """
         if response["status"]["status_str"] != "success":
-            logger.error("ComfyUI request failed: %s", response["status"]["status_str"])
+            logger.error("ComfyUI request failed: {}", response["status"]["status_str"])
             raise RuntimeError(
                 f"ComfyUI request failed: {response['status']['status_str']}"
             )
