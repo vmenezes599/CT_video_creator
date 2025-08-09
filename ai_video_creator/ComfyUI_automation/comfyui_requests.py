@@ -173,7 +173,7 @@ class ComfyUIRequests:
                 processing_time = self._wait_for_completion(prompt_id)
 
                 logger.info(
-                    "Request finished successfully after %ds: %s",
+                    "Request finished successfully after {}s: {}",
                     processing_time,
                     display_summary,
                 )
@@ -191,7 +191,7 @@ class ComfyUIRequests:
             except RuntimeError:
                 tries += 1
                 logger.error(
-                    "Failed to run workflow on attempt %d/%d for request: %s",
+                    "Failed to run workflow on attempt {}/{} for request: {}",
                     tries,
                     self.max_retries_per_request,
                     display_summary,
