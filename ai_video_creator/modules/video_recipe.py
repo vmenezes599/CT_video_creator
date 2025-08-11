@@ -186,6 +186,6 @@ class VideoRecipeBuilder:
             if not self._verify_recipe_against_prompt():
                 self._recipe.clean()
                 self._create_flux_image_recipe()
-                self._create_spark_tts_narrator_recipe()
+                # self._create_spark_tts_narrator_recipe()
 
             logger.info("Video recipe creation completed successfully")

@@ -147,7 +147,7 @@ class VideoAssetManager:
 
     def _synchronize_assets_with_recipe(self):
         """Ensure video_assets lists have the same size as recipe."""
-        recipe_size = len(self.recipe.narrator_data)
+        recipe_size = len(self.recipe.image_data)
         logger.debug(f"Synchronizing assets with recipe - target size: {recipe_size}")
 
         # Extend or truncate narrator_list to match recipe size
@@ -197,7 +197,7 @@ class VideoAssetManager:
 
     def _generate_narrator_asset(self, scene_index: int):
         """Generate narrator asset for a scene."""
-        self.video_assets.set_scene_narrator(scene_index, "audio_generation_disabled")
+        self.video_assets.set_scene_narrator(scene_index, Path("audio_generation_disabled"))
         self.video_assets.save_assets_to_file()
 
         return
