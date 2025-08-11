@@ -197,6 +197,11 @@ class VideoAssetManager:
 
     def _generate_narrator_asset(self, scene_index: int):
         """Generate narrator asset for a scene."""
+        self.video_assets.set_scene_narrator(scene_index, "audio_generation_disabled")
+        self.video_assets.save_assets_to_file()
+
+        return
+
         try:
             logger.info(f"Generating narrator asset for scene {scene_index}")
             audio = self.recipe.narrator_data[scene_index]

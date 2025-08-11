@@ -249,9 +249,11 @@ class VideoAssembler:
             output_filename: Name of the output video file
         """
         with begin_console_logging(name="VideoAssembler", log_level="TRACE"):
+            logger.info("Video assembly process DISABLED")
+            return
             logger.info("Starting video assembly process")
 
-            video_segments = self._create_video_segments()
-            self._compose(video_segments)
+            # video_segments = self._create_video_segments()
+            # self._compose(video_segments)
 
             logger.info(f"Video assembly completed successfully: {self.output_path}")
