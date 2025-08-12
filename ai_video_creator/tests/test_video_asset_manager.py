@@ -9,6 +9,7 @@ from unittest.mock import patch
 import pytest
 
 from ai_video_creator.modules.video_asset_manager import VideoAssets, VideoAssetManager
+from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 
 
 class TestVideoAssets:
@@ -48,14 +49,8 @@ class TestVideoAssets:
 
         expected_structure = {
             "assets": [
-                {
-                    "narrator": "/path/to/narrator1.mp3",
-                    "image": "/path/to/image1.jpg"
-                },
-                {
-                    "narrator": "/path/to/narrator2.mp3",
-                    "image": "/path/to/image2.jpg"
-                }
+                {"narrator": "/path/to/narrator1.mp3", "image": "/path/to/image1.jpg"},
+                {"narrator": "/path/to/narrator2.mp3", "image": "/path/to/image2.jpg"},
             ]
         }
 
@@ -67,14 +62,8 @@ class TestVideoAssets:
 
         test_data = {
             "assets": [
-                {
-                    "narrator": "/loaded/narrator1.mp3",
-                    "image": "/loaded/image1.jpg"
-                },
-                {
-                    "narrator": "/loaded/narrator2.mp3",
-                    "image": "/loaded/image2.jpg"
-                }
+                {"narrator": "/loaded/narrator1.mp3", "image": "/loaded/image1.jpg"},
+                {"narrator": "/loaded/narrator2.mp3", "image": "/loaded/image2.jpg"},
             ]
         }
 
@@ -97,20 +86,20 @@ class TestVideoAssets:
 
         # Empty assets should be complete
         assert assets.is_complete()
-        
+
         assets.set_scene_narrator(0, Path("/path/to/narrator1.mp3"))
         assets.set_scene_image(0, Path("/path/to/image1.jpg"))
         assets.set_scene_narrator(1, Path("/path/to/narrator2.mp3"))
         # Missing image for scene 1
 
         assert not assets.is_complete()
-        
+
         missing = assets.get_missing_assets()
         assert missing["narrator"] == []
         assert missing["image"] == [1]
 
         assets.set_scene_image(1, Path("/path/to/image2.jpg"))
-        
+
         assert assets.is_complete()
         missing = assets.get_missing_assets()
         assert missing["narrator"] == []
@@ -130,7 +119,7 @@ class TestVideoAssets:
 
         assert assets.narrator_list[5] == "/path/to/narrator5.mp3"
         assert assets.image_list[3] == "/path/to/image3.jpg"
-        
+
         assert assets.narrator_list[0] == ""
         assert assets.narrator_list[1] == ""
         assert assets.image_list[0] == ""
@@ -157,7 +146,7 @@ class TestVideoAssetManager:
                 },
                 {
                     "narrator": "Second narrator text",
-                    "visual_description": "Second visual description", 
+                    "visual_description": "Second visual description",
                     "visual_prompt": "Second visual prompt",
                 },
             ]
@@ -171,14 +160,14 @@ class TestVideoAssetManager:
             "narrator_data": [
                 {
                     "prompt": "First narrator text",
-                    "clone_voice_path": "default-assets/voices/voice_002.mp3",
+                    "clone_voice_path": f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3",
                     "recipe_type": "SparkTTSRecipeType",
                 },
                 {
                     "prompt": "Second narrator text",
-                    "clone_voice_path": "default-assets/voices/voice_002.mp3",
+                    "clone_voice_path": f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3",
                     "recipe_type": "SparkTTSRecipeType",
-                }
+                },
             ],
             "image_data": [
                 {
@@ -190,8 +179,8 @@ class TestVideoAssetManager:
                     "prompt": "Second visual prompt",
                     "seed": 67890,
                     "recipe_type": "FluxImageRecipeType",
-                }
-            ]
+                },
+            ],
         }
 
         video_folder = story_folder / "video"
@@ -223,7 +212,9 @@ class TestVideoAssetManager:
         with patch("logging_utils.logger"):
             manager = VideoAssetManager(story_setup_with_recipe, 0)
 
-            manager.video_assets.set_scene_narrator(0, Path("/generated/narrator_001.mp3"))
+            manager.video_assets.set_scene_narrator(
+                0, Path("/generated/narrator_001.mp3")
+            )
             manager.video_assets.set_scene_image(0, Path("/generated/image_001.jpg"))
             manager.video_assets.save_assets_to_file()
 
@@ -250,12 +241,12 @@ class TestVideoAssetManager:
             "assets": [
                 {
                     "narrator": "/existing/narrator1.mp3",
-                    "image": "/existing/image1.jpg"
+                    "image": "/existing/image1.jpg",
                 },
                 {
-                    "narrator": "/existing/narrator2.mp3", 
-                    "image": "/existing/image2.jpg"
-                }
+                    "narrator": "/existing/narrator2.mp3",
+                    "image": "/existing/image2.jpg",
+                },
             ]
         }
 
@@ -280,10 +271,7 @@ class TestVideoAssetManager:
 
         existing_data = {
             "assets": [
-                {
-                    "narrator": "/existing/narrator1.mp3",
-                    "image": "/existing/image1.jpg"
-                }
+                {"narrator": "/existing/narrator1.mp3", "image": "/existing/image1.jpg"}
             ]
         }
 

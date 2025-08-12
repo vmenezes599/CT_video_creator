@@ -1,10 +1,9 @@
 """This module manages the creation of video assets for a given story chapter."""
 
 import json
-import shutil
 from pathlib import Path
 
-from logging_utils import begin_console_logging, logger
+from logging_utils import setup_console_logging, logger
 from ai_video_creator.generators import IAudioGenerator, IImageGenerator
 from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
 
@@ -124,6 +123,9 @@ class VideoAssetManager:
 
     def __init__(self, story_folder: Path, chapter_index: int):
         """Initialize VideoAssetManager with story folder and chapter index."""
+
+        setup_console_logging(name="VideoAssetManager", log_level="TRACE")
+
         logger.info(
             f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
         )
@@ -164,17 +166,6 @@ class VideoAssetManager:
             f"Asset synchronization completed - narrator assets: {len(self.video_assets.narrator_list)}, image assets: {len(self.video_assets.image_list)}"
         )
 
-    def _move_asset_to_database(self, asset_path: Path) -> Path:
-        """Move asset to the database folder and return the new path."""
-        if not asset_path.exists():
-            logger.error(f"Asset file does not exist: {asset_path}")
-            raise FileNotFoundError(f"Asset file does not exist: {asset_path}")
-
-        target_path = self.__paths.assets_path / asset_path.name
-        shutil.move(asset_path, target_path)
-        logger.trace(f"Asset moved successfully to: {target_path}")
-        return target_path
-
     def _generate_scene_assets(self, scene_index: int):
         """Generate assets for a specific scene."""
         logger.debug(f"Generating assets for scene {scene_index}")
@@ -197,27 +188,22 @@ class VideoAssetManager:
 
     def _generate_narrator_asset(self, scene_index: int):
         """Generate narrator asset for a scene."""
-        self.video_assets.set_scene_narrator(scene_index, Path("audio_generation_disabled"))
-        self.video_assets.save_assets_to_file()
-
-        return
-
         try:
             logger.info(f"Generating narrator asset for scene {scene_index}")
             audio = self.recipe.narrator_data[scene_index]
             audio_generator: IAudioGenerator = audio.GENERATOR()
-            output_audio_file_name = (
-                f"{self.output_file_prefix}_narrator_{scene_index+1:03}"
+            output_audio_file_path = (
+                self.__paths.assets_path
+                / f"{self.output_file_prefix}_narrator_{scene_index+1:03}.mp3"
             )
             logger.debug(
-                f"Using audio generator: {type(audio_generator).__name__} for file: {output_audio_file_name}"
+                f"Using audio generator: {type(audio_generator).__name__} for file: {output_audio_file_path.name}"
             )
 
             output_audio = audio_generator.clone_text_to_speech(
                 recipe=audio,
-                output_file_name=output_audio_file_name,
+                output_file_path=output_audio_file_path,
             )
-            output_audio = self._move_asset_to_database(output_audio)
 
             self.video_assets.set_scene_narrator(scene_index, output_audio)
             self.video_assets.save_assets_to_file()  # Save progress immediately
@@ -228,7 +214,6 @@ class VideoAssetManager:
 
         except (IOError, OSError, RuntimeError) as e:
             logger.error(f"Failed to generate narrator for scene {scene_index}: {e}")
-            print(f"Failed to generate narrator for scene {scene_index}: {e}")
 
     def _generate_image_asset(self, scene_index: int):
         """Generate image asset for a scene."""
@@ -236,17 +221,17 @@ class VideoAssetManager:
             logger.info(f"Generating image asset for scene {scene_index}")
             image = self.recipe.image_data[scene_index]
             image_generator: IImageGenerator = image.GENERATOR()
-            output_image_file_name = (
-                f"{self.output_file_prefix}_image_{scene_index+1:03}"
+            output_image_file_path = (
+                self.__paths.assets_path
+                / f"{self.output_file_prefix}_image_{scene_index+1:03}.png"
             )
             logger.debug(
-                f"Using image generator: {type(image_generator).__name__} for file: {output_image_file_name}"
+                f"Using image generator: {type(image_generator).__name__} for file: {output_image_file_path.name}"
             )
 
             output_image = image_generator.text_to_image(
-                recipe=image, output_file_name=output_image_file_name
+                recipe=image, output_file_path=output_image_file_path
             )
-            output_image = self._move_asset_to_database(output_image)
 
             self.video_assets.set_scene_image(scene_index, output_image)
             self.video_assets.save_assets_to_file()  # Save progress immediately
@@ -267,23 +252,20 @@ class VideoAssetManager:
         self._generate_scene_assets(scene_index)
         logger.info(f"Asset regeneration completed for scene {scene_index}")
 
-    def generate_recipe_output(self):
+    def generate_video_assets(self):
         """Generate all missing assets from the recipe."""
-        with begin_console_logging(name="VideoAssetManager", log_level="TRACE"):
-            logger.info("Starting video asset generation process")
+        logger.info("Starting video asset generation process")
 
-            missing = self.video_assets.get_missing_assets()
-            all_missing_scenes = set(missing["narrator"] + missing["image"])
+        missing = self.video_assets.get_missing_assets()
+        all_missing_scenes = set(missing["narrator"] + missing["image"])
 
-            logger.info(
-                f"Found {len(missing['narrator'])} scenes missing narrator assets"
-            )
-            logger.info(f"Found {len(missing['image'])} scenes missing image assets")
-            logger.info(f"Total scenes requiring processing: {len(all_missing_scenes)}")
+        logger.info(f"Found {len(missing['narrator'])} scenes missing narrator assets")
+        logger.info(f"Found {len(missing['image'])} scenes missing image assets")
+        logger.info(f"Total scenes requiring processing: {len(all_missing_scenes)}")
 
-            for scene_index in sorted(all_missing_scenes):
-                logger.info(f"Processing scene {scene_index}...")
-                print(f"Processing scene {scene_index}...")
-                self._generate_scene_assets(scene_index)
+        for scene_index in sorted(all_missing_scenes):
+            logger.info(f"Processing scene {scene_index}...")
+            print(f"Processing scene {scene_index}...")
+            self._generate_scene_assets(scene_index)
 
-            logger.info("Video asset generation process completed successfully")
+        logger.info("Video asset generation process completed successfully")

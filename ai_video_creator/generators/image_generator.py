@@ -3,11 +3,12 @@ AI Video Generation Module
 """
 
 import random
+import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
-
+from logging_utils import logger
 from .ComfyUI_automation.comfyui_image_workflows import FluxWorkflow
 
 
@@ -30,7 +31,7 @@ class IImageGenerator(ABC):
     """Interface for image generators."""
 
     @abstractmethod
-    def text_to_image(self, recipe: ImageRecipeBase, output_file_name: str) -> Path:
+    def text_to_image(self, recipe: ImageRecipeBase, output_file_path: Path) -> Path:
         """Generate an image based on the recipe."""
 
 
@@ -45,7 +46,18 @@ class FluxAIImageGenerator(IImageGenerator):
         """
         self.requests = ComfyUIRequests()  # Initialize ComfyUI requests
 
-    def text_to_image(self, recipe: "FluxImageRecipe", output_file_name: str) -> Path:
+    def _move_asset_to_output_path(self, target_path: Path, asset_path: Path) -> Path:
+        """Move asset to the database folder and return the new path."""
+        if not asset_path.exists():
+            logger.error(f"Asset file does not exist: {asset_path}")
+            raise FileNotFoundError(f"Asset file does not exist: {asset_path}")
+
+        complete_target_path = target_path / asset_path.name
+        shutil.move(asset_path, complete_target_path)
+        logger.trace(f"Asset moved successfully to: {complete_target_path}")
+        return complete_target_path
+
+    def text_to_image(self, recipe: "FluxImageRecipe", output_file_path: Path) -> Path:
         """
         Generate images for a list of prompts and return the paths to the generated images.
 
@@ -57,13 +69,15 @@ class FluxAIImageGenerator(IImageGenerator):
         workflow = FluxWorkflow()
 
         workflow.set_positive_prompt(recipe.prompt)
-        workflow.set_output_filename(output_file_name)
+        workflow.set_output_filename(output_file_path.stem)
 
         workflow.set_seed(recipe.seed)
 
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
 
-        return Path(output_file_names[0])
+        return self._move_asset_to_output_path(
+            output_file_path.parent, Path(output_file_names[0])
+        )
 
 
 class FluxImageRecipe(ImageRecipeBase):

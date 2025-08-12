@@ -27,7 +27,7 @@ def create_chapter_video_recipe(story_path: Path, chapter_index: int) -> None:
     video_asset_manager = VideoAssetManager(
         story_folder=story_path, chapter_index=chapter_index
     )
-    video_asset_manager.generate_recipe_output()
+    video_asset_manager.generate_video_assets()
 
 
 def assemble_chapter_video(story_path: Path, chapter_index: int) -> None:

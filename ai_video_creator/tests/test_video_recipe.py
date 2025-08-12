@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
+from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 from ai_video_creator.generators import FluxImageRecipe, SparkTTSRecipe
 from ai_video_creator.modules.video_recipe import (
     VideoRecipe,
@@ -22,11 +23,11 @@ class TestVideoRecipeDefaultSettings:
         """Test that default settings have correct values."""
         assert (
             VideoRecipeDefaultSettings.NARRATOR_VOICE
-            == "default-assets/voices/voice_002.mp3"
+            == f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3"
         )
         assert (
             VideoRecipeDefaultSettings.BACKGROUND_MUSIC
-            == "default-assets/background_music.mp3"
+            == f"{DEFAULT_ASSETS_FOLDER}/background_music.mp3"
         )
 
 

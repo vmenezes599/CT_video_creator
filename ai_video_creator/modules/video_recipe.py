@@ -5,22 +5,23 @@ Video executor for create_video command.
 import json
 from pathlib import Path
 
-from logging_utils import begin_console_logging, logger
+from logging_utils import setup_console_logging, logger
 from ai_video_creator.prompt import Prompt
 
 from ai_video_creator.generators import (
-    SparkTTSRecipe,
+    ZonosTTSRecipe,
     FluxImageRecipe,
 )
 
 from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 
 
 class VideoRecipeDefaultSettings:
     """Default settings for video recipe."""
 
-    NARRATOR_VOICE = "default-assets/voices/voice_002.mp3"
-    BACKGROUND_MUSIC = "default-assets/background_music.mp3"
+    NARRATOR_VOICE = f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3"
+    BACKGROUND_MUSIC = f"{DEFAULT_ASSETS_FOLDER}/background_music.mp3"
 
 
 class VideoRecipe:
@@ -73,10 +74,10 @@ class VideoRecipe:
         """Create the appropriate recipe object from dictionary data based on recipe_type."""
         recipe_type = data.get("recipe_type")
 
-        if recipe_type == "SparkTTSRecipeType":
-            return SparkTTSRecipe.from_dict(data)
-        elif recipe_type == "FluxImageRecipeType":
+        if recipe_type == "FluxImageRecipeType":
             return FluxImageRecipe.from_dict(data)
+        elif recipe_type == "ZonosTTSRecipeType":
+            return ZonosTTSRecipe.from_dict(data)
         else:
             logger.error(f"Unknown recipe_type: {recipe_type}")
             raise ValueError(f"Unknown recipe_type: {recipe_type}")
@@ -119,6 +120,8 @@ class VideoRecipeBuilder:
             background_music: Background music setting
             seeds: List of seeds for each generation (None elements use default behavior)
         """
+        setup_console_logging(name="VideoRecipeBuilder", log_level="TRACE")
+
         logger.info(
             f"Initializing VideoRecipeBuilder for story: {story_folder.name}, chapter: {chapter_prompt_index}"
         )
@@ -159,33 +162,34 @@ class VideoRecipeBuilder:
             f"Successfully created {len(self.__video_prompt)} Flux image recipes"
         )
 
-    def _create_spark_tts_narrator_recipe(self) -> None:
-        """Create Spark TTS narrator recipe."""
+    def _create_zonos_tts_narrator_recipe(self, seed: int | None = None) -> None:
+        """Create Zonos TTS narrator recipe."""
         logger.info(
-            f"Creating Spark TTS narrator recipes for {len(self.__video_prompt)} prompts"
+            f"Creating Zonos TTS narrator recipes for {len(self.__video_prompt)} prompts"
         )
 
         for prompt in self.__video_prompt:
-            recipe = SparkTTSRecipe(
+            recipe = ZonosTTSRecipe(
                 prompt=prompt.narrator,
                 clone_voice_path=VideoRecipeDefaultSettings.NARRATOR_VOICE,
+                seed=seed,
             )
             self._recipe.add_narrator_data(recipe)
 
         logger.info(
-            f"Successfully created {len(self.__video_prompt)} Spark TTS narrator recipes"
+            f"Successfully created {len(self.__video_prompt)} Zonos TTS narrator recipes"
         )
 
     def create_video_recipe(self) -> None:
         """Create video recipe from story folder and chapter prompt index."""
-        with begin_console_logging(name="VideoRecipeBuilder", log_level="TRACE"):
-            logger.info("Starting video recipe creation process")
+        logger.info("Starting video recipe creation process")
 
-            self._recipe = VideoRecipe(self.__paths.recipe_file)
+        self._recipe = VideoRecipe(self.__paths.recipe_file)
 
-            if not self._verify_recipe_against_prompt():
-                self._recipe.clean()
-                self._create_flux_image_recipe()
-                # self._create_spark_tts_narrator_recipe()
+        if not self._verify_recipe_against_prompt():
+            self._recipe.clean()
+            self._create_flux_image_recipe()
+            self._create_zonos_tts_narrator_recipe()
+            # self._create_spark_tts_narrator_recipe()
 
-            logger.info("Video recipe creation completed successfully")
+        logger.info("Video recipe creation completed successfully")
