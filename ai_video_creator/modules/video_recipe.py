@@ -5,7 +5,7 @@ Video executor for create_video command.
 import json
 from pathlib import Path
 
-from logging_utils import setup_console_logging, logger
+from logging_utils import begin_console_logging, logger
 from ai_video_creator.prompt import Prompt
 
 from ai_video_creator.generators import (
@@ -61,14 +61,14 @@ class VideoRecipe:
                 logger.info(
                     f"Successfully loaded {len(self.narrator_data)} narrator recipes and {len(self.image_data)} image recipes"
                 )
+                self.save_current_state()
 
         except FileNotFoundError:
-            logger.error(
+            logger.info(
                 f"Recipe file not found: {file_path.name} - starting with empty recipe"
             )
         except (IOError, json.JSONDecodeError) as e:
             logger.error(f"Error loading video recipe from {file_path.name}: {e}")
-            print(f"Error loading video recipe: {e}")
 
     def _create_recipe_from_dict(self, data: dict):
         """Create the appropriate recipe object from dictionary data based on recipe_type."""
@@ -120,19 +120,19 @@ class VideoRecipeBuilder:
             background_music: Background music setting
             seeds: List of seeds for each generation (None elements use default behavior)
         """
-        setup_console_logging(name="VideoRecipeBuilder", log_level="TRACE")
 
-        logger.info(
-            f"Initializing VideoRecipeBuilder for story: {story_folder.name}, chapter: {chapter_prompt_index}"
-        )
+        with begin_console_logging(name="VideoRecipeBuilder", log_level="TRACE"):
+            logger.info(
+                f"Initializing VideoRecipeBuilder for story: {story_folder.name}, chapter: {chapter_prompt_index}"
+            )
 
-        # Initialize path management
-        self.__paths = VideoRecipePaths(story_folder, chapter_prompt_index)
-        self.__chapter_prompt_path = self.__paths.chapter_prompt_path
+            # Initialize path management
+            self.__paths = VideoRecipePaths(story_folder, chapter_prompt_index)
+            self.__chapter_prompt_path = self.__paths.chapter_prompt_path
 
-        # Load video prompt
-        self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
-        self._recipe = None
+            # Load video prompt
+            self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
+            self._recipe = None
 
     def _verify_recipe_against_prompt(self) -> None:
         """Verify the recipe against the prompt to ensure all required data is present."""
@@ -182,14 +182,16 @@ class VideoRecipeBuilder:
 
     def create_video_recipe(self) -> None:
         """Create video recipe from story folder and chapter prompt index."""
-        logger.info("Starting video recipe creation process")
 
-        self._recipe = VideoRecipe(self.__paths.recipe_file)
+        with begin_console_logging(name="VideoRecipeBuilder", log_level="TRACE"):
+            logger.info("Starting video recipe creation process")
 
-        if not self._verify_recipe_against_prompt():
-            self._recipe.clean()
-            self._create_flux_image_recipe()
-            self._create_zonos_tts_narrator_recipe()
-            # self._create_spark_tts_narrator_recipe()
+            self._recipe = VideoRecipe(self.__paths.recipe_file)
 
-        logger.info("Video recipe creation completed successfully")
+            if not self._verify_recipe_against_prompt():
+                self._recipe.clean()
+                self._create_flux_image_recipe()
+                self._create_zonos_tts_narrator_recipe()
+                # self._create_spark_tts_narrator_recipe()
+
+            logger.info("Video recipe creation completed successfully")

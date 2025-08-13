@@ -321,7 +321,7 @@ class ZonosTTSRecipe(AudioRecipeBase):
             ValueError: If data format is invalid
         """
         # Validate required keys
-        required_keys = ["prompt", "clone_voice_path", "seed", "recipe_type"]
+        required_keys = ["prompt", "clone_voice_path", "recipe_type"]
         for key in required_keys:
             if key not in data:
                 raise KeyError(f"Missing required key: {key}")
@@ -330,8 +330,6 @@ class ZonosTTSRecipe(AudioRecipeBase):
             raise ValueError("prompt must be a string")
         if not isinstance(data["clone_voice_path"], str):
             raise ValueError("clone_voice_path must be a string")
-        if not isinstance(data["seed"], int):
-            raise ValueError("seed must be an integer")
         if not isinstance(data["recipe_type"], str):
             raise ValueError("recipe_type must be a string")
 
@@ -341,5 +339,5 @@ class ZonosTTSRecipe(AudioRecipeBase):
         return cls(
             prompt=data["prompt"],
             clone_voice_path=data["clone_voice_path"],
-            seed=data["seed"],
+            seed=data.get("seed", None),
         )

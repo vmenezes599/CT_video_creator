@@ -9,7 +9,7 @@ import subprocess
 from pathlib import Path
 
 import ffmpeg
-from logging_utils import setup_console_logging, logger
+from logging_utils import begin_console_logging, logger
 
 from ai_video_creator.generators import SubtitleGenerator
 from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
@@ -27,19 +27,19 @@ class VideoAssembler:
         """
         Initialize VideoCreator with the required generators.
         """
-        setup_console_logging(name="VideoAssembler", log_level="TRACE")
 
-        self.__paths = VideoRecipePaths(story_folder, chapter_index)
-        self.__subtitle_generator = SubtitleGenerator()
+        with begin_console_logging(name="VideoAssembler", log_level="TRACE"):
+            self.__paths = VideoRecipePaths(story_folder, chapter_index)
+            self.__subtitle_generator = SubtitleGenerator()
 
-        self.assets = VideoAssets(self.__paths.video_asset_file)
-        if not self.assets.is_complete():
-            raise ValueError(
-                "Video assets are incomplete. Please ensure all required assets are present."
-            )
+            self.assets = VideoAssets(self.__paths.video_asset_file)
+            if not self.assets.is_complete():
+                raise ValueError(
+                    "Video assets are incomplete. Please ensure all required assets are present."
+                )
 
-        self.output_path = self.__paths.video_output_file
-        self._temp_files = []
+            self.output_path = self.__paths.video_output_file
+            self._temp_files = []
 
     def __run_ffmpeg_trace(self, ffmpeg_compiled: str):
         """
@@ -250,9 +250,10 @@ class VideoAssembler:
             video_recipe: VideoRecipe object containing narrator text and visual descriptions
             output_filename: Name of the output video file
         """
-        logger.info("Starting video assembly process")
+        with begin_console_logging(name="VideoAssembler", log_level="TRACE"):
+            logger.info("Starting video assembly process")
 
-        video_segments = self._create_video_segments()
-        self._compose(video_segments)
+            video_segments = self._create_video_segments()
+            self._compose(video_segments)
 
-        logger.info(f"Video assembly completed successfully: {self.output_path}")
+            logger.info(f"Video assembly completed successfully: {self.output_path}")

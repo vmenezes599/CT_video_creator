@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from logging_utils import setup_console_logging, logger
+from logging_utils import begin_console_logging, logger
 from ai_video_creator.generators import IAudioGenerator, IImageGenerator
 from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
 
@@ -58,7 +58,6 @@ class VideoAssets:
             logger.error(
                 f"Error saving video assets to {self.asset_file_path.name}: {e}"
             )
-            print(f"Error saving video assets: {e}")
 
     def _ensure_index_exists(self, scene_index: int) -> None:
         """Extend lists to ensure the scene_index exists."""
@@ -124,28 +123,27 @@ class VideoAssetManager:
     def __init__(self, story_folder: Path, chapter_index: int):
         """Initialize VideoAssetManager with story folder and chapter index."""
 
-        setup_console_logging(name="VideoAssetManager", log_level="TRACE")
+        with begin_console_logging(name="VideoAssetManager", log_level="TRACE"):
+            logger.info(
+                f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
+            )
 
-        logger.info(
-            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
-        )
+            self.story_folder = story_folder
+            self.chapter_index = chapter_index
+            self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
-        self.story_folder = story_folder
-        self.chapter_index = chapter_index
-        self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
+            # Initialize path management
+            self.__paths = VideoRecipePaths(story_folder, chapter_index)
 
-        # Initialize path management
-        self.__paths = VideoRecipePaths(story_folder, chapter_index)
+            self.recipe = VideoRecipe(self.__paths.recipe_file)
+            self.video_assets = VideoAssets(self.__paths.video_asset_file)
 
-        self.recipe = VideoRecipe(self.__paths.recipe_file)
-        self.video_assets = VideoAssets(self.__paths.video_asset_file)
+            # Ensure video_assets lists have the same size as recipe
+            self._synchronize_assets_with_recipe()
 
-        # Ensure video_assets lists have the same size as recipe
-        self._synchronize_assets_with_recipe()
-
-        logger.debug(
-            f"VideoAssetManager initialized with {len(self.recipe.narrator_data)} scenes"
-        )
+            logger.debug(
+                f"VideoAssetManager initialized with {len(self.recipe.narrator_data)} scenes"
+            )
 
     def _synchronize_assets_with_recipe(self):
         """Ensure video_assets lists have the same size as recipe."""
@@ -210,7 +208,6 @@ class VideoAssetManager:
             logger.info(
                 f"Successfully generated narrator for scene {scene_index}: {output_audio.name}"
             )
-            print(f"Generated narrator for scene {scene_index}")
 
         except (IOError, OSError, RuntimeError) as e:
             logger.error(f"Failed to generate narrator for scene {scene_index}: {e}")
@@ -238,34 +235,27 @@ class VideoAssetManager:
             logger.info(
                 f"Successfully generated image for scene {scene_index}: {output_image.name}"
             )
-            print(f"Generated image for scene {scene_index}")
 
         except (IOError, OSError, RuntimeError) as e:
             logger.error(f"Failed to generate image for scene {scene_index}: {e}")
-            print(f"Failed to generate image for scene {scene_index}: {e}")
-
-    def regenerate_asset(self, scene_index: int):
-        """Regenerate assets for a specific scene."""
-        logger.info(f"Regenerating assets for scene {scene_index}")
-        self.video_assets.clear_scene_assets(scene_index)
-        self.video_assets.save_assets_to_file()
-        self._generate_scene_assets(scene_index)
-        logger.info(f"Asset regeneration completed for scene {scene_index}")
 
     def generate_video_assets(self):
         """Generate all missing assets from the recipe."""
-        logger.info("Starting video asset generation process")
 
-        missing = self.video_assets.get_missing_assets()
-        all_missing_scenes = set(missing["narrator"] + missing["image"])
+        with begin_console_logging(name="VideoAssetManager", log_level="TRACE"):
+            logger.info("Starting video asset generation process")
 
-        logger.info(f"Found {len(missing['narrator'])} scenes missing narrator assets")
-        logger.info(f"Found {len(missing['image'])} scenes missing image assets")
-        logger.info(f"Total scenes requiring processing: {len(all_missing_scenes)}")
+            missing = self.video_assets.get_missing_assets()
+            all_missing_scenes = set(missing["narrator"] + missing["image"])
 
-        for scene_index in sorted(all_missing_scenes):
-            logger.info(f"Processing scene {scene_index}...")
-            print(f"Processing scene {scene_index}...")
-            self._generate_scene_assets(scene_index)
+            logger.info(
+                f"Found {len(missing['narrator'])} scenes missing narrator assets"
+            )
+            logger.info(f"Found {len(missing['image'])} scenes missing image assets")
+            logger.info(f"Total scenes requiring processing: {len(all_missing_scenes)}")
 
-        logger.info("Video asset generation process completed successfully")
+            for scene_index in sorted(all_missing_scenes):
+                logger.info(f"Processing scene {scene_index}...")
+                self._generate_scene_assets(scene_index)
+
+            logger.info("Video asset generation process completed successfully")
