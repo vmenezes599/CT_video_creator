@@ -129,20 +129,18 @@ class FluxImageRecipe(ImageRecipeBase):
             ValueError: If data format is invalid
         """
         # Validate required keys
-        required_keys = ["prompt", "recipe_type", "seed"]
+        required_keys = ["prompt", "recipe_type"]
         for key in required_keys:
             if key not in data:
                 raise KeyError(f"Missing required key: {key}")
 
         if not isinstance(data["prompt"], str):
             raise ValueError("prompt must be a string")
-        if not isinstance(data["seed"], int):
-            raise ValueError("seed must be an integer")
 
         if cls.recipe_type != data["recipe_type"]:
             raise ValueError(f"Invalid recipe type: {cls.recipe_type}")
 
         return cls(
             prompt=data["prompt"],
-            seed=data["seed"],
+            seed=data.get("seed", None),
         )
