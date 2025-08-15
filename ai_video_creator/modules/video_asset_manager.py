@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from logging_utils import begin_console_logging, logger
+from logging_utils import setup_console_logging, cleanup_logging, logger
 from ai_video_creator.generators import IAudioGenerator, IImageGenerator
 from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
 
@@ -123,27 +123,34 @@ class VideoAssetManager:
     def __init__(self, story_folder: Path, chapter_index: int):
         """Initialize VideoAssetManager with story folder and chapter index."""
 
-        with begin_console_logging(name="VideoAssetManager", log_level="TRACE"):
-            logger.info(
-                f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
-            )
+        self.__console_log_id = setup_console_logging(
+            name="VideoAssetManager", log_level="TRACE"
+        )
 
-            self.story_folder = story_folder
-            self.chapter_index = chapter_index
-            self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
+        logger.info(
+            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
+        )
 
-            # Initialize path management
-            self.__paths = VideoRecipePaths(story_folder, chapter_index)
+        self.story_folder = story_folder
+        self.chapter_index = chapter_index
+        self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
-            self.recipe = VideoRecipe(self.__paths.recipe_file)
-            self.video_assets = VideoAssets(self.__paths.video_asset_file)
+        # Initialize path management
+        self.__paths = VideoRecipePaths(story_folder, chapter_index)
 
-            # Ensure video_assets lists have the same size as recipe
-            self._synchronize_assets_with_recipe()
+        self.recipe = VideoRecipe(self.__paths.recipe_file)
+        self.video_assets = VideoAssets(self.__paths.video_asset_file)
 
-            logger.debug(
-                f"VideoAssetManager initialized with {len(self.recipe.narrator_data)} scenes"
-            )
+        # Ensure video_assets lists have the same size as recipe
+        self._synchronize_assets_with_recipe()
+
+        logger.debug(
+            f"VideoAssetManager initialized with {len(self.recipe.narrator_data)} scenes"
+        )
+
+    def __del__(self):
+        """Cleanup resources."""
+        cleanup_logging(self.__console_log_id)
 
     def _synchronize_assets_with_recipe(self):
         """Ensure video_assets lists have the same size as recipe."""
@@ -241,21 +248,17 @@ class VideoAssetManager:
 
     def generate_video_assets(self):
         """Generate all missing assets from the recipe."""
+        logger.info("Starting video asset generation process")
 
-        with begin_console_logging(name="VideoAssetManager", log_level="TRACE"):
-            logger.info("Starting video asset generation process")
+        missing = self.video_assets.get_missing_assets()
+        all_missing_scenes = set(missing["narrator"] + missing["image"])
 
-            missing = self.video_assets.get_missing_assets()
-            all_missing_scenes = set(missing["narrator"] + missing["image"])
+        logger.info(f"Found {len(missing['narrator'])} scenes missing narrator assets")
+        logger.info(f"Found {len(missing['image'])} scenes missing image assets")
+        logger.info(f"Total scenes requiring processing: {len(all_missing_scenes)}")
 
-            logger.info(
-                f"Found {len(missing['narrator'])} scenes missing narrator assets"
-            )
-            logger.info(f"Found {len(missing['image'])} scenes missing image assets")
-            logger.info(f"Total scenes requiring processing: {len(all_missing_scenes)}")
+        for scene_index in sorted(all_missing_scenes):
+            logger.info(f"Processing scene {scene_index}...")
+            self._generate_scene_assets(scene_index)
 
-            for scene_index in sorted(all_missing_scenes):
-                logger.info(f"Processing scene {scene_index}...")
-                self._generate_scene_assets(scene_index)
-
-            logger.info("Video asset generation process completed successfully")
+        logger.info("Video asset generation process completed successfully")
