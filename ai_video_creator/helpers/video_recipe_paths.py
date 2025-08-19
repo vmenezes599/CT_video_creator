@@ -31,6 +31,9 @@ class VideoRecipePaths:
         # Recipe file path
         self.recipe_file = self.video_path / f"{self.name_stem}_recipe.json"
         self.video_asset_file = self.video_path / f"{self.name_stem}_video_assets.json"
+        self.video_effects_file = (
+            self.video_path / f"{self.name_stem}_video_effects.json"
+        )
         self.video_output_file = self.video_path / f"{self.name_stem}_output.mp4"
 
     def _find_prompt_by_index(self, chapter_prompt_index: int) -> Path:

@@ -322,9 +322,9 @@ class ZonosTTSRecipe(AudioRecipeBase):
         """
         # Validate required keys
         required_keys = ["prompt", "clone_voice_path", "recipe_type"]
-        for key in required_keys:
-            if key not in data:
-                raise KeyError(f"Missing required key: {key}")
+        missing_fields = set(required_keys) - data.keys()
+        for field in missing_fields:
+            raise KeyError(f"Missing required key: {field}")
 
         if not isinstance(data["prompt"], str):
             raise ValueError("prompt must be a string")

@@ -5,16 +5,17 @@ This module contains the VideoCreator class that orchestrates the entire video c
 by coordinating image generation, audio generation, and video composition.
 """
 
-import subprocess
 from pathlib import Path
 
 import ffmpeg
-from logging_utils import setup_console_logging, cleanup_logging, logger
+from logging_utils import begin_file_logging, logger
 
 from ai_video_creator.generators import SubtitleGenerator
+from ai_video_creator.helpers.ffmpeg_helpers import get_audio_duration, run_ffmpeg_trace
 from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
 
 from .video_asset_manager import VideoAssets
+from .video_effect_manager import MediaEffects
 
 
 class VideoAssembler:
@@ -27,59 +28,29 @@ class VideoAssembler:
         """
         Initialize VideoCreator with the required generators.
         """
-        self.__console_log_id = setup_console_logging(
-            name="VideoAssembler", log_level="TRACE"
-        )
-
         self.__paths = VideoRecipePaths(story_folder, chapter_index)
-        self.__subtitle_generator = SubtitleGenerator()
 
-        self.assets = VideoAssets(self.__paths.video_asset_file)
-        if not self.assets.is_complete():
-            raise ValueError(
-                "Video assets are incomplete. Please ensure all required assets are present."
+        with begin_file_logging(
+            name="VideoAssembler",
+            log_level="TRACE",
+            base_folder=self.__paths.video_path,
+        ):
+            self.__subtitle_generator = SubtitleGenerator()
+
+            self.assets = VideoAssets(self.__paths.video_asset_file)
+            if not self.assets.is_complete():
+                raise ValueError(
+                    "Video assets are incomplete. Please ensure all required assets are present."
+                )
+
+            self.effects = MediaEffects(
+                effects_file_path=self.__paths.video_effects_file
             )
 
-        self.output_path = self.__paths.video_output_file
-        self._temp_files = []
+            self.output_path = self.__paths.video_output_file
+            self._temp_files = []
 
-    def __del__(self):
-        """Cleanup resources."""
-        cleanup_logging(self.__console_log_id)
-
-    def __run_ffmpeg_trace(self, ffmpeg_compiled: str):
-        """
-        Run the FFmpeg command and logs its output.
-        """
-        # Step 2: Run with Popen to capture output
-        process = subprocess.Popen(
-            ffmpeg_compiled,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
-        )
-
-        # Step 3: Stream and log each line
-        for line in process.stdout:
-            logger.trace(line.strip())  # Your logger class handles output
-
-        process.wait()
-
-        # Optional: check exit code
-        if process.returncode != 0:
-            logger.error(f"FFmpeg exited with code {process.returncode}")
-            raise RuntimeError(f"FFmpeg failed with code {process.returncode}")
-
-    def __get_audio_duration(self, path: str) -> float:
-        """
-        Get the duration of an audio file using ffmpeg.probe
-        """
-        probe = ffmpeg.probe(path)
-        duration = float(probe["format"]["duration"])
-        return duration
-
-    def _generate_image_audio_video_segment(
+    def _combine_image_audio_video_segment(
         self, image_path: str, audio_path: str
     ) -> str:
         """
@@ -87,7 +58,7 @@ class VideoAssembler:
         """
         image_path_obj = Path(image_path)
         temp_file = self.__paths.assets_path / f"temp_{image_path_obj.stem}.mp4"
-        duration = self.__get_audio_duration(audio_path)
+        duration = get_audio_duration(audio_path)
         video_input = ffmpeg.input(image_path, loop=1, t=duration)
         audio_input = ffmpeg.input(audio_path)
         if not temp_file.exists():
@@ -115,7 +86,7 @@ class VideoAssembler:
                 .overwrite_output()
                 .compile()
             )
-            self.__run_ffmpeg_trace(cmd)
+            run_ffmpeg_trace(cmd)
             logger.info(f"Video segment created successfully: {temp_file.name}")
         else:
             logger.info(f"Video segment already exists: {temp_file.name}")
@@ -154,7 +125,7 @@ class VideoAssembler:
             .overwrite_output()
             .compile()
         )
-        self.__run_ffmpeg_trace(cmd)
+        run_ffmpeg_trace(cmd)
 
         logger.info(f"Subtitles added successfully to: {self.output_path.name}")
         return self.output_path
@@ -183,7 +154,7 @@ class VideoAssembler:
                 .overwrite_output()
                 .compile()
             )
-            self.__run_ffmpeg_trace(cmd)
+            run_ffmpeg_trace(cmd)
             logger.info("Video concatenation completed successfully")
         else:
             logger.info(f"Final video already exists: {output_video_path.name}")
@@ -219,27 +190,62 @@ class VideoAssembler:
                 file_path.unlink()
         logger.info("Cleanup completed")
 
+    def _apply_media_effects(
+        self, narrator_file_paths: list[Path], image_file_paths: list[Path]
+    ) -> tuple[Path, Path]:
+        """
+        Apply media effects to the audio and image files.
+        """
+        processed_images: list[Path] = []
+        for image_path, image_effects in zip(
+            image_file_paths, self.effects.image_effects
+        ):
+            processed_image_path = image_path
+            for effect in image_effects:
+                if effect:
+                    processed_image_path = effect.apply(processed_image_path)
+                    self._temp_files.append(processed_image_path)
+            processed_images.append(processed_image_path)
+
+        processed_narrators: list[Path] = []
+        for audio_path, audio_effects in zip(
+            narrator_file_paths, self.effects.narrator_effects
+        ):
+            processed_narrator_path = audio_path
+            for effect in audio_effects:
+                if effect:
+                    processed_narrator_path = effect.apply(processed_narrator_path)
+                    self._temp_files.append(processed_narrator_path)
+            processed_narrators.append(processed_narrator_path)
+
+        return processed_narrators, processed_images
+
     def _create_video_segments(self) -> None:
         """
         Create video segments from the assets defined in the video recipe.
         """
 
         # Extract data from video recipe
-        audio_prompts = self.assets.narrator_list
-        visual_prompts = self.assets.image_list
+        narrator_file_paths = self.assets.narrator_list
+        image_file_paths = self.assets.image_list
 
         logger.info(
-            f"Processing {len(audio_prompts)} audio files and {len(visual_prompts)} images"
+            f"Processing {len(narrator_file_paths)} audio files and {len(image_file_paths)} images"
+        )
+
+        processed_narrators, processed_images = self._apply_media_effects(
+            narrator_file_paths, image_file_paths
         )
 
         video_segments = []
         for i, (image_path, audio_path) in enumerate(
-            zip(visual_prompts, audio_prompts), 1
+            zip(processed_images, processed_narrators), 1
         ):
             logger.info(
-                f"Processing segment {i}/{len(audio_prompts)}: {Path(image_path).name}"
+                f"Processing segment {i}/{len(narrator_file_paths)}: {Path(image_path).name}"
             )
-            video_segment = self._generate_image_audio_video_segment(
+
+            video_segment = self._combine_image_audio_video_segment(
                 image_path, audio_path
             )
             video_segments.append(video_segment)
@@ -256,9 +262,14 @@ class VideoAssembler:
             video_recipe: VideoRecipe object containing narrator text and visual descriptions
             output_filename: Name of the output video file
         """
-        logger.info("Starting video assembly process")
+        with begin_file_logging(
+            name="VideoAssembler",
+            log_level="TRACE",
+            base_folder=self.__paths.video_path,
+        ):
+            logger.info("Starting video assembly process")
 
-        video_segments = self._create_video_segments()
-        self._compose(video_segments)
+            video_segments = self._create_video_segments()
+            self._compose(video_segments)
 
-        logger.info(f"Video assembly completed successfully: {self.output_path}")
+            logger.info(f"Video assembly completed successfully: {self.output_path}")
