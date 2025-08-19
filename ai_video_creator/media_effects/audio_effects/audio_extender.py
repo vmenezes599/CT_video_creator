@@ -3,7 +3,7 @@ A class that extends the duration of an audio clip by a specified number of seco
 """
 
 from pathlib import Path
-from typing import override
+from typing_extensions import override
 
 import ffmpeg
 from logging_utils import logger
