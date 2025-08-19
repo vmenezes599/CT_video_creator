@@ -34,6 +34,10 @@ def create_chapter_video_recipe(story_path: Path, chapter_index: int) -> None:
     )
     video_asset_manager.generate_video_assets()
 
+    video_effect_manager = MediaEffectsManager(
+        story_folder=story_path, chapter_index=chapter_index
+    )
+
     cleanup_logging(log_id)
 
 
@@ -49,10 +53,6 @@ def assemble_chapter_video(story_path: Path, chapter_index: int) -> None:
         None
     """
     log_id = setup_console_logging("AssembleChapterVideo", log_level="TRACE")
-
-    video_effect_manager = MediaEffectsManager(
-        story_folder=story_path, chapter_index=chapter_index
-    )
 
     video_assembler = VideoAssembler(
         story_folder=story_path,
