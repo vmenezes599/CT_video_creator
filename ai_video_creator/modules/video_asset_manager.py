@@ -28,15 +28,11 @@ class VideoAssets:
                 data = json.load(file)
                 assets = data.get("assets", [])
                 self.narrator_list = [
-                    (
-                        Path(asset.get("narrator", ""))
-                        if asset.get("narrator")
-                        else Path("")
-                    )
+                    (Path(asset.get("narrator", "")) if asset.get("narrator") else None)
                     for asset in assets
                 ]
                 self.image_list = [
-                    Path(asset.get("image", "")) if asset.get("image") else Path("")
+                    (Path(asset.get("image", "")) if asset.get("image") else None)
                     for asset in assets
                 ]
             logger.info(
@@ -75,11 +71,11 @@ class VideoAssets:
         """Extend lists to ensure the scene_index exists."""
         # Extend narrator_list if needed
         while len(self.narrator_list) <= scene_index:
-            self.narrator_list.append(Path(""))
+            self.narrator_list.append(None)
 
         # Extend image_list if needed
         while len(self.image_list) <= scene_index:
-            self.image_list.append(Path(""))
+            self.image_list.append(None)
 
     def set_scene_narrator(self, scene_index: int, narrator_file_path: Path) -> None:
         """Set narrator file path for a specific scene."""
@@ -104,22 +100,24 @@ class VideoAssets:
         """Check if a scene has narrator asset."""
         if scene_index < 0 or scene_index >= len(self.narrator_list):
             return False
-        return bool(str(self.narrator_list[scene_index]))
+        narrator = self.narrator_list[scene_index]
+        return narrator is not None and narrator.exists() and narrator.is_file()
 
     def has_image(self, scene_index: int) -> bool:
         """Check if a scene has image asset."""
         if scene_index < 0 or scene_index >= len(self.image_list):
             return False
-        return bool(str(self.image_list[scene_index]))
+        image = self.image_list[scene_index]
+        return image is not None and image.exists() and image.is_file()
 
     def get_missing_assets(self) -> dict:
         """Get a summary of missing assets per scene."""
         missing = {"narrator": [], "image": []}
-        for i, narrator in enumerate(self.narrator_list):
-            if not str(narrator):
+        for i, _ in enumerate(self.narrator_list):
+            if not self.has_narrator(i):
                 missing["narrator"].append(i)
-        for i, image in enumerate(self.image_list):
-            if not str(image):
+        for i, _ in enumerate(self.image_list):
+            if not self.has_image(i):
                 missing["image"].append(i)
         return missing
 
@@ -135,31 +133,24 @@ class VideoAssetManager:
     def __init__(self, story_folder: Path, chapter_index: int):
         """Initialize VideoAssetManager with story folder and chapter index."""
 
+        logger.info(
+            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
+        )
+
+        self.story_folder = story_folder
+        self.chapter_index = chapter_index
+        self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
+
         self.__paths = VideoRecipePaths(story_folder, chapter_index)
-        with begin_file_logging(
-            name="VideoAssetManager",
-            log_level="TRACE",
-            base_folder=self.__paths.video_path,
-        ):
-            logger.info(
-                f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
-            )
+        self.recipe = VideoRecipe(self.__paths.recipe_file)
+        self.video_assets = VideoAssets(self.__paths.video_asset_file)
 
-            self.story_folder = story_folder
-            self.chapter_index = chapter_index
-            self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
+        # Ensure video_assets lists have the same size as recipe
+        self._synchronize_assets_with_recipe()
 
-            # Initialize path management
-
-            self.recipe = VideoRecipe(self.__paths.recipe_file)
-            self.video_assets = VideoAssets(self.__paths.video_asset_file)
-
-            # Ensure video_assets lists have the same size as recipe
-            self._synchronize_assets_with_recipe()
-
-            logger.debug(
-                f"VideoAssetManager initialized with {len(self.recipe.narrator_data)} scenes"
-            )
+        logger.debug(
+            f"VideoAssetManager initialized with {len(self.recipe.narrator_data)} scenes"
+        )
 
     def _synchronize_assets_with_recipe(self):
         """Ensure video_assets lists have the same size as recipe."""

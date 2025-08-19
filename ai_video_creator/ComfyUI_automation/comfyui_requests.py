@@ -116,6 +116,20 @@ class ComfyUIRequests:
 
         return (datetime.now() - start_time).seconds
 
+    def _send_clean_memory_request(self):
+        """
+        Send a request to clean memory in ComfyUI.
+        """
+        try:
+            payload = {"unload_models": True, "free_memory": True}
+            response = self._send_post_request(
+                f"{COMFYUI_URL}/free", json=payload, timeout=10
+            )
+            if not response.ok:
+                logger.error("Failed to clean memory in ComfyUI: {}", response.text)
+        except RequestException as e:
+            logger.error("Error occurred while cleaning memory in ComfyUI: {}", e)
+
     def _get_output_path(self, history_entry: dict) -> str | None:
         """
         Get the output file path for a completed workflow.
@@ -184,6 +198,8 @@ class ComfyUIRequests:
                 if history_entry:
                     self._check_for_output_success(history_entry)
                     output_path = self._get_output_path(history_entry)
+
+                    self._send_clean_memory_request()
 
                     return output_path
                 tries += 1

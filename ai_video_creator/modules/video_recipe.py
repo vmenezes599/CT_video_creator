@@ -120,23 +120,17 @@ class VideoRecipeBuilder:
             background_music: Background music setting
             seeds: List of seeds for each generation (None elements use default behavior)
         """
+        logger.info(
+            "Initializing VideoRecipeBuilder for story:"
+            f" {story_folder.name}, chapter: {chapter_prompt_index}"
+        )
+
         self.__paths = VideoRecipePaths(story_folder, chapter_prompt_index)
+        self.__chapter_prompt_path = self.__paths.chapter_prompt_path
 
-        with begin_file_logging(
-            name="VideoRecipeBuilder",
-            log_level="TRACE",
-            base_folder=self.__paths.video_path,
-        ):
-            logger.info(
-                "Initializing VideoRecipeBuilder for story:"
-                f" {story_folder.name}, chapter: {chapter_prompt_index}"
-            )
-
-            self.__chapter_prompt_path = self.__paths.chapter_prompt_path
-
-            # Load video prompt
-            self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
-            self._recipe = None
+        # Load video prompt
+        self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
+        self._recipe = None
 
     def _verify_recipe_against_prompt(self) -> None:
         """Verify the recipe against the prompt to ensure all required data is present."""
