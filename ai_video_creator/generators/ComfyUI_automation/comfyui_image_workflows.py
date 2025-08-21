@@ -192,17 +192,17 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
     STABLE_DIFFUSION_LOADER_NODE_INDEX = 12
     SAVE_IMAGE_NODE_INDEX = 17
 
-    def __init__(self, load_best_config: bool = True) -> None:
+    def __init__(self, load_default_config: bool = False) -> None:
         """
         Initialize the StableDiffusionWorkflow class.
         """
         super().__init__(self.STABLE_DIFFUSION_WORKFLOW_PATH)
 
-        # Loading best configurations for the workflow
-        if load_best_config:
-            self._load_best_configurations()
+        # Loading default configurations for the workflow
+        if load_default_config:
+            self._load_default_configurations()
 
-    def _load_best_configurations(self) -> None:
+    def _load_default_configurations(self) -> None:
         self.set_latent_image([1024, 768], 1)
         self.set_ksampler(
             seed=random.randint(0, 2**32 - 1),
@@ -437,17 +437,17 @@ class FluxWorkflow(UnetWorkflowBase):
     WIDTH_NODE_INDEX = 70
     HEIGHT_NODE_INDEX = 71
 
-    def __init__(self, load_best_config: bool = True) -> None:
+    def __init__(self, load_default_config: bool = False) -> None:
         """
         Initialize the FluxWorkflow class.
         """
         super().__init__(self.FLUX_WORKFLOW_PATH)
 
-        # Loading best configurations for the workflow
-        if load_best_config:
-            self._load_best_configurations()
+        # Loading default configurations for the workflow
+        if load_default_config:
+            self._load_default_configurations()
 
-    def _load_best_configurations(self) -> None:
+    def _load_default_configurations(self) -> None:
         self.set_seed(random.randint(0, 2**64 - 1))
         self.set_output_filename("output")
 
@@ -503,12 +503,6 @@ class FluxWorkflow(UnetWorkflowBase):
         super()._set_random_noise(
             self.RANDOM_NOISE_NODE_INDEX, random_noise=random_noise
         )
-
-    def get_seed(self) -> int:
-        """
-        Get the random noise seed.
-        """
-        return self._get_fields(self.RANDOM_NOISE_NODE_INDEX, "noise_seed")
 
     @override
     def set_output_filename(self, filename):

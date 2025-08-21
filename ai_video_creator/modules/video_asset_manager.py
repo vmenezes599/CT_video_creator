@@ -57,7 +57,7 @@ class VideoAssets:
                         else ""
                     )
                     image = str(self.image_list[i]) if i < len(self.image_list) else ""
-                    assets.append({"narrator": narrator, "image": image})
+                    assets.append({"index": i, "narrator": narrator, "image": image})
 
                 data = {"assets": assets}
                 json.dump(data, file, indent=4)

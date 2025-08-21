@@ -93,9 +93,17 @@ class VideoRecipe:
         Returns:
             Dictionary representation of the VideoRecipe
         """
+        narrator_data = [item.to_dict() for item in self.narrator_data]
+        for i, item in enumerate(narrator_data):
+            item["index"] = i
+
+        image_data = [item.to_dict() for item in self.image_data]
+        for i, item in enumerate(image_data):
+            item["index"] = i
+
         return {
-            "narrator_data": [item.to_dict() for item in self.narrator_data],
-            "image_data": [item.to_dict() for item in self.image_data],
+            "narrator_data": narrator_data,
+            "image_data": image_data,
         }
 
     def save_current_state(self) -> None:
