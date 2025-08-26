@@ -293,3 +293,16 @@ class ComfyUIRequests:
 
         logger.error("Failed to fetch last history entry.")
         return {}
+
+    def comfyui_get_available_loras(self) -> list[str]:
+        """
+        Get the list of available LORA models from ComfyUI.
+        """
+        response = self._send_get_request(f"{COMFYUI_URL}/models/loras", timeout=10)
+
+        if response.ok:
+            lora_data = response.json()
+            return lora_data
+
+        logger.error("Failed to fetch available LORA models.")
+        return []

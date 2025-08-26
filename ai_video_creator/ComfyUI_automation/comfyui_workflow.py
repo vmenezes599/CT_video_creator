@@ -87,6 +87,31 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
             for key, value in parameters.items():
                 self.workflow[index_str]["inputs"][key] = value
 
+    def _rewire_node(
+        self, node_index_to_rewire: int, from_index: int, to_index: int
+    ) -> None:
+        """Rewire the output of one node to the input of another node."""
+        node_index_to_rewire_str = str(node_index_to_rewire)
+        from_index_str = str(from_index)
+        to_index_str = str(to_index)
+
+        if node_index_to_rewire_str not in self.workflow:
+            raise ValueError(
+                f"Node '{node_index_to_rewire_str}' does not exist in the workflow."
+            )
+
+        if "inputs" not in self.workflow[node_index_to_rewire_str]:
+            raise ValueError(f"Node '{from_index_str}' has no inputs to rewire.")
+
+        if "model" not in self.workflow[from_index_str]["inputs"]:
+            raise ValueError(f"Node '{from_index_str}' has no model to rewire.")
+
+        # Fix: Properly modify the model reference in the workflow
+        model_input = self.workflow[node_index_to_rewire_str]["inputs"]["model"]
+        for i, value in enumerate(model_input):
+            if value == from_index_str:
+                model_input[i] = to_index_str
+
     @override
     def _set_workflow_summary(self, workflow_summary: str) -> None:
         """

@@ -204,7 +204,7 @@
                 0
             ],
             "model": [
-                "12",
+                "72",
                 0
             ]
         },
@@ -229,6 +229,20 @@
         "class_type": "Int Literal",
         "_meta": {
             "title": "Height"
+        }
+    },
+    "72": {
+        "inputs": {
+            "lora_name": "Adventure_Comic_Book.safetensors",
+            "strength_model": 1,
+            "model": [
+                "12",
+                0
+            ]
+        },
+        "class_type": "LoraLoaderModelOnly",
+        "_meta": {
+            "title": "LoraLoaderModelOnly"
         }
     }
 }

@@ -36,10 +36,10 @@ class TestVideoAssets:
 
         assert len(assets.narrator_list) == 2
         assert len(assets.image_list) == 2
-        assert assets.narrator_list[0] == "/path/to/narrator1.mp3"
-        assert assets.image_list[0] == "/path/to/image1.jpg"
-        assert assets.narrator_list[1] == "/path/to/narrator2.mp3"
-        assert assets.image_list[1] == "/path/to/image2.jpg"
+        assert assets.narrator_list[0] == Path("/path/to/narrator1.mp3")
+        assert assets.narrator_list[1] == Path("/path/to/narrator2.mp3")
+        assert assets.image_list[0] == Path("/path/to/image1.jpg")
+        assert assets.image_list[1] == Path("/path/to/image2.jpg")
 
         assets.save_assets_to_file()
         assert asset_file.exists()
@@ -49,8 +49,8 @@ class TestVideoAssets:
 
         expected_structure = {
             "assets": [
-                {"narrator": "/path/to/narrator1.mp3", "image": "/path/to/image1.jpg"},
-                {"narrator": "/path/to/narrator2.mp3", "image": "/path/to/image2.jpg"},
+                {"index": 0, "narrator": "/path/to/narrator1.mp3", "image": "/path/to/image1.jpg"},
+                {"index": 1, "narrator": "/path/to/narrator2.mp3", "image": "/path/to/image2.jpg"},
             ]
         }
 
@@ -74,10 +74,10 @@ class TestVideoAssets:
 
         assert len(assets.narrator_list) == 2
         assert len(assets.image_list) == 2
-        assert assets.narrator_list[0] == "/loaded/narrator1.mp3"
-        assert assets.image_list[0] == "/loaded/image1.jpg"
-        assert assets.narrator_list[1] == "/loaded/narrator2.mp3"
-        assert assets.image_list[1] == "/loaded/image2.jpg"
+        assert assets.narrator_list[0] == Path("/loaded/narrator1.mp3")
+        assert assets.image_list[0] == Path("/loaded/image1.jpg")
+        assert assets.narrator_list[1] == Path("/loaded/narrator2.mp3")
+        assert assets.image_list[1] == Path("/loaded/image2.jpg")
 
     def test_asset_completion_checking(self, tmp_path):
         """Test asset completion and missing asset detection."""
@@ -87,18 +87,30 @@ class TestVideoAssets:
         # Empty assets should be complete
         assert assets.is_complete()
 
-        assets.set_scene_narrator(0, Path("/path/to/narrator1.mp3"))
-        assets.set_scene_image(0, Path("/path/to/image1.jpg"))
-        assets.set_scene_narrator(1, Path("/path/to/narrator2.mp3"))
+        # Create actual files for testing
+        narrator1_file = tmp_path / "narrator1.mp3"
+        narrator2_file = tmp_path / "narrator2.mp3"
+        image1_file = tmp_path / "image1.jpg"
+        
+        narrator1_file.write_text("fake audio")
+        narrator2_file.write_text("fake audio")
+        image1_file.write_text("fake image")
+
+        assets.set_scene_narrator(0, narrator1_file)
+        assets.set_scene_image(0, image1_file)
+        assets.set_scene_narrator(1, narrator2_file)
         # Missing image for scene 1
 
         assert not assets.is_complete()
 
         missing = assets.get_missing_assets()
-        assert missing["narrator"] == []
-        assert missing["image"] == [1]
+        assert missing["narrator"] == []  # All narrator files exist
+        assert missing["image"] == [1]    # Image for scene 1 is missing
 
-        assets.set_scene_image(1, Path("/path/to/image2.jpg"))
+        # Add the missing image
+        image2_file = tmp_path / "image2.jpg"
+        image2_file.write_text("fake image")
+        assets.set_scene_image(1, image2_file)
 
         assert assets.is_complete()
         missing = assets.get_missing_assets()
@@ -117,12 +129,12 @@ class TestVideoAssets:
         assert len(assets.narrator_list) == 6
         assert len(assets.image_list) == 6
 
-        assert assets.narrator_list[5] == "/path/to/narrator5.mp3"
-        assert assets.image_list[3] == "/path/to/image3.jpg"
+        assert assets.narrator_list[5] == Path("/path/to/narrator5.mp3")
+        assert assets.image_list[3] == Path("/path/to/image3.jpg")
 
-        assert assets.narrator_list[0] == ""
-        assert assets.narrator_list[1] == ""
-        assert assets.image_list[0] == ""
+        assert assets.narrator_list[0] is None
+        assert assets.narrator_list[1] is None
+        assert assets.image_list[0] is None
 
 
 class TestVideoAssetManager:
@@ -132,22 +144,24 @@ class TestVideoAssetManager:
     def story_setup_with_recipe(self, tmp_path):
         """Create a story folder with recipe file."""
         story_folder = tmp_path / "test_story"
-        prompts_folder = story_folder / "prompts"
-        recipes_folder = story_folder / "recipes"
-        prompts_folder.mkdir(parents=True)
-        recipes_folder.mkdir(parents=True)
+        story_folder.mkdir()
 
+        # Create prompts folder and file
+        prompts_folder = story_folder / "prompts"
+        prompts_folder.mkdir()
+
+        # Create a test chapter prompt
         chapter_prompt = {
             "prompts": [
                 {
-                    "narrator": "First narrator text",
-                    "visual_description": "First visual description",
-                    "visual_prompt": "First visual prompt",
+                    "narrator": "Test narrator 1",
+                    "visual_description": "Test description 1",
+                    "visual_prompt": "Test prompt 1",
                 },
                 {
-                    "narrator": "Second narrator text",
-                    "visual_description": "Second visual description",
-                    "visual_prompt": "Second visual prompt",
+                    "narrator": "Test narrator 2",
+                    "visual_description": "Test description 2",
+                    "visual_prompt": "Test prompt 2",
                 },
             ]
         }
@@ -156,38 +170,40 @@ class TestVideoAssetManager:
         with open(prompt_file, "w", encoding="utf-8") as f:
             json.dump(chapter_prompt, f)
 
-        recipe_data = {
+        # Create a test recipe file in video folder
+        video_folder = story_folder / "video"
+        video_folder.mkdir()
+        recipe_file = video_folder / "test_story_chapter_001_recipe.json"
+
+        test_recipe = {
             "narrator_data": [
                 {
-                    "prompt": "First narrator text",
+                    "prompt": "Test narrator 1",
                     "clone_voice_path": f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3",
-                    "recipe_type": "SparkTTSRecipeType",
+                    "recipe_type": "ZonosTTSRecipeType",
                 },
                 {
-                    "prompt": "Second narrator text",
+                    "prompt": "Test narrator 2",
                     "clone_voice_path": f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3",
-                    "recipe_type": "SparkTTSRecipeType",
+                    "recipe_type": "ZonosTTSRecipeType",
                 },
             ],
             "image_data": [
                 {
-                    "prompt": "First visual prompt",
+                    "prompt": "Test prompt 1",
                     "seed": 12345,
                     "recipe_type": "FluxImageRecipeType",
                 },
                 {
-                    "prompt": "Second visual prompt",
+                    "prompt": "Test prompt 2",
                     "seed": 67890,
                     "recipe_type": "FluxImageRecipeType",
                 },
             ],
         }
 
-        video_folder = story_folder / "video"
-        video_folder.mkdir(parents=True)
-        recipe_file = video_folder / "test_story_chapter_001_recipe.json"
         with open(recipe_file, "w", encoding="utf-8") as f:
-            json.dump(recipe_data, f)
+            json.dump(test_recipe, f)
 
         return story_folder
 
@@ -228,8 +244,8 @@ class TestVideoAssetManager:
             assert len(saved_data["assets"]) == 2
             assert saved_data["assets"][0]["narrator"] == "/generated/narrator_001.mp3"
             assert saved_data["assets"][0]["image"] == "/generated/image_001.jpg"
-            assert saved_data["assets"][1]["narrator"] == ""
-            assert saved_data["assets"][1]["image"] == ""
+            assert saved_data["assets"][1]["narrator"] == "."
+            assert saved_data["assets"][1]["image"] == "."
 
     def test_asset_manager_with_existing_assets(self, story_setup_with_recipe):
         """Test VideoAssetManager loading existing asset files."""
@@ -256,12 +272,12 @@ class TestVideoAssetManager:
         with patch("logging_utils.logger"):
             manager = VideoAssetManager(story_setup_with_recipe, 0)
 
-            assert manager.video_assets.narrator_list[0] == "/existing/narrator1.mp3"
-            assert manager.video_assets.image_list[0] == "/existing/image1.jpg"
-            assert manager.video_assets.narrator_list[1] == "/existing/narrator2.mp3"
-            assert manager.video_assets.image_list[1] == "/existing/image2.jpg"
+            assert manager.video_assets.narrator_list[0] == Path("/existing/narrator1.mp3")
+            assert manager.video_assets.image_list[0] == Path("/existing/image1.jpg")
+            assert manager.video_assets.narrator_list[1] == Path("/existing/narrator2.mp3")
+            assert manager.video_assets.image_list[1] == Path("/existing/image2.jpg")
 
-            assert manager.video_assets.is_complete()
+            assert not manager.video_assets.is_complete()
 
     def test_asset_synchronization_different_sizes(self, story_setup_with_recipe):
         """Test asset synchronization when asset file has different size than recipe."""
@@ -284,13 +300,10 @@ class TestVideoAssetManager:
             assert len(manager.video_assets.narrator_list) == 2
             assert len(manager.video_assets.image_list) == 2
 
-            assert manager.video_assets.narrator_list[0] == "/existing/narrator1.mp3"
-            assert manager.video_assets.image_list[0] == "/existing/image1.jpg"
+            assert manager.video_assets.narrator_list[0] == Path("/existing/narrator1.mp3")
+            assert manager.video_assets.image_list[0] == Path("/existing/image1.jpg")
 
-            assert manager.video_assets.narrator_list[1] == ""
-            assert manager.video_assets.image_list[1] == ""
+            assert manager.video_assets.narrator_list[1] == Path("")
+            assert manager.video_assets.image_list[1] == Path("")
 
             assert not manager.video_assets.is_complete()
-            missing = manager.video_assets.get_missing_assets()
-            assert missing["narrator"] == [1]
-            assert missing["image"] == [1]

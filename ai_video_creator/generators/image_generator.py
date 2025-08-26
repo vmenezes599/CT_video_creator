@@ -6,9 +6,9 @@ import random
 import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
+from logging_utils import logger
 
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
-from logging_utils import logger
 from .ComfyUI_automation.comfyui_image_workflows import FluxWorkflow
 
 
@@ -16,15 +16,16 @@ class ImageRecipeBase:
     """Base class for image recipes."""
 
     prompt: str
+    lora: str
     seed: int
     recipe_type = "ImageRecipeBase"
 
-    def __init__(self, prompt: str, seed: int, recipe_type: str):
+    def __init__(self, prompt: str, lora: str, seed: int, recipe_type: str):
         """Initialize ImageRecipeBase with a name."""
-        self.recipe_type = recipe_type
         self.prompt = prompt
-        if seed:
-            self.seed = seed
+        self.lora = lora
+        self.seed = seed
+        self.recipe_type = recipe_type
 
 
 class IImageGenerator(ABC):
@@ -71,6 +72,7 @@ class FluxAIImageGenerator(IImageGenerator):
         workflow.set_positive_prompt(recipe.prompt)
         workflow.set_output_filename(output_file_path.stem)
 
+        workflow.set_lora(recipe.lora)
         workflow.set_seed(recipe.seed)
 
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
@@ -87,7 +89,7 @@ class FluxImageRecipe(ImageRecipeBase):
 
     recipe_type = "FluxImageRecipeType"
 
-    def __init__(self, prompt: str, seed: int | None = None):
+    def __init__(self, prompt: str, lora: str | None = None, seed: int | None = None):
         """Initialize ImageRecipe with image data.
 
         Args:
@@ -97,6 +99,7 @@ class FluxImageRecipe(ImageRecipeBase):
         super().__init__(
             prompt=prompt,
             recipe_type=self.recipe_type,
+            lora=lora if lora is not None else "",
             seed=random.randint(0, 2**64 - 1) if seed is None else seed,
         )
 
@@ -106,8 +109,14 @@ class FluxImageRecipe(ImageRecipeBase):
         Returns:
             Dictionary representation of the ImageRecipe
         """
+        # TODO: Remove this when web UI is mature?
+        requests = ComfyUIRequests()
+        available_loras = requests.comfyui_get_available_loras()
+
         return {
             "prompt": self.prompt,
+            "lora": self.lora,
+            "available_loras": available_loras,
             "seed": self.seed,
             "recipe_type": self.recipe_type,
         }
@@ -142,5 +151,6 @@ class FluxImageRecipe(ImageRecipeBase):
 
         return cls(
             prompt=data["prompt"],
+            lora=data.get("lora", None),
             seed=data.get("seed", None),
         )

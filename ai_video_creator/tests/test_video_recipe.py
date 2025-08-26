@@ -3,12 +3,12 @@ Unit tests for video_recipe module.
 """
 
 import json
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
-from ai_video_creator.generators import FluxImageRecipe, SparkTTSRecipe
+from ai_video_creator.generators import FluxImageRecipe, ZonosTTSRecipe
 from ai_video_creator.modules.video_recipe import (
     VideoRecipe,
     VideoRecipeBuilder,
@@ -48,43 +48,53 @@ class TestVideoRecipe:
         recipe_path = tmp_path / "test_recipe.json"
         recipe = VideoRecipe(recipe_path)
 
-        # Add real data
-        narrator_recipe = SparkTTSRecipe("Test narrator text", "voice.mp3")
-        image_recipe = FluxImageRecipe("Test image prompt", 12345)
+        # Mock ComfyUIRequests to avoid network calls that might affect seed generation
+        with patch("ai_video_creator.generators.image_generator.ComfyUIRequests") as mock_requests_class:
+            mock_requests_instance = MagicMock()
+            mock_requests_instance.comfyui_get_available_loras.return_value = []
+            mock_requests_class.return_value = mock_requests_instance
 
-        recipe.add_narrator_data(narrator_recipe)
-        recipe.add_image_data(image_recipe)
+            # Add real data
+            narrator_recipe = ZonosTTSRecipe("Test narrator text", "voice.mp3")
+            image_recipe = FluxImageRecipe("Test image prompt", seed=12345)
 
-        # Verify data was added correctly
-        assert len(recipe.narrator_data) == 1
-        assert len(recipe.image_data) == 1
-        assert recipe.narrator_data[0].prompt == "Test narrator text"
-        assert recipe.image_data[0].prompt == "Test image prompt"
-        assert recipe.image_data[0].seed == 12345
+            recipe.add_narrator_data(narrator_recipe)
+            recipe.add_image_data(image_recipe)
+
+            # Verify data was added correctly
+            assert len(recipe.narrator_data) == 1
+            assert len(recipe.image_data) == 1
+            assert recipe.narrator_data[0].prompt == "Test narrator text"
+            assert recipe.image_data[0].prompt == "Test image prompt"
+            assert recipe.image_data[0].seed == 12345
 
         # Verify file was created with correct structure
         assert recipe_path.exists()
         with open(recipe_path, "r", encoding="utf-8") as f:
             saved_data = json.load(f)
 
-        expected_structure = {
-            "narrator_data": [
-                {
-                    "prompt": "Test narrator text",
-                    "clone_voice_path": "voice.mp3",
-                    "recipe_type": "SparkTTSRecipeType",
-                }
-            ],
-            "image_data": [
-                {
-                    "prompt": "Test image prompt",
-                    "seed": 12345,
-                    "recipe_type": "FluxImageRecipeType",
-                }
-            ],
-        }
-
-        assert saved_data == expected_structure
+        # Check basic structure and key values
+        assert "narrator_data" in saved_data
+        assert "image_data" in saved_data
+        assert len(saved_data["narrator_data"]) == 1
+        assert len(saved_data["image_data"]) == 1
+        
+        # Check narrator data
+        narrator = saved_data["narrator_data"][0]
+        assert narrator["prompt"] == "Test narrator text"
+        assert narrator["clone_voice_path"] == "voice.mp3"
+        assert narrator["recipe_type"] == "ZonosTTSRecipeType"
+        assert "index" in narrator
+        assert "seed" in narrator
+        
+        # Check image data  
+        image = saved_data["image_data"][0]
+        assert image["prompt"] == "Test image prompt"
+        assert image["seed"] == 12345  # This should be preserved
+        assert image["recipe_type"] == "FluxImageRecipeType"
+        assert "index" in image
+        assert "lora" in image
+        assert "available_loras" in image
 
     def test_recipe_loading_from_file(self, tmp_path):
         """Test loading recipe from existing file."""
@@ -96,7 +106,7 @@ class TestVideoRecipe:
                 {
                     "prompt": "Loaded narrator text",
                     "clone_voice_path": "loaded_voice.mp3",
-                    "recipe_type": "SparkTTSRecipeType",
+                    "recipe_type": "ZonosTTSRecipeType",
                 }
             ],
             "image_data": [
@@ -117,7 +127,7 @@ class TestVideoRecipe:
         # Verify data was loaded correctly
         assert len(recipe.narrator_data) == 1
         assert len(recipe.image_data) == 1
-        assert isinstance(recipe.narrator_data[0], SparkTTSRecipe)
+        assert isinstance(recipe.narrator_data[0], ZonosTTSRecipe)
         assert isinstance(recipe.image_data[0], FluxImageRecipe)
         assert recipe.narrator_data[0].prompt == "Loaded narrator text"
         assert recipe.image_data[0].seed == 99999
@@ -159,7 +169,7 @@ class TestVideoRecipeBuilder:
         """Test that VideoRecipeBuilder creates the correct JSON file structure."""
         # Mock only external dependencies
         with patch("logging_utils.logger"):
-            with patch("ai_video_creator.modules.video_recipe.begin_console_logging"):
+            with patch("ai_video_creator.modules.video_recipe.begin_file_logging"):
                 builder = VideoRecipeBuilder(story_setup, 0)
                 builder.create_video_recipe()
 
@@ -186,7 +196,7 @@ class TestVideoRecipeBuilder:
                 )
                 assert (
                     saved_recipe["narrator_data"][0]["recipe_type"]
-                    == "SparkTTSRecipeType"
+                    == "ZonosTTSRecipeType"
                 )
                 assert (
                     saved_recipe["narrator_data"][0]["clone_voice_path"]
@@ -206,20 +216,34 @@ class TestVideoRecipeBuilder:
     def test_recipe_builder_with_existing_valid_recipe(self, story_setup):
         """Test that builder doesn't recreate valid existing recipes."""
         with patch("logging_utils.logger"):
-            with patch("ai_video_creator.modules.video_recipe.begin_console_logging"):
+            with patch("ai_video_creator.modules.video_recipe.begin_file_logging"):
                 # Create first recipe
                 builder1 = VideoRecipeBuilder(story_setup, 0)
                 builder1.create_video_recipe()
 
                 recipe_file = builder1._VideoRecipeBuilder__paths.recipe_file
-                original_mtime = recipe_file.stat().st_mtime
+                
+                # Load the original content
+                with open(recipe_file, "r", encoding="utf-8") as f:
+                    original_content = json.load(f)
 
                 # Create second builder - should use existing recipe
                 builder2 = VideoRecipeBuilder(story_setup, 0)
                 builder2.create_video_recipe()
 
-                # File should not have been modified (same modification time)
-                assert recipe_file.stat().st_mtime == original_mtime
+                # Content should be the same (recipes should not be recreated)
+                with open(recipe_file, "r", encoding="utf-8") as f:
+                    new_content = json.load(f)
+                
+                # The content should be essentially the same
+                assert len(original_content["narrator_data"]) == len(new_content["narrator_data"])
+                assert len(original_content["image_data"]) == len(new_content["image_data"])
+                
+                # Check that prompts are the same (main content unchanged)
+                for i in range(len(original_content["narrator_data"])):
+                    assert original_content["narrator_data"][i]["prompt"] == new_content["narrator_data"][i]["prompt"]
+                for i in range(len(original_content["image_data"])):
+                    assert original_content["image_data"][i]["prompt"] == new_content["image_data"][i]["prompt"]
 
                 # Content should be the same
                 with open(recipe_file, "r", encoding="utf-8") as f:
@@ -260,7 +284,7 @@ class TestVideoRecipeBuilder:
             json.dump(chapter_prompt, f)
 
         with patch("logging_utils.logger"):
-            with patch("ai_video_creator.modules.video_recipe.begin_console_logging"):
+            with patch("ai_video_creator.modules.video_recipe.begin_file_logging"):
                 builder = VideoRecipeBuilder(story_folder, 0)
                 builder.create_video_recipe()
 

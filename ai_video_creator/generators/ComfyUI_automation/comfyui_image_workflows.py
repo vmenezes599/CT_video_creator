@@ -362,6 +362,19 @@ class UnetWorkflowBase(ComfyUIWorkflowBase):
         self._set_unet_model(node_index, model_names[0])
         self._set_dual_clip_loader(node_index, model_names[1], model_names[2])
 
+    def _set_lora(self, node_index: int, lora_name) -> None:
+        """
+        Set the LoRA model to the JSON configuration.
+        """
+        parameters = {
+            node_index: {
+                "lora_name": lora_name,
+            }
+        }
+        super()._set_fields(parameters)
+        workflow_summary = f"LoRA({lora_name})/{self.get_workflow_summary()}"
+        self._set_workflow_summary(workflow_summary)
+
     def _set_positive_prompt(self, node_index: int, positive_prompt: str) -> None:
         """
         Set the positive prompt.
@@ -432,6 +445,8 @@ class FluxWorkflow(UnetWorkflowBase):
     SAVE_IMAGE_NODE_INDEX = 9
     DUAL_CLIP_NODE_INDEX = 11
     UNET_MODEL_NODE_INDEX = 12
+    LORA_REWIRE_NODE_INDEX = 61
+    LORA_NODE_INDEX = 72
     RANDOM_NOISE_NODE_INDEX = 25
     POSITIVE_PROMPT_NODE_INDEX = 28
     WIDTH_NODE_INDEX = 70
@@ -449,7 +464,28 @@ class FluxWorkflow(UnetWorkflowBase):
 
     def _load_default_configurations(self) -> None:
         self.set_seed(random.randint(0, 2**64 - 1))
+        self.set_lora("")
         self.set_output_filename("output")
+
+    def _enable_lora(self) -> None:
+        """
+        Enable LoRA (Low-Rank Adaptation) for the model.
+        """
+        self._rewire_node(
+            self.LORA_REWIRE_NODE_INDEX,
+            self.UNET_MODEL_NODE_INDEX,
+            self.LORA_NODE_INDEX,
+        )
+
+    def _disable_lora(self) -> None:
+        """
+        Disable LoRA (Low-Rank Adaptation) for the model.
+        """
+        self._rewire_node(
+            self.LORA_REWIRE_NODE_INDEX,
+            self.LORA_NODE_INDEX,
+            self.UNET_MODEL_NODE_INDEX,
+        )
 
     def set_unet_model(self, model_name: str) -> None:
         """
@@ -472,6 +508,16 @@ class FluxWorkflow(UnetWorkflowBase):
         assert len(model_names) >= 3, "Two model names are required."
         self.set_unet_model(model_names[0])
         self.set_dual_clip_loader(model_names[1], model_names[2])
+
+    def set_lora(self, lora_name: str) -> None:
+        """
+        Set the LoRA model.
+        """
+        if lora_name:
+            self._enable_lora()
+            super()._set_lora(self.LORA_NODE_INDEX, lora_name)
+        else:
+            self._disable_lora()
 
     def set_positive_prompt(
         self,
