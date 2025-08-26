@@ -101,10 +101,10 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
             )
 
         if "inputs" not in self.workflow[node_index_to_rewire_str]:
-            raise ValueError(f"Node '{from_index_str}' has no inputs to rewire.")
+            raise ValueError(f"Node '{node_index_to_rewire_str}' has no inputs to rewire.")
 
-        if "model" not in self.workflow[from_index_str]["inputs"]:
-            raise ValueError(f"Node '{from_index_str}' has no model to rewire.")
+        if "model" not in self.workflow[node_index_to_rewire_str]["inputs"]:
+            raise ValueError(f"Node '{node_index_to_rewire_str}' has no model to rewire.")
 
         # Fix: Properly modify the model reference in the workflow
         model_input = self.workflow[node_index_to_rewire_str]["inputs"]["model"]
