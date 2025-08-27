@@ -12,7 +12,7 @@ from .modules.video_effect_manager import MediaEffectsManager
 from .modules.video_assembler import VideoAssembler
 
 
-def create_chapter_video_recipe(story_path: Path, chapter_index: int) -> None:
+def create_recipe_from_prompt(story_path: Path, chapter_index: int) -> None:
     """
     Create a video from a video prompt file.
 
@@ -29,6 +29,15 @@ def create_chapter_video_recipe(story_path: Path, chapter_index: int) -> None:
     )
     video_recipe_builder.create_video_recipe()
 
+    cleanup_logging(log_id)
+
+
+def create_assets_from_recipe(story_path: Path, chapter_index: int) -> None:
+    """
+    Create video assets from the recipe.
+    """
+    log_id = setup_console_logging("CreateAssetsFromRecipe", log_level="TRACE")
+
     video_asset_manager = VideoAssetManager(
         story_folder=story_path, chapter_index=chapter_index
     )
@@ -41,7 +50,7 @@ def create_chapter_video_recipe(story_path: Path, chapter_index: int) -> None:
     cleanup_logging(log_id)
 
 
-def assemble_chapter_video(story_path: Path, chapter_index: int) -> None:
+def create_video_from_assets(story_path: Path, chapter_index: int) -> None:
     """
     Assemble a chapter video from the recipe.
 

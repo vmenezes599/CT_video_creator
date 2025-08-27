@@ -226,8 +226,8 @@ class VideoAssembler:
         """
 
         # Extract data from video recipe
-        narrator_file_paths = self.assets.narrator_list
-        image_file_paths = self.assets.image_list
+        narrator_file_paths = self.assets.narrator_assets
+        image_file_paths = self.assets.image_assets
 
         logger.info(
             f"Processing {len(narrator_file_paths)} audio files and {len(image_file_paths)} images"

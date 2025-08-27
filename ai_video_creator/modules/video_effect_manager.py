@@ -216,7 +216,7 @@ class MediaEffectsManager:
 
     def _synchronize_effects_with_assets(self):
         """Ensure video_effects lists have the same size as assets."""
-        assets_size = len(self.assets.narrator_list)
+        assets_size = len(self.assets.narrator_assets)
         logger.debug(f"Synchronizing effects with assets - target size: {assets_size}")
 
         # Extend or truncate narrator_effects to match assets size
