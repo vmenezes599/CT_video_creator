@@ -69,7 +69,9 @@ class VideoAssets:
                         and self.image_assets[i] is not None
                         else ""
                     )
-                    assets.append({"index": i, "narrator": narrator, "image": image})
+                    assets.append(
+                        {"index": i + 1, "narrator": narrator, "image": image}
+                    )
 
                 data = {"assets": assets}
                 json.dump(data, file, indent=4)

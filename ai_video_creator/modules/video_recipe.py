@@ -94,11 +94,11 @@ class VideoRecipe:
             Dictionary representation of the VideoRecipe
         """
         narrator_data = [item.to_dict() for item in self.narrator_data]
-        for i, item in enumerate(narrator_data):
+        for i, item in enumerate(narrator_data, 1):
             item["index"] = i
 
         image_data = [item.to_dict() for item in self.image_data]
-        for i, item in enumerate(image_data):
+        for i, item in enumerate(image_data, 1):
             item["index"] = i
 
         return {
