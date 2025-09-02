@@ -27,23 +27,24 @@ class VideoAssets:
             with open(self.asset_file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
 
-            # Load assets from the "assets" array format
-            for asset in data.get("assets", []):
-                index = asset.get("index", len(self.narrator_assets))
+                # Load assets from the "assets" array format
+                for asset in data.get("assets", []):
+                    index = asset.get("index", len(self.narrator_assets))
 
-                # Ensure the lists are long enough
-                self._ensure_index_exists(index)
+                    # Ensure the lists are long enough
+                    self._ensure_index_exists(index)
 
-                # Load narrator asset, skip None/empty values
-                narrator_value = asset.get("narrator")
-                if narrator_value is not None and narrator_value != "":
-                    self.narrator_assets[index] = Path(narrator_value)
+                    # Load narrator asset, skip None/empty values
+                    narrator_value = asset.get("narrator")
+                    if narrator_value is not None and narrator_value != "":
+                        self.narrator_assets[index] = Path(narrator_value)
 
-                # Load image asset, skip None/empty values
-                image_value = asset.get("image")
-                if image_value is not None and image_value != "":
-                    self.image_assets[index] = Path(image_value)
-
+                    # Load image asset, skip None/empty values
+                    image_value = asset.get("image")
+                    if image_value is not None and image_value != "":
+                        self.image_assets[index] = Path(image_value)
+                self.save_assets_to_file()
+                
         except FileNotFoundError:
             logger.debug(
                 f"Asset file not found: {self.asset_file_path.name} - starting with empty assets"
