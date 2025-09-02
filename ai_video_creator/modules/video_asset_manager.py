@@ -29,7 +29,7 @@ class VideoAssets:
 
                 # Load assets from the "assets" array format
                 for asset in data.get("assets", []):
-                    index = asset.get("index", len(self.narrator_assets))
+                    index = asset.get("index", len(self.narrator_assets)) - 1
 
                     # Ensure the lists are long enough
                     self._ensure_index_exists(index)
@@ -44,7 +44,7 @@ class VideoAssets:
                     if image_value is not None and image_value != "":
                         self.image_assets[index] = Path(image_value)
                 self.save_assets_to_file()
-                
+
         except FileNotFoundError:
             logger.debug(
                 f"Asset file not found: {self.asset_file_path.name} - starting with empty assets"
