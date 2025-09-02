@@ -28,7 +28,7 @@ class VideoAssets:
                 data: dict = json.load(file)
 
                 assets = data.get("assets", [])
-                self._ensure_index_exists(len(assets))
+                self._ensure_index_exists(len(assets) - 1)
 
                 # Load assets from the "assets" array format
                 for index, asset in enumerate(assets):
