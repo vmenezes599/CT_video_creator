@@ -35,16 +35,13 @@ class VideoAssets:
                     # Load narrator asset, skip None/empty values
                     narrator_value = asset.get("narrator")
                     if narrator_value is not None and narrator_value != "":
-                        narrator_path = Path(narrator_value)
-                        if narrator_path.exists():
-                            self.narrator_assets[index] = narrator_path
+                        self.narrator_assets[index] = Path(narrator_value)
 
                     # Load image asset, skip None/empty values
                     image_value = asset.get("image")
                     if image_value is not None and image_value != "":
-                        image_path = Path(image_value)
-                        if image_path.exists():
-                            self.image_assets[index] = image_path
+                        self.image_assets[index] = Path(image_value)
+
                 self.save_assets_to_file()
 
         except FileNotFoundError:
