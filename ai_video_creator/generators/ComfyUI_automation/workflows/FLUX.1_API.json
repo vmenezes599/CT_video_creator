@@ -23,7 +23,7 @@
                 0
             ],
             "clip": [
-                "11",
+                "73",
                 0
             ]
         },
@@ -204,7 +204,7 @@
                 0
             ],
             "model": [
-                "72",
+                "73",
                 0
             ]
         },
@@ -231,18 +231,23 @@
             "title": "Height"
         }
     },
-    "72": {
+    "73": {
         "inputs": {
-            "lora_name": "Adventure_Comic_Book.safetensors",
+            "lora_name": "dungeons-and-dreamscapes-flux_v21-000030.safetensors",
             "strength_model": 1,
+            "strength_clip": 1,
             "model": [
                 "12",
                 0
+            ],
+            "clip": [
+                "11",
+                0
             ]
         },
-        "class_type": "LoraLoaderModelOnly",
+        "class_type": "LoraLoader",
         "_meta": {
-            "title": "LoraLoaderModelOnly"
+            "title": "Load LoRA"
         }
     }
 }

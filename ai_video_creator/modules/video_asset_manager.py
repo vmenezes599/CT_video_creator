@@ -25,24 +25,26 @@ class VideoAssets:
         try:
             logger.debug(f"Loading video assets from: {self.asset_file_path.name}")
             with open(self.asset_file_path, "r", encoding="utf-8") as file:
-                data = json.load(file)
+                data: dict = json.load(file)
+
+                assets = data.get("assets", [])
+                self._ensure_index_exists(len(assets))
 
                 # Load assets from the "assets" array format
-                for asset in data.get("assets", []):
-                    index = asset.get("index", len(self.narrator_assets)) - 1
-
-                    # Ensure the lists are long enough
-                    self._ensure_index_exists(index)
-
+                for index, asset in enumerate(assets):
                     # Load narrator asset, skip None/empty values
                     narrator_value = asset.get("narrator")
                     if narrator_value is not None and narrator_value != "":
-                        self.narrator_assets[index] = Path(narrator_value)
+                        narrator_path = Path(narrator_value)
+                        if narrator_path.exists():
+                            self.narrator_assets[index] = narrator_path
 
                     # Load image asset, skip None/empty values
                     image_value = asset.get("image")
                     if image_value is not None and image_value != "":
-                        self.image_assets[index] = Path(image_value)
+                        image_path = Path(image_value)
+                        if image_path.exists():
+                            self.image_assets[index] = image_path
                 self.save_assets_to_file()
 
         except FileNotFoundError:
