@@ -70,3 +70,12 @@ def create_video_from_assets(story_path: Path, chapter_index: int) -> None:
     video_assembler.assemble_video()
 
     cleanup_logging(log_id)
+
+
+def clean_unused_assets(story_path: Path, chapter_index: int) -> None:
+    """Clean up video assets for a specific story folder."""
+
+    video_asset_manager = VideoAssetManager(
+        story_folder=story_path, chapter_index=chapter_index
+    )
+    video_asset_manager.clean_unused_assets()

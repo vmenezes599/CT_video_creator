@@ -49,8 +49,8 @@ class TestVideoAssets:
 
         expected_structure = {
             "assets": [
-                {"index": 0, "narrator": "/path/to/narrator1.mp3", "image": "/path/to/image1.jpg"},
-                {"index": 1, "narrator": "/path/to/narrator2.mp3", "image": "/path/to/image2.jpg"},
+                {"index": 1, "narrator": "/path/to/narrator1.mp3", "image": "/path/to/image1.jpg"},
+                {"index": 2, "narrator": "/path/to/narrator2.mp3", "image": "/path/to/image2.jpg"},
             ]
         }
 
@@ -307,3 +307,111 @@ class TestVideoAssetManager:
             assert manager.video_assets.image_assets[1] is None
 
             assert not manager.video_assets.is_complete()
+
+    def test_cleanup_assets_removes_unused_files(self, story_setup_with_recipe):
+        """Test that cleanup_assets removes files not referenced in assets."""
+        video_folder = story_setup_with_recipe / "video"
+        video_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = video_folder / "assets"
+        assets_folder.mkdir(parents=True, exist_ok=True)
+
+        # Create some asset files that should be kept
+        valid_narrator1 = assets_folder / "chapter_001_narrator_001.mp3"
+        valid_image1 = assets_folder / "chapter_001_image_001.png"
+        valid_narrator2 = assets_folder / "chapter_001_narrator_002.mp3"
+        
+        # Create some files that should be deleted
+        old_narrator = assets_folder / "old_narrator.mp3"
+        old_image = assets_folder / "old_image.png"
+        temp_file = assets_folder / "temp.txt"
+        
+        # Create all files
+        for file_path in [valid_narrator1, valid_image1, valid_narrator2, old_narrator, old_image, temp_file]:
+            file_path.touch()
+
+        with patch("logging_utils.logger"):
+            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            
+            # Set up some assets to be kept
+            manager.video_assets.set_scene_narrator(0, valid_narrator1)
+            manager.video_assets.set_scene_image(0, valid_image1)
+            manager.video_assets.set_scene_narrator(1, valid_narrator2)
+            # Note: scene 1 has no image asset (None)
+            
+            # Run cleanup
+            manager.clean_unused_assets()
+            
+            # Verify that valid assets are kept
+            assert valid_narrator1.exists()
+            assert valid_image1.exists()
+            assert valid_narrator2.exists()
+            
+            # Verify that unused files are deleted
+            assert not old_narrator.exists()
+            assert not old_image.exists()
+            assert not temp_file.exists()
+
+    def test_cleanup_assets_handles_none_values_in_assets(self, story_setup_with_recipe):
+        """Test that cleanup_assets properly handles None values in asset lists."""
+        video_folder = story_setup_with_recipe / "video"
+        video_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = video_folder / "assets"
+        assets_folder.mkdir(parents=True, exist_ok=True)
+
+        # Create some files
+        valid_file = assets_folder / "valid_asset.mp3"
+        invalid_file = assets_folder / "should_be_deleted.mp3"
+        
+        valid_file.touch()
+        invalid_file.touch()
+
+        with patch("logging_utils.logger"):
+            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            
+            # Set only one asset, leaving others as None
+            manager.video_assets.set_scene_narrator(0, valid_file)
+            # manager.video_assets.narrator_assets[1] is None
+            # manager.video_assets.image_assets[0] and [1] are None
+            
+            # Run cleanup
+            manager.clean_unused_assets()
+            
+            # Verify that the valid file is kept
+            assert valid_file.exists()
+            
+            # Verify that the unused file is deleted
+            assert not invalid_file.exists()
+
+    def test_cleanup_assets_preserves_directories(self, story_setup_with_recipe):
+        """Test that cleanup_assets only removes files, not directories."""
+        video_folder = story_setup_with_recipe / "video"
+        video_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = video_folder / "assets"
+        assets_folder.mkdir(parents=True, exist_ok=True)
+
+        # Create a subdirectory
+        sub_dir = assets_folder / "subdirectory"
+        sub_dir.mkdir()
+        
+        # Create a file inside the subdirectory
+        file_in_subdir = sub_dir / "file.txt"
+        file_in_subdir.touch()
+        
+        # Create a file in the main assets folder
+        main_file = assets_folder / "main_file.txt"
+        main_file.touch()
+
+        with patch("logging_utils.logger"):
+            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            
+            # Run cleanup with no assets set (all should be deleted except directories)
+            manager.clean_unused_assets()
+            
+            # Verify that the subdirectory still exists
+            assert sub_dir.exists()
+            assert sub_dir.is_dir()
+            
+            # Verify that files are deleted
+            assert not main_file.exists()
+            # Note: file_in_subdir should still exist because cleanup only processes
+            # files directly in assets_folder, not in subdirectories

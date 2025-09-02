@@ -285,3 +285,26 @@ class VideoAssetManager:
                 self._generate_scene_assets(scene_index)
 
             logger.info("Video asset generation process completed successfully")
+
+    def clean_unused_assets(self):
+        """Clean up video assets for a specific story folder."""
+
+        logger.info("Starting video asset cleanup process")
+
+        # Get list of valid (non-None) asset files to keep
+        valid_narrator_assets = [
+            asset for asset in self.video_assets.narrator_assets if asset is not None
+        ]
+        valid_image_assets = [
+            asset for asset in self.video_assets.image_assets if asset is not None
+        ]
+        assets_to_keep = set(valid_narrator_assets + valid_image_assets)
+
+        for file in self.__paths.assets_path.glob("*"):
+            if file.is_file():
+                if file in assets_to_keep:
+                    continue
+                file.unlink()
+                logger.info(f"Deleted asset file: {file}")
+
+        logger.info("Video asset cleanup process completed successfully")
