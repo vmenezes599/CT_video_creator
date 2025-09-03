@@ -249,14 +249,14 @@ class VideoAssetManager:
                 f"Using image generator: {type(image_generator).__name__} for file: {output_image_file_path.name}"
             )
 
-            output_image = image_generator.text_to_image(
+            output_images = image_generator.text_to_image(
                 recipe=image, output_file_path=output_image_file_path
             )
-
-            self.video_assets.set_scene_image(scene_index, output_image)
+            first_output_image = output_images[0]
+            self.video_assets.set_scene_image(scene_index, first_output_image)
             self.video_assets.save_assets_to_file()  # Save progress immediately
             logger.info(
-                f"Successfully generated image for scene {scene_index}: {output_image.name}"
+                f"Successfully generated image for scene {scene_index}: {first_output_image.name}"
             )
 
         except (IOError, OSError, RuntimeError) as e:

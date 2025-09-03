@@ -82,9 +82,12 @@ class FluxAIImageGenerator(IImageGenerator):
 
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
 
-        return self._move_asset_to_output_path(
-            output_file_path.parent, Path(output_file_names[0])
-        )
+        moved_files = [
+            self._move_asset_to_output_path(output_file_path.parent, Path(file))
+            for file in output_file_names
+        ]
+
+        return moved_files
 
 
 class FluxImageRecipe(ImageRecipeBase):

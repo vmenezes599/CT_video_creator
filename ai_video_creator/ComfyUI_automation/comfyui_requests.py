@@ -130,7 +130,7 @@ class ComfyUIRequests:
         except RequestException as e:
             logger.error("Error occurred while cleaning memory in ComfyUI: {}", e)
 
-    def _get_output_path(self, history_entry: dict) -> str | None:
+    def _get_output_path(self, history_entry: dict) -> list[str]:
         """
         Get the output file path for a completed workflow.
 
@@ -139,11 +139,11 @@ class ComfyUIRequests:
         :return: Full path to output file or None if not found
         """
         output_names = comfyui_get_history_output_name(history_entry)
+        result = []
         if output_names:
-            actual_output_name = output_names[0]
-            return os.path.join(COMFYUI_OUTPUT_FOLDER, actual_output_name)
-
-        return None
+            for name in output_names:
+                result.append(os.path.join(COMFYUI_OUTPUT_FOLDER, name))
+        return result
 
     def _check_for_output_success(self, response: dict):
         """
@@ -163,7 +163,7 @@ class ComfyUIRequests:
                 f"ComfyUI request failed: {response['status']['status_str']}"
             )
 
-    def _process_single_workflow(self, workflow: IComfyUIWorkflow) -> str | None:
+    def _process_single_workflow(self, workflow: IComfyUIWorkflow) -> list[str]:
         """
         Process a single workflow through the complete pipeline.
 
@@ -232,7 +232,7 @@ class ComfyUIRequests:
             self.max_retries_per_request,
             display_summary,
         )
-        return None
+        return []
 
     def comfyui_ensure_send_all_prompts(
         self, req_list: list[IComfyUIWorkflow]
@@ -246,8 +246,8 @@ class ComfyUIRequests:
         output_image_paths: list[str] = []
 
         for workflow in req_list:
-            output_path = self._process_single_workflow(workflow)
-            output_image_paths.append(output_path)
+            output_paths = self._process_single_workflow(workflow)
+            output_image_paths.extend(output_paths)
 
             # Add delay between requests
             time.sleep(self.delay_seconds)
