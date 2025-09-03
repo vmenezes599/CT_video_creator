@@ -435,6 +435,20 @@ class UnetWorkflowBase(ComfyUIWorkflowBase):
         workflow_summary = f"RandomNoise({random_noise})/{self.get_workflow_summary()}"
         self._set_workflow_summary(workflow_summary)
 
+    def _set_batch_size(self, node_index: int, batch_size: int) -> None:
+        """
+        Set the batch size.
+        """
+        parameters = {
+            node_index: {
+                "batch_size": batch_size,
+            }
+        }
+        super()._set_fields(parameters)
+
+        workflow_summary = f"BatchSize({batch_size})/{self.get_workflow_summary()}"
+        self._set_workflow_summary(workflow_summary)
+
 
 class FluxWorkflow(UnetWorkflowBase):
     """
@@ -451,6 +465,7 @@ class FluxWorkflow(UnetWorkflowBase):
     POSITIVE_PROMPT_NODE_INDEX = 28
     WIDTH_NODE_INDEX = 70
     HEIGHT_NODE_INDEX = 71
+    BATCH_SIZE_NODE_INDEX = 5
 
     def __init__(self, load_default_config: bool = False) -> None:
         """
@@ -549,6 +564,12 @@ class FluxWorkflow(UnetWorkflowBase):
         super()._set_random_noise(
             self.RANDOM_NOISE_NODE_INDEX, random_noise=random_noise
         )
+
+    def set_batch_size(self, batch_size: int) -> None:
+        """
+        Set the batch size.
+        """
+        super()._set_batch_size(self.BATCH_SIZE_NODE_INDEX, batch_size)
 
     @override
     def set_output_filename(self, filename):

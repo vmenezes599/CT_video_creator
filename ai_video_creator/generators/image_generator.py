@@ -17,14 +17,18 @@ class ImageRecipeBase:
 
     prompt: str
     lora: str
+    batch_size: int
     seed: int
     recipe_type = "ImageRecipeBase"
 
-    def __init__(self, prompt: str, lora: str, seed: int, recipe_type: str):
+    def __init__(
+        self, prompt: str, lora: str, seed: int, batch_size: int, recipe_type: str
+    ):
         """Initialize ImageRecipeBase with a name."""
         self.prompt = prompt
         self.lora = lora
         self.seed = seed
+        self.batch_size = batch_size
         self.recipe_type = recipe_type
 
 
@@ -73,6 +77,7 @@ class FluxAIImageGenerator(IImageGenerator):
         workflow.set_output_filename(output_file_path.stem)
 
         workflow.set_lora(recipe.lora)
+        workflow.set_batch_size(recipe.batch_size)
         workflow.set_seed(recipe.seed)
 
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
@@ -89,7 +94,13 @@ class FluxImageRecipe(ImageRecipeBase):
 
     recipe_type = "FluxImageRecipeType"
 
-    def __init__(self, prompt: str, lora: str | None = None, seed: int | None = None):
+    def __init__(
+        self,
+        prompt: str,
+        lora: str | None = None,
+        batch_size: int | None = None,
+        seed: int | None = None,
+    ):
         """Initialize ImageRecipe with image data.
 
         Args:
@@ -100,6 +111,7 @@ class FluxImageRecipe(ImageRecipeBase):
             prompt=prompt,
             recipe_type=self.recipe_type,
             lora=lora if lora is not None else "",
+            batch_size=batch_size if batch_size is not None else 1,
             seed=random.randint(0, 2**64 - 1) if seed is None else seed,
         )
 
@@ -117,6 +129,7 @@ class FluxImageRecipe(ImageRecipeBase):
             "prompt": self.prompt,
             "lora": self.lora,
             "available_loras": available_loras,
+            "batch_size": self.batch_size,
             "seed": self.seed,
             "recipe_type": self.recipe_type,
         }
@@ -152,5 +165,6 @@ class FluxImageRecipe(ImageRecipeBase):
         return cls(
             prompt=data["prompt"],
             lora=data.get("lora", None),
+            batch_size=data.get("batch_size", None),
             seed=data.get("seed", None),
         )
