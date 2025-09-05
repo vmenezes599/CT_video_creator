@@ -243,6 +243,8 @@ class ComfyUIRequests:
         :param req_list: List of workflows to process
         :return: List of output file paths for successful requests
         """
+        logger.info(f"Sending {len(req_list)} requests to ComfyUI...")
+
         output_image_paths: list[str] = []
 
         for workflow in req_list:
@@ -251,6 +253,8 @@ class ComfyUIRequests:
 
             # Add delay between requests
             time.sleep(self.delay_seconds)
+
+        logger.info(f"Finished sending requests to ComfyUI.")
 
         return output_image_paths
 

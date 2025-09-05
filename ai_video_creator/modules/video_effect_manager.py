@@ -7,7 +7,7 @@ from pathlib import Path
 
 from logging_utils import begin_file_logging, logger
 
-from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.utils.video_recipe_paths import VideoRecipePaths
 from ai_video_creator.media_effects.effect_base import EffectBase
 from ai_video_creator.media_effects.effects_map import (
     EFFECTS_MAP,

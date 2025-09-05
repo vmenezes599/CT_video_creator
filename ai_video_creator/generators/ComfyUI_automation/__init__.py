@@ -7,11 +7,11 @@ from .comfyui_audio_workflows import (
     SparkTTSVoiceCreatorWorkflow,
 )
 from .comfyui_image_workflows import FluxWorkflow
-from .comfyui_video_workflows import AnimateDiffWorkflow
+from .comfyui_video_workflows import WanWorkflow
 
 __all__ = [
     "SparkTTSVoiceCloneWorkflow",
     "SparkTTSVoiceCreatorWorkflow",
     "FluxWorkflow",
-    "AnimateDiffWorkflow",
+    "WanWorkflow",
 ]

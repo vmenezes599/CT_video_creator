@@ -5,7 +5,7 @@ from pathlib import Path
 
 from logging_utils import begin_file_logging, logger
 from ai_video_creator.generators import IAudioGenerator, IImageGenerator
-from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.utils.video_recipe_paths import VideoRecipePaths
 
 from .video_recipe import VideoRecipe
 
@@ -255,8 +255,12 @@ class VideoAssetManager:
             first_output_image = output_images[0]
             self.video_assets.set_scene_image(scene_index, first_output_image)
             self.video_assets.save_assets_to_file()  # Save progress immediately
+            for img in output_images:
+                logger.info(
+                    f"Successfully generated image for scene {scene_index}: {img.name}"
+                )
             logger.info(
-                f"Successfully generated image for scene {scene_index}: {first_output_image.name}"
+                f"Using generated image for scene {scene_index}: {first_output_image.name}"
             )
 
         except (IOError, OSError, RuntimeError) as e:

@@ -13,7 +13,7 @@ from ai_video_creator.generators import (
     FluxImageRecipe,
 )
 
-from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.utils.video_recipe_paths import VideoRecipePaths
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 
 

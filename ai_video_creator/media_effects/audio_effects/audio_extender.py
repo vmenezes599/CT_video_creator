@@ -8,7 +8,7 @@ from typing_extensions import override
 import ffmpeg
 from logging_utils import logger
 
-from ai_video_creator.helpers.ffmpeg_helpers import get_audio_duration, run_ffmpeg_trace
+from ai_video_creator.utils.ffmpeg_helpers import get_audio_duration, run_ffmpeg_trace
 from ai_video_creator.media_effects.effect_base import EffectBase
 
 

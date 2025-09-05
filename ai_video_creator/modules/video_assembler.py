@@ -11,8 +11,8 @@ import ffmpeg
 from logging_utils import begin_file_logging, logger
 
 from ai_video_creator.generators import SubtitleGenerator
-from ai_video_creator.helpers.ffmpeg_helpers import get_audio_duration, run_ffmpeg_trace
-from ai_video_creator.helpers.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.utils.ffmpeg_helpers import get_audio_duration, run_ffmpeg_trace
+from ai_video_creator.utils.video_recipe_paths import VideoRecipePaths
 
 from .video_asset_manager import VideoAssets
 from .video_effect_manager import MediaEffects
