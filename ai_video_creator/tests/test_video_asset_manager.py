@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ai_video_creator.modules.video_asset_manager import VideoAssets, VideoAssetManager
+from ai_video_creator.modules.narrator_and_image_asset_manager import NarratorAndImageAssetsFile, NarratorAndImageAssetManager
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 
 
@@ -18,7 +18,7 @@ class TestVideoAssets:
     def test_empty_assets_creation(self, tmp_path):
         """Test creating empty video assets."""
         asset_file = tmp_path / "assets.json"
-        assets = VideoAssets(asset_file)
+        assets = NarratorAndImageAssetsFile(asset_file)
 
         assert assets.asset_file_path == asset_file
         assert assets.narrator_assets == []
@@ -27,7 +27,7 @@ class TestVideoAssets:
     def test_assets_with_data(self, tmp_path):
         """Test video assets with actual data - core functionality."""
         asset_file = tmp_path / "assets.json"
-        assets = VideoAssets(asset_file)
+        assets = NarratorAndImageAssetsFile(asset_file)
 
         assets.set_scene_narrator(0, Path("/path/to/narrator1.mp3"))
         assets.set_scene_image(0, Path("/path/to/image1.jpg"))
@@ -70,7 +70,7 @@ class TestVideoAssets:
         with open(asset_file, "w", encoding="utf-8") as f:
             json.dump(test_data, f)
 
-        assets = VideoAssets(asset_file)
+        assets = NarratorAndImageAssetsFile(asset_file)
 
         assert len(assets.narrator_assets) == 2
         assert len(assets.image_assets) == 2
@@ -82,7 +82,7 @@ class TestVideoAssets:
     def test_asset_completion_checking(self, tmp_path):
         """Test asset completion and missing asset detection."""
         asset_file = tmp_path / "assets.json"
-        assets = VideoAssets(asset_file)
+        assets = NarratorAndImageAssetsFile(asset_file)
 
         # Empty assets should be complete
         assert assets.is_complete()
@@ -103,7 +103,7 @@ class TestVideoAssets:
 
         assert not assets.is_complete()
 
-        missing = assets.get_missing_assets()
+        missing = assets.get_missing_narrator_and_image_assets()
         assert missing["narrator"] == []  # All narrator files exist
         assert missing["image"] == [1]    # Image for scene 1 is missing
 
@@ -113,14 +113,14 @@ class TestVideoAssets:
         assets.set_scene_image(1, image2_file)
 
         assert assets.is_complete()
-        missing = assets.get_missing_assets()
+        missing = assets.get_missing_narrator_and_image_assets()
         assert missing["narrator"] == []
         assert missing["image"] == []
 
     def test_asset_index_management(self, tmp_path):
         """Test that assets can be set at non-sequential indices."""
         asset_file = tmp_path / "assets.json"
-        assets = VideoAssets(asset_file)
+        assets = NarratorAndImageAssetsFile(asset_file)
 
         assets.set_scene_narrator(5, Path("/path/to/narrator5.mp3"))
         assets.set_scene_image(3, Path("/path/to/image3.jpg"))
@@ -210,7 +210,7 @@ class TestVideoAssetManager:
     def test_asset_manager_initialization(self, story_setup_with_recipe):
         """Test VideoAssetManager initialization with recipe synchronization."""
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
             assert len(manager.recipe.narrator_data) == 2
             assert len(manager.recipe.image_data) == 2
@@ -219,14 +219,14 @@ class TestVideoAssetManager:
             assert len(manager.video_assets.image_assets) == 2
 
             assert not manager.video_assets.is_complete()
-            missing = manager.video_assets.get_missing_assets()
+            missing = manager.video_assets.get_missing_narrator_and_image_assets()
             assert missing["narrator"] == [0, 1]
             assert missing["image"] == [0, 1]
 
     def test_asset_manager_creates_asset_file(self, story_setup_with_recipe):
         """Test that VideoAssetManager creates and manages asset files properly."""
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
             manager.video_assets.set_scene_narrator(
                 0, Path("/generated/narrator_001.mp3")
@@ -270,7 +270,7 @@ class TestVideoAssetManager:
             json.dump(existing_data, f)
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
             assert manager.video_assets.narrator_assets[0] == Path("/existing/narrator1.mp3")
             assert manager.video_assets.image_assets[0] == Path("/existing/image1.jpg")
@@ -295,7 +295,7 @@ class TestVideoAssetManager:
             json.dump(existing_data, f)
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
             assert len(manager.video_assets.narrator_assets) == 2
             assert len(manager.video_assets.image_assets) == 2
@@ -330,7 +330,7 @@ class TestVideoAssetManager:
             file_path.touch()
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
             
             # Set up some assets to be kept
             manager.video_assets.set_scene_narrator(0, valid_narrator1)
@@ -366,7 +366,7 @@ class TestVideoAssetManager:
         invalid_file.touch()
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
             
             # Set only one asset, leaving others as None
             manager.video_assets.set_scene_narrator(0, valid_file)
@@ -402,7 +402,7 @@ class TestVideoAssetManager:
         main_file.touch()
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
             
             # Run cleanup with no assets set (all should be deleted except directories)
             manager.clean_unused_assets()

@@ -9,9 +9,9 @@ import pytest
 
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 from ai_video_creator.generators import FluxImageRecipe, ZonosTTSRecipe
-from ai_video_creator.modules.video_recipe import (
+from ai_video_creator.modules.narrator_and_image_recipe import (
     VideoRecipe,
-    VideoRecipeBuilder,
+    NarratorAndImageRecipeBuilder,
     VideoRecipeDefaultSettings,
 )
 
@@ -170,8 +170,8 @@ class TestVideoRecipeBuilder:
         # Mock only external dependencies
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.video_recipe.begin_file_logging"):
-                builder = VideoRecipeBuilder(story_setup, 0)
-                builder.create_video_recipe()
+                builder = NarratorAndImageRecipeBuilder(story_setup, 0)
+                builder.create_narrator_and_image_recipe()
 
                 # Verify recipe file was created
                 recipe_file = builder._VideoRecipeBuilder__paths.recipe_file
@@ -218,8 +218,8 @@ class TestVideoRecipeBuilder:
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.video_recipe.begin_file_logging"):
                 # Create first recipe
-                builder1 = VideoRecipeBuilder(story_setup, 0)
-                builder1.create_video_recipe()
+                builder1 = NarratorAndImageRecipeBuilder(story_setup, 0)
+                builder1.create_narrator_and_image_recipe()
 
                 recipe_file = builder1._VideoRecipeBuilder__paths.recipe_file
                 
@@ -228,8 +228,8 @@ class TestVideoRecipeBuilder:
                     original_content = json.load(f)
 
                 # Create second builder - should use existing recipe
-                builder2 = VideoRecipeBuilder(story_setup, 0)
-                builder2.create_video_recipe()
+                builder2 = NarratorAndImageRecipeBuilder(story_setup, 0)
+                builder2.create_narrator_and_image_recipe()
 
                 # Content should be the same (recipes should not be recreated)
                 with open(recipe_file, "r", encoding="utf-8") as f:
@@ -285,8 +285,8 @@ class TestVideoRecipeBuilder:
 
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.video_recipe.begin_file_logging"):
-                builder = VideoRecipeBuilder(story_folder, 0)
-                builder.create_video_recipe()
+                builder = NarratorAndImageRecipeBuilder(story_folder, 0)
+                builder.create_narrator_and_image_recipe()
 
                 recipe_file = builder._VideoRecipeBuilder__paths.recipe_file
                 with open(recipe_file, "r", encoding="utf-8") as f:

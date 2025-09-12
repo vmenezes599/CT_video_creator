@@ -8,13 +8,11 @@ from pathlib import Path
 from logging_utils import begin_file_logging, logger
 from ai_video_creator.prompt import Prompt
 
-from ai_video_creator.generators import (
-    ZonosTTSRecipe,
-    FluxImageRecipe,
-)
+from ai_video_creator.generators import VideoRecipeBase, WanVideoRecipe
 
-from ai_video_creator.utils.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
+from .narrator_and_image_asset_manager import NarratorAndImageAssetsFile
 
 
 class VideoRecipeDefaultSettings:
@@ -24,43 +22,45 @@ class VideoRecipeDefaultSettings:
     BACKGROUND_MUSIC = f"{DEFAULT_ASSETS_FOLDER}/background_music.mp3"
 
 
-class VideoRecipe:
+class VideoRecipeFile:
     """Video recipe for creating videos from stories."""
 
     def __init__(self, recipe_path: Path):
         """Initialize VideoRecipe with default settings."""
         self.recipe_path = recipe_path
 
-        self.narrator_data = []
-        self.image_data = []
+        self.video_data: list[list[VideoRecipeBase]] = []
 
-        self.__load_from_file(recipe_path)
+        self.__from_dict(recipe_path)
 
-    def add_narrator_data(self, narrator_data) -> None:
-        """Add narrator data to the recipe."""
-        self.narrator_data.append(narrator_data)
+    def _ensure_index_exists(self, iteratable: list, index: int) -> None:
+        """Extend lists to ensure the index exists."""
+        # Extend sub_video_data if needed
+        while len(iteratable) <= index:
+            iteratable.append(None)
+
+    def add_video_data(self, video_data: list[VideoRecipeBase]) -> None:
+        """Add video data to the recipe."""
+        self.video_data.append(video_data)
         self.save_current_state()
 
-    def add_image_data(self, image_data) -> None:
-        """Add image data to the recipe."""
-        self.image_data.append(image_data)
-        self.save_current_state()
-
-    def __load_from_file(self, file_path: Path) -> None:
+    def __from_dict(self, file_path: Path) -> None:
         """Load video recipe from a JSON file."""
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
-                self.narrator_data = [
-                    self._create_recipe_from_dict(item)
-                    for item in data["narrator_data"]
-                ]
-                self.image_data = [
-                    self._create_recipe_from_dict(item) for item in data["image_data"]
-                ]
-                logger.info(
-                    f"Successfully loaded {len(self.narrator_data)} narrator recipes and {len(self.image_data)} image recipes"
-                )
+                video_data = data.get("video_data", [])
+
+                for item in video_data:
+                    recipe_list = item.get("recipe_list", [])
+                    self.video_data.append(
+                        [
+                            self._create_recipe_from_dict(recipe)
+                            for recipe in recipe_list
+                        ]
+                    )
+
+                logger.info(f"Successfully loaded {len(self.video_data)} video recipes")
                 self.save_current_state()
 
         except FileNotFoundError:
@@ -74,18 +74,15 @@ class VideoRecipe:
         """Create the appropriate recipe object from dictionary data based on recipe_type."""
         recipe_type = data.get("recipe_type")
 
-        if recipe_type == "FluxImageRecipeType":
-            return FluxImageRecipe.from_dict(data)
-        elif recipe_type == "ZonosTTSRecipeType":
-            return ZonosTTSRecipe.from_dict(data)
+        if recipe_type == "WanVideoRecipeType":
+            return WanVideoRecipe.from_dict(data)
         else:
             logger.error(f"Unknown recipe_type: {recipe_type}")
             raise ValueError(f"Unknown recipe_type: {recipe_type}")
 
     def clean(self) -> None:
         """Clean the current recipe data."""
-        self.narrator_data = []
-        self.image_data = []
+        self.video_data = []
 
     def to_dict(self) -> dict:
         """Convert VideoRecipe to dictionary.
@@ -93,18 +90,13 @@ class VideoRecipe:
         Returns:
             Dictionary representation of the VideoRecipe
         """
-        narrator_data = [item.to_dict() for item in self.narrator_data]
-        for i, item in enumerate(narrator_data, 1):
-            item["index"] = i
+        result = {"video_data": []}
 
-        image_data = [item.to_dict() for item in self.image_data]
-        for i, item in enumerate(image_data, 1):
-            item["index"] = i
+        for i, item in enumerate(self.video_data, 1):
+            item = {"index": i, "recipe_list": [recipe.to_dict() for recipe in item]}
+            result["video_data"].append(item)
 
-        return {
-            "narrator_data": narrator_data,
-            "image_data": image_data,
-        }
+        return result
 
     def save_current_state(self) -> None:
         """Save the current state of the video recipe to a file."""
@@ -122,10 +114,7 @@ class VideoRecipeBuilder:
         """Initialize VideoRecipe with recipe data.
 
         Args:
-            narrators: List of narrator text strings
-            visual_descriptions: List of visual description strings
-            narrator_audio: Audio voice setting for narrator
-            background_music: Background music setting
+            video_data: List of video data dictionaries
             seeds: List of seeds for each generation (None elements use default behavior)
         """
         logger.info(
@@ -133,11 +122,14 @@ class VideoRecipeBuilder:
             f" {story_folder.name}, chapter: {chapter_prompt_index}"
         )
 
-        self.__paths = VideoRecipePaths(story_folder, chapter_prompt_index)
+        self.__paths = VideoCreatorPaths(story_folder, chapter_prompt_index)
         self.__chapter_prompt_path = self.__paths.chapter_prompt_path
 
         # Load video prompt
         self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
+        self.__image_assets = NarratorAndImageAssetsFile(
+            self.__paths.narrator_and_image_asset_file
+        )
         self._recipe = None
 
     def _verify_recipe_against_prompt(self) -> None:
@@ -145,48 +137,53 @@ class VideoRecipeBuilder:
         logger.debug("Verifying recipe against prompt data")
 
         if (
-            not self._recipe.narrator_data
-            or not self._recipe.image_data
-            or len(self._recipe.image_data) != len(self.__video_prompt)
-            or len(self._recipe.narrator_data) != len(self.__video_prompt)
+            not self._recipe.video_data
+            or len(self._recipe.video_data) != len(self.__video_prompt)
+            or len(self.__image_assets.image_assets) != len(self.__video_prompt)
         ):
             return False
 
         return True
 
-    def _create_flux_image_recipe(self, seed: int | None = None) -> None:
+    def _create_video_recipes(
+        self, sub_videos_length: int, seed: int | None = None
+    ) -> None:
         """Create video recipe from story folder and chapter prompt index."""
         logger.info(
-            f"Creating Flux image recipes for {len(self.__video_prompt)} prompts"
+            f"Creating Wan video recipes for {len(self.__video_prompt)} prompts"
         )
 
-        for prompt in self.__video_prompt:
-            recipe = FluxImageRecipe(prompt=prompt.visual_prompt, seed=seed)
-            self._recipe.add_image_data(recipe)
-
-        logger.info(
-            f"Successfully created {len(self.__video_prompt)} Flux image recipes"
-        )
-
-    def _create_zonos_tts_narrator_recipe(self, seed: int | None = None) -> None:
-        """Create Zonos TTS narrator recipe."""
-        logger.info(
-            f"Creating Zonos TTS narrator recipes for {len(self.__video_prompt)} prompts"
-        )
-
-        for prompt in self.__video_prompt:
-            recipe = ZonosTTSRecipe(
-                prompt=prompt.narrator,
-                clone_voice_path=VideoRecipeDefaultSettings.NARRATOR_VOICE,
-                seed=seed,
+        for prompt, image_asset in zip(
+            self.__video_prompt, self.__image_assets.image_assets
+        ):
+            recipe_list = []
+            recipe = self._create_wan_video_recipe(
+                prompt=prompt, image_asset=image_asset, seed=seed
             )
-            self._recipe.add_narrator_data(recipe)
+            recipe_list.append(recipe)
+            for _ in range(sub_videos_length - 1):
+                recipe = self._create_wan_video_recipe(
+                    prompt=prompt, image_asset=image_asset, seed=seed
+                )
+                recipe_list.append(recipe)
+
+            self._recipe.add_video_data(recipe_list)
 
         logger.info(
-            f"Successfully created {len(self.__video_prompt)} Zonos TTS narrator recipes"
+            f"Successfully created {len(self.__video_prompt)} Wan video recipes"
         )
 
-    def create_video_recipe(self) -> None:
+    def _create_wan_video_recipe(
+        self, prompt: Prompt, image_asset: Path | None = None, seed: int | None = None
+    ) -> None:
+        """Create video recipe from story folder and chapter prompt index."""
+        return WanVideoRecipe(
+            prompt=prompt.visual_description,
+            media_path=str(image_asset),
+            seed=seed,
+        )
+
+    def create_video_recipe(self, sub_videos_length: int = 5) -> None:
         """Create video recipe from story folder and chapter prompt index."""
 
         with begin_file_logging(
@@ -196,12 +193,10 @@ class VideoRecipeBuilder:
         ):
             logger.info("Starting video recipe creation process")
 
-            self._recipe = VideoRecipe(self.__paths.recipe_file)
+            self._recipe = VideoRecipeFile(self.__paths.video_recipe_file)
 
             if not self._verify_recipe_against_prompt():
                 self._recipe.clean()
-                self._create_flux_image_recipe()
-                self._create_zonos_tts_narrator_recipe()
-                # self._create_spark_tts_narrator_recipe()
+                self._create_video_recipes(sub_videos_length)
 
             logger.info("Video recipe creation completed successfully")

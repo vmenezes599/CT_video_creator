@@ -4,20 +4,22 @@ import json
 from pathlib import Path
 
 from logging_utils import begin_file_logging, logger
-from ai_video_creator.generators import IAudioGenerator, IImageGenerator
-from ai_video_creator.utils.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.generators import IVideoGenerator
+from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
+from ai_video_creator.utils.utils import ensure_collection_index_exists
 
-from .video_recipe import VideoRecipe
+from .video_recipe import VideoRecipeFile
+from .narrator_and_image_asset_manager import NarratorAndImageAssetsFile
 
 
-class VideoAssets:
+class VideoAssetsFile:
     """Class to manage video assets data and persistence only."""
 
     def __init__(self, asset_file_path: Path):
         """Initialize VideoAssets with file path and expected scene count."""
         self.asset_file_path = asset_file_path
-        self.narrator_assets: list[Path] = []
-        self.image_assets: list[Path] = []
+        self.video_assets: list[Path] = []
+        self.sub_video_assets: list[list[Path]] = []
         self._load_assets_from_file()
 
     def _load_assets_from_file(self):
@@ -28,19 +30,27 @@ class VideoAssets:
                 data: dict = json.load(file)
 
                 assets = data.get("assets", [])
-                self._ensure_index_exists(len(assets) - 1)
+                ensure_collection_index_exists(self.video_assets, len(assets) - 1)
+                ensure_collection_index_exists(
+                    self.sub_video_assets, len(assets) - 1, []
+                )
 
                 # Load assets from the "assets" array format
                 for index, asset in enumerate(assets):
-                    # Load narrator asset, skip None/empty values
-                    narrator_value = asset.get("narrator")
-                    if narrator_value is not None and narrator_value != "":
-                        self.narrator_assets[index] = Path(narrator_value)
 
-                    # Load image asset, skip None/empty values
-                    image_value = asset.get("image")
-                    if image_value is not None and image_value != "":
-                        self.image_assets[index] = Path(image_value)
+                    # Load video asset, skip None/empty values
+                    video_value = asset.get("video")
+                    if video_value is not None and video_value != "":
+                        self.video_assets[index] = Path(video_value)
+                    else:
+                        self.video_assets[index] = None
+
+                    sub_video_assets = asset.get("sub_video_assets", [])
+                    for sub_video in sub_video_assets:
+                        if sub_video is not None and sub_video != "":
+                            self.sub_video_assets[index].append(Path(sub_video))
+                        else:
+                            self.sub_video_assets[index].append(None)
 
                 self.save_assets_to_file()
 
@@ -48,30 +58,27 @@ class VideoAssets:
             logger.debug(
                 f"Asset file not found: {self.asset_file_path.name} - starting with empty assets"
             )
-            self.narrator_assets = []
-            self.image_assets = []
+            self.video_assets = []
 
     def save_assets_to_file(self) -> None:
         """Save the current state of the video assets to a file."""
         try:
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 assets = []
-                for i, _ in enumerate(self.narrator_assets):
-                    narrator = (
-                        str(self.narrator_assets[i])
-                        if i < len(self.narrator_assets)
-                        and self.narrator_assets[i] is not None
-                        else ""
-                    )
-                    image = (
-                        str(self.image_assets[i])
-                        if i < len(self.image_assets)
-                        and self.image_assets[i] is not None
-                        else ""
-                    )
-                    assets.append(
-                        {"index": i + 1, "narrator": narrator, "image": image}
-                    )
+                for i, (video_asset, sub_video_assets) in enumerate(
+                    zip(self.video_assets, self.sub_video_assets)
+                ):
+                    videos = {
+                        "index": i + 1,
+                        "video_asset": str(video_asset),
+                        "sub_video_assets": [
+                            (str(sub_video_asset) if sub_video_asset else None)
+                            for sub_video_asset in sub_video_assets
+                            if sub_video_asset is not None and sub_video_assets != []
+                        ],
+                    }
+
+                    assets.append(videos)
 
                 data = {"assets": assets}
                 json.dump(data, file, indent=4)
@@ -81,64 +88,46 @@ class VideoAssets:
                 f"Error saving video assets to {self.asset_file_path.name}: {e}"
             )
 
-    def _ensure_index_exists(self, scene_index: int) -> None:
-        """Extend lists to ensure the scene_index exists."""
-        # Extend narrator_list if needed
-        while len(self.narrator_assets) <= scene_index:
-            self.narrator_assets.append(None)
+    def set_scene_video(self, scene_index: int, video_file_path: Path) -> None:
+        """Set video file path for a specific scene."""
+        ensure_collection_index_exists(self.video_assets, scene_index)
+        ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
+        self.video_assets[scene_index] = video_file_path
+        logger.debug(f"Set video for scene {scene_index}: {video_file_path.name}")
 
-        # Extend image_list if needed
-        while len(self.image_assets) <= scene_index:
-            self.image_assets.append(None)
-
-    def set_scene_narrator(self, scene_index: int, narrator_file_path: Path) -> None:
-        """Set narrator file path for a specific scene."""
-        self._ensure_index_exists(scene_index)
-        self.narrator_assets[scene_index] = narrator_file_path
-        logger.debug(f"Set narrator for scene {scene_index}: {narrator_file_path.name}")
-
-    def set_scene_image(self, scene_index: int, image_file_path: Path) -> None:
-        """Set image file path for a specific scene."""
-        self._ensure_index_exists(scene_index)
-        self.image_assets[scene_index] = image_file_path
-        logger.debug(f"Set image for scene {scene_index}: {image_file_path.name}")
+    def set_scene_sub_video(
+        self, scene_index: int, sub_video_index: int, sub_video_file_path: Path
+    ) -> None:
+        """Append a sub-video file path for a specific scene."""
+        ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
+        ensure_collection_index_exists(
+            self.sub_video_assets[scene_index], sub_video_index
+        )
+        self.sub_video_assets[scene_index][sub_video_index] = sub_video_file_path
+        logger.debug(
+            f"Appended sub-video for scene {scene_index}: {sub_video_file_path.name}"
+        )
 
     def clear_scene_assets(self, scene_index: int) -> None:
         """Clear all assets for a specific scene."""
-        self._ensure_index_exists(scene_index)
-        self.narrator_assets[scene_index] = None
-        self.image_assets[scene_index] = None
+        ensure_collection_index_exists(self.video_assets, scene_index)
+        self.video_assets[scene_index] = None
         logger.debug(f"Cleared all assets for scene {scene_index}")
 
-    def has_narrator(self, scene_index: int) -> bool:
-        """Check if a scene has narrator asset."""
-        if scene_index < 0 or scene_index >= len(self.narrator_assets):
+    def has_video(self, scene_index: int) -> bool:
+        """Check if a scene has video asset."""
+        if scene_index < 0 or scene_index >= len(self.video_assets):
             return False
-        narrator = self.narrator_assets[scene_index]
-        return narrator is not None and narrator.exists() and narrator.is_file()
+        video = self.video_assets[scene_index]
+        return video is not None and video.exists() and video.is_file()
 
-    def has_image(self, scene_index: int) -> bool:
-        """Check if a scene has image asset."""
-        if scene_index < 0 or scene_index >= len(self.image_assets):
-            return False
-        image = self.image_assets[scene_index]
-        return image is not None and image.exists() and image.is_file()
-
-    def get_missing_assets(self) -> dict:
-        """Get a summary of missing assets per scene."""
-        missing = {"narrator": [], "image": []}
-        for i, _ in enumerate(self.narrator_assets):
-            if not self.has_narrator(i):
-                missing["narrator"].append(i)
-        for i, _ in enumerate(self.image_assets):
-            if not self.has_image(i):
-                missing["image"].append(i)
+    def get_missing_videos(self) -> list[int]:
+        """Get a summary of missing videos per scene."""
+        missing = []
+        for i, _ in enumerate(self.video_assets):
+            if not self.has_video(i):
+                missing.append(i)
         return missing
-
-    def is_complete(self) -> bool:
-        """Check if all assets are present for all scenes."""
-        missing = self.get_missing_assets()
-        return len(missing["narrator"]) == 0 and len(missing["image"]) == 0
 
 
 class VideoAssetManager:
@@ -155,119 +144,108 @@ class VideoAssetManager:
         self.chapter_index = chapter_index
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
-        self.__paths = VideoRecipePaths(story_folder, chapter_index)
-        self.recipe = VideoRecipe(self.__paths.recipe_file)
-        self.video_assets = VideoAssets(self.__paths.video_asset_file)
+        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
+        self.__narrator_and_image_assets = NarratorAndImageAssetsFile(
+            self.__paths.narrator_and_image_asset_file
+        )
+        self.recipe = VideoRecipeFile(self.__paths.video_recipe_file)
+        self.video_assets = VideoAssetsFile(self.__paths.video_asset_file)
 
         # Ensure video_assets lists have the same size as recipe
-        self._synchronize_assets_with_recipe()
+        self._synchronize_assets_with_image_assets()
 
         logger.debug(
-            f"VideoAssetManager initialized with {len(self.recipe.narrator_data)} scenes"
+            f"VideoAssetManager initialized with {len(self.recipe.video_data)} scenes"
         )
 
-    def _synchronize_assets_with_recipe(self):
+    def _synchronize_assets_with_image_assets(self):
         """Ensure video_assets lists have the same size as recipe."""
-        recipe_size = len(self.recipe.image_data)
+        recipe_size = len(self.recipe.video_data)
         logger.debug(f"Synchronizing assets with recipe - target size: {recipe_size}")
 
-        # Extend or truncate narrator_list to match recipe size
-        while len(self.video_assets.narrator_assets) < recipe_size:
-            self.video_assets.narrator_assets.append(None)
-        self.video_assets.narrator_assets = self.video_assets.narrator_assets[
-            :recipe_size
-        ]
-
-        # Extend or truncate image_list to match recipe size
-        while len(self.video_assets.image_assets) < recipe_size:
-            self.video_assets.image_assets.append(None)
-        self.video_assets.image_assets = self.video_assets.image_assets[:recipe_size]
-
-        logger.debug(
-            f"Asset synchronization completed - narrator assets: {len(self.video_assets.narrator_assets)}, image assets: {len(self.video_assets.image_assets)}"
+        ensure_collection_index_exists(self.video_assets.video_assets, recipe_size - 1)
+        ensure_collection_index_exists(
+            self.video_assets.sub_video_assets, recipe_size - 1, []
         )
 
-    def _generate_scene_assets(self, scene_index: int):
-        """Generate assets for a specific scene."""
-        logger.debug(f"Generating assets for scene {scene_index}")
+        logger.debug(
+            f"Asset synchronization completed - video assets: {len(self.video_assets.video_assets)}"
+        )
 
-        # Generate narrator if missing
-        if not self.video_assets.has_narrator(scene_index):
-            logger.debug(f"Scene {scene_index} missing narrator - generating")
-            self._generate_narrator_asset(scene_index)
-        else:
-            logger.debug(f"Scene {scene_index} already has narrator - skipping")
-
-        # Generate image if missing
-        if not self.video_assets.has_image(scene_index):
-            logger.debug(f"Scene {scene_index} missing image - generating")
-            self._generate_image_asset(scene_index)
-        else:
-            logger.debug(f"Scene {scene_index} already has image - skipping")
-
-        logger.info(f"Scene {scene_index} asset generation completed")
-
-    def _generate_narrator_asset(self, scene_index: int):
-        """Generate narrator asset for a scene."""
+    def _generate_sub_videos_assets(self, scene_index: int) -> None:
+        """Generate sub-videos assets for a specific scene."""
         try:
-            logger.info(f"Generating narrator asset for scene {scene_index}")
-            audio = self.recipe.narrator_data[scene_index]
-            audio_generator: IAudioGenerator = audio.GENERATOR()
-            output_audio_file_path = (
-                self.__paths.assets_path
-                / f"{self.output_file_prefix}_narrator_{scene_index+1:03}.mp3"
-            )
-            logger.debug(
-                f"Using audio generator: {type(audio_generator).__name__} for file: {output_audio_file_path.name}"
-            )
+            logger.info(f"Generating video asset for scene {scene_index}")
+            video_recipe_list = self.recipe.video_data[scene_index]
 
-            output_audio = audio_generator.clone_text_to_speech(
-                recipe=audio,
-                output_file_path=output_audio_file_path,
-            )
+            sub_videos_paths = self.video_assets.sub_video_assets[scene_index]
+            for sub_video_index, recipe in enumerate(video_recipe_list):
+                if (
+                    sub_video_index < len(sub_videos_paths)
+                    and sub_videos_paths[sub_video_index] is not None
+                    and sub_videos_paths[sub_video_index].exists()
+                ):
+                    logger.debug(
+                        f"Sub-video {sub_video_index} already exists, skipping generation."
+                    )
+                    continue
 
-            self.video_assets.set_scene_narrator(scene_index, output_audio)
-            self.video_assets.save_assets_to_file()  # Save progress immediately
-            logger.info(
-                f"Successfully generated narrator for scene {scene_index}: {output_audio.name}"
-            )
-
-        except (IOError, OSError, RuntimeError) as e:
-            logger.error(f"Failed to generate narrator for scene {scene_index}: {e}")
-
-    def _generate_image_asset(self, scene_index: int):
-        """Generate image asset for a scene."""
-        try:
-            logger.info(f"Generating image asset for scene {scene_index}")
-            image = self.recipe.image_data[scene_index]
-            image_generator: IImageGenerator = image.GENERATOR()
-            output_image_file_path = (
-                self.__paths.assets_path
-                / f"{self.output_file_prefix}_image_{scene_index+1:03}.png"
-            )
-            logger.debug(
-                f"Using image generator: {type(image_generator).__name__} for file: {output_image_file_path.name}"
-            )
-
-            output_images = image_generator.text_to_image(
-                recipe=image, output_file_path=output_image_file_path
-            )
-            first_output_image = output_images[0]
-            self.video_assets.set_scene_image(scene_index, first_output_image)
-            self.video_assets.save_assets_to_file()  # Save progress immediately
-            for img in output_images:
-                logger.info(
-                    f"Successfully generated image for scene {scene_index}: {img.name}"
+                video_generator: IVideoGenerator = recipe.GENERATOR()
+                sub_video_file_path = (
+                    self.__paths.videos_asset_folder
+                    / f"{self.output_file_prefix}_sub_video_{scene_index+1:03}_{sub_video_index+1:02}.mp4"
                 )
+
+                logger.debug(
+                    f"Using video generator: {type(video_generator).__name__} for file: {sub_video_file_path.name}"
+                )
+
+                # output_sub_video = video_generator.media_to_video(recipe, sub_video_file_path)
+
+                output_sub_video = Path(
+                    f"mock_video_2_video/{sub_video_file_path.stem}.mock.mp4"
+                )
+
+                self.video_assets.set_scene_sub_video(
+                    scene_index, sub_video_index, output_sub_video
+                )
+                self.video_assets.save_assets_to_file()  # Save progress immediately
             logger.info(
-                f"Using generated image for scene {scene_index}: {first_output_image.name}"
+                f"Successfully generated video for scene {scene_index}: {output_sub_video.name}"
             )
 
         except (IOError, OSError, RuntimeError) as e:
-            logger.error(f"Failed to generate image for scene {scene_index}: {e}")
+            logger.error(f"Failed to generate video for scene {scene_index}: {e}")
+
+    def _generate_video_asset(self, scene_index: int):
+        """Generate assets for a specific scene."""
+        try:
+            logger.info(f"Generating video asset for scene {scene_index}")
+
+            video_file_path = (
+                self.__paths.videos_asset_folder
+                / f"{self.output_file_prefix}_video_{scene_index+1:03}.mp4"
+            )
+
+            self._generate_sub_videos_assets(scene_index)
+
+            # output_video = self._concatenate_sub_videos(scene_index, video_file_path)
+
+            output_video = Path(
+                f"mock_concatenate_sub_video/{video_file_path.stem}.mock.mp4"
+            )
+
+            self.video_assets.set_scene_video(scene_index, output_video)
+            self.video_assets.save_assets_to_file()  # Save progress immediately
+            logger.info(
+                f"Successfully generated video for scene {scene_index}: {output_video.name}"
+            )
+
+        except (IOError, OSError, RuntimeError) as e:
+            logger.error(f"Failed to generate video for scene {scene_index}: {e}")
 
     def generate_video_assets(self):
-        """Generate all missing assets from the recipe."""
+        """Generate a video from the image assets using ffmpeg."""
         with begin_file_logging(
             name="VideoAssetManager",
             log_level="TRACE",
@@ -275,18 +253,26 @@ class VideoAssetManager:
         ):
             logger.info("Starting video asset generation process")
 
-            missing = self.video_assets.get_missing_assets()
-            all_missing_scenes = set(missing["narrator"] + missing["image"])
-
-            logger.info(
-                f"Found {len(missing['narrator'])} scenes missing narrator assets"
+            missing_narrator_and_images = (
+                self.__narrator_and_image_assets.get_missing_narrator_and_image_assets()
             )
-            logger.info(f"Found {len(missing['image'])} scenes missing image assets")
-            logger.info(f"Total scenes requiring processing: {len(all_missing_scenes)}")
+            if (
+                "image" in missing_narrator_and_images
+                and len(missing_narrator_and_images["image"]) > 0
+            ):
+                logger.error(
+                    f"Cannot generate videos - {len(missing_narrator_and_images)} scenes are missing image assets"
+                )
+                return
 
-            for scene_index in sorted(all_missing_scenes):
+            missing_videos = self.video_assets.get_missing_videos()
+
+            logger.info(f"Found {len(missing_videos)} scenes missing video assets")
+            logger.info(f"Total scenes requiring processing: {len(missing_videos)}")
+
+            for scene_index in sorted(missing_videos):
                 logger.info(f"Processing scene {scene_index}...")
-                self._generate_scene_assets(scene_index)
+                self._generate_video_asset(scene_index)
 
             logger.info("Video asset generation process completed successfully")
 
@@ -296,15 +282,12 @@ class VideoAssetManager:
         logger.info("Starting video asset cleanup process")
 
         # Get list of valid (non-None) asset files to keep
-        valid_narrator_assets = [
-            asset for asset in self.video_assets.narrator_assets if asset is not None
+        valid_video_assets = [
+            asset for asset in self.video_assets.video_assets if asset is not None
         ]
-        valid_image_assets = [
-            asset for asset in self.video_assets.image_assets if asset is not None
-        ]
-        assets_to_keep = set(valid_narrator_assets + valid_image_assets)
+        assets_to_keep = set(valid_video_assets)
 
-        for file in self.__paths.assets_path.glob("*"):
+        for file in self.__paths.video_asset_file.glob("*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue

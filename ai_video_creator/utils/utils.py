@@ -1,6 +1,7 @@
 """Utility functions for AI Video Creator project."""
 
 import os
+import copy
 
 
 def get_next_available_filename(file_path: str) -> str:
@@ -19,3 +20,17 @@ def get_next_available_filename(file_path: str) -> str:
         counter += 1
 
     return file_path
+
+
+def ensure_collection_index_exists(
+    collection: list, index: int, empty_value=None
+) -> None:
+    """
+    Ensure that the collection has enough elements to include the specified index.
+
+    :param collection: The list to check and potentially extend.
+    :param index: The index that needs to be accessible in the list.
+    :param empty_value: The value to append to the list if it needs to be extended. Defaults to None.
+    """
+    while len(collection) <= index:
+        collection.append(copy.deepcopy(empty_value))

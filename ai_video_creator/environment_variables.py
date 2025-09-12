@@ -13,6 +13,12 @@ if not DEFAULT_ASSETS_FOLDER:
         "DEFAULT_ASSETS_FOLDER environment variable is not set. Please set it in your .env file."
     )
 
+COMFYUI_INPUT_FOLDER = os.getenv("COMFYUI_INPUT_FOLDER")
+if not COMFYUI_INPUT_FOLDER:
+    raise ValueError(
+        "COMFYUI_INPUT_FOLDER environment variable is not set. Please set it in your .env file."
+    )
+
 COMFYUI_OUTPUT_FOLDER = os.getenv("COMFYUI_OUTPUT_FOLDER")
 if not COMFYUI_OUTPUT_FOLDER:
     raise ValueError(

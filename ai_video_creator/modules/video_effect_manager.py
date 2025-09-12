@@ -7,14 +7,14 @@ from pathlib import Path
 
 from logging_utils import begin_file_logging, logger
 
-from ai_video_creator.utils.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from ai_video_creator.media_effects.effect_base import EffectBase
 from ai_video_creator.media_effects.effects_map import (
     EFFECTS_MAP,
     AudioExtender,
 )
 
-from .video_asset_manager import VideoAssets
+from .narrator_and_image_asset_manager import NarratorAndImageAssetsFile
 
 
 class MediaEffects:
@@ -182,7 +182,7 @@ class MediaEffectsManager:
 
     def __init__(self, story_folder: Path, chapter_index: int):
         """Initialize MediaEffectsManager with story folder and chapter index."""
-        self.__paths = VideoRecipePaths(story_folder, chapter_index)
+        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
 
         with begin_file_logging(
             name="MediaEffectsManager",
@@ -193,7 +193,7 @@ class MediaEffectsManager:
                 f"Initializing MediaEffectsManager for story: {story_folder.name}, chapter: {chapter_index}"
             )
 
-            self.assets = VideoAssets(self.__paths.video_asset_file)
+            self.assets = NarratorAndImageAssetsFile(self.__paths.narrator_and_image_asset_file)
             if not self.assets.is_complete():
                 raise ValueError(
                     "Video assets are incomplete. Please ensure all required assets are present."

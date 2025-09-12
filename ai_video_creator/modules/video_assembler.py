@@ -12,9 +12,9 @@ from logging_utils import begin_file_logging, logger
 
 from ai_video_creator.generators import SubtitleGenerator
 from ai_video_creator.utils.ffmpeg_helpers import get_audio_duration, run_ffmpeg_trace
-from ai_video_creator.utils.video_recipe_paths import VideoRecipePaths
+from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 
-from .video_asset_manager import VideoAssets
+from .narrator_and_image_asset_manager import NarratorAndImageAssetsFile
 from .video_effect_manager import MediaEffects
 
 
@@ -28,7 +28,7 @@ class VideoAssembler:
         """
         Initialize VideoCreator with the required generators.
         """
-        self.__paths = VideoRecipePaths(story_folder, chapter_index)
+        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
 
         with begin_file_logging(
             name="VideoAssembler",
@@ -37,7 +37,7 @@ class VideoAssembler:
         ):
             self.__subtitle_generator = SubtitleGenerator()
 
-            self.assets = VideoAssets(self.__paths.video_asset_file)
+            self.assets = NarratorAndImageAssetsFile(self.__paths.narrator_and_image_asset_file)
             if not self.assets.is_complete():
                 raise ValueError(
                     "Video assets are incomplete. Please ensure all required assets are present."
@@ -57,7 +57,7 @@ class VideoAssembler:
         Generate a video segment from an image and audio file.
         """
         image_path_obj = Path(image_path)
-        temp_file = self.__paths.assets_path / f"temp_{image_path_obj.stem}.mp4"
+        temp_file = self.__paths.narrator_and_image_asset_folder / f"temp_{image_path_obj.stem}.mp4"
         duration = get_audio_duration(audio_path)
         video_input = ffmpeg.input(image_path, loop=1, t=duration)
         audio_input = ffmpeg.input(audio_path)
@@ -138,7 +138,7 @@ class VideoAssembler:
         :return: Path to the concatenated video file
         """
         logger.info(f"Concatenating {len(video_segments)} video segments")
-        concat_list_path = self.__paths.assets_path / "concat_list.txt"
+        concat_list_path = self.__paths.narrator_and_image_asset_folder / "concat_list.txt"
 
         with open(concat_list_path, "w", encoding="utf-8") as f:
             for segment in video_segments:

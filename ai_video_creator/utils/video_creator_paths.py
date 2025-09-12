@@ -5,7 +5,7 @@ Path management for video recipe creation.
 from pathlib import Path
 
 
-class VideoRecipePaths:
+class VideoCreatorPaths:
     """Handles path management for video recipe creation."""
 
     def __init__(self, story_folder: Path, chapter_prompt_index: int):
@@ -20,16 +20,26 @@ class VideoRecipePaths:
 
         # Initialize paths
         self.video_path = story_folder / "video"
-        self.assets_path = self.video_path / "assets"
+        self.narrator_and_image_asset_folder = (
+            self.video_path / "assets" / "narrator_and_image"
+        )
+        self.videos_asset_folder = self.video_path / "assets" / "video"
 
         # Create directories if they don't exist
-        self.assets_path.mkdir(parents=True, exist_ok=True)
+        self.narrator_and_image_asset_folder.mkdir(parents=True, exist_ok=True)
+        self.videos_asset_folder.mkdir(parents=True, exist_ok=True)
 
         # Generate recipe name
         self.name_stem = f"{story_folder.stem}_{self.chapter_prompt_path.stem}"
 
         # Recipe file path
-        self.recipe_file = self.video_path / f"{self.name_stem}_recipe.json"
+        self.narrator_and_image_recipe_file = (
+            self.video_path / f"{self.name_stem}_narrator_and_image_recipe.json"
+        )
+        self.narrator_and_image_asset_file = (
+            self.video_path / f"{self.name_stem}_narrator_and_image_assets.json"
+        )
+        self.video_recipe_file = self.video_path / f"{self.name_stem}_video_recipe.json"
         self.video_asset_file = self.video_path / f"{self.name_stem}_video_assets.json"
         self.video_effects_file = (
             self.video_path / f"{self.name_stem}_video_effects.json"
@@ -104,9 +114,13 @@ class VideoRecipePaths:
             if (
                 asset_current_path.exists()
                 and asset_current_path.is_file()
-                and not asset_current_path.is_relative_to(self.assets_path)
+                and not asset_current_path.is_relative_to(
+                    self.narrator_and_image_asset_folder
+                )
             ):
-                asset_target_path = self.assets_path / asset_current_path.name
+                asset_target_path = (
+                    self.narrator_and_image_asset_folder / asset_current_path.name
+                )
                 try:
                     asset_current_path.rename(asset_target_path)
                     new_path_list.append(asset_target_path)
