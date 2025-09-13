@@ -5,10 +5,9 @@ A class that extends the duration of an audio clip by a specified number of seco
 from pathlib import Path
 from typing_extensions import override
 
-import ffmpeg
 from logging_utils import logger
 
-from ai_video_creator.utils.ffmpeg_helpers import get_audio_duration, run_ffmpeg_trace
+from ai_video_creator.utils import extend_audio_to_duration
 from ai_video_creator.media_effects.effect_base import EffectBase
 
 
@@ -27,32 +26,6 @@ class AudioExtender(EffectBase):
         super().__init__(effect_type=self.effect_type)
         self.seconds_to_extend = seconds_to_extend
 
-    def extend_audio_to_duration(
-        self, input_path: Path, output_path: Path, extra_time: float
-    ):
-        """
-        Extend the audio clip to the target duration.
-        """
-        current_duration = get_audio_duration(input_path)
-        target_duration = current_duration + extra_time
-
-        cmd = (
-            ffmpeg.input(str(input_path))
-            .filter("apad")
-            .output(
-                str(output_path),
-                t=target_duration,
-                acodec="libmp3lame",
-                format="mp3",
-            )
-            .overwrite_output()
-            .compile()
-        )
-
-        run_ffmpeg_trace(cmd)
-
-        return output_path
-
     @override
     def apply(self, media_file_path: Path, **kwargs) -> Path:
         """Apply the audio extender effect."""
@@ -61,7 +34,7 @@ class AudioExtender(EffectBase):
         )
         output_path = media_file_path.with_stem(f"{media_file_path.stem}_extended")
 
-        result = self.extend_audio_to_duration(
+        result = extend_audio_to_duration(
             input_path=media_file_path,
             output_path=output_path,
             extra_time=self.seconds_to_extend,

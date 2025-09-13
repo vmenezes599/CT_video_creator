@@ -20,9 +20,8 @@ from elevenlabs.client import ElevenLabs
 from typing_extensions import override
 
 # SparkTTSComfyUIAudioGenerator
-from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER
-from ai_video_creator.utils.utils import get_next_available_filename
+from ai_video_creator.utils import get_next_available_filename
 
 from .environment_variables import ELEVENLABS_API_KEY
 

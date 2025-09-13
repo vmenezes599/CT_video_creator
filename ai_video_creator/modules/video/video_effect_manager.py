@@ -7,14 +7,14 @@ from pathlib import Path
 
 from logging_utils import begin_file_logging, logger
 
-from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
+from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.media_effects.effect_base import EffectBase
 from ai_video_creator.media_effects.effects_map import (
     EFFECTS_MAP,
     AudioExtender,
 )
 
-from .narrator_and_image_asset_manager import NarratorAndImageAssetsFile
+from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
 
 
 class MediaEffects:
@@ -193,7 +193,9 @@ class MediaEffectsManager:
                 f"Initializing MediaEffectsManager for story: {story_folder.name}, chapter: {chapter_index}"
             )
 
-            self.assets = NarratorAndImageAssetsFile(self.__paths.narrator_and_image_asset_file)
+            self.assets = NarratorAndImageAssets(
+                self.__paths.narrator_and_image_asset_file
+            )
             if not self.assets.is_complete():
                 raise ValueError(
                     "Video assets are incomplete. Please ensure all required assets are present."

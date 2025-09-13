@@ -12,7 +12,7 @@ from logging_utils import logger
 
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 from ai_video_creator.environment_variables import COMFYUI_INPUT_FOLDER
-from ai_video_creator.utils.utils import safe_move, safe_copy
+from ai_video_creator.utils import safe_move, safe_copy
 
 from .ComfyUI_automation.comfyui_video_workflows import WanI2VWorkflow, WanV2VWorkflow
 
