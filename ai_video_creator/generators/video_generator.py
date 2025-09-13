@@ -7,7 +7,7 @@ import random
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import override
+from typing_extensions import override
 from logging_utils import logger
 
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
