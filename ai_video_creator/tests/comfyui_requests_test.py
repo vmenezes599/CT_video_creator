@@ -9,7 +9,6 @@ from requests.exceptions import RequestException
 
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 from ai_video_creator.ComfyUI_automation.comfyui_workflow import IComfyUIWorkflow
-from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER
 
 
 @pytest.fixture

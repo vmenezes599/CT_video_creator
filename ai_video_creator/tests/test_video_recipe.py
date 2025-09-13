@@ -3,8 +3,7 @@ Unit tests for video_recipe module.
 """
 
 import json
-from unittest.mock import patch, MagicMock
-from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -50,11 +49,9 @@ class TestVideoRecipeFile:
 
         # Add real video recipe data
         video_recipe = WanVideoRecipe(
-            prompt="Test video prompt",
-            media_path="/path/to/image.jpg",
-            seed=12345
+            prompt="Test video prompt", media_path="/path/to/image.jpg", seed=12345
         )
-        
+
         recipe.add_video_data([video_recipe])
 
         # Verify data was added correctly
@@ -78,7 +75,7 @@ class TestVideoRecipeFile:
         assert "index" in video
         assert "recipe_list" in video
         assert len(video["recipe_list"]) == 1
-        
+
         recipe_data = video["recipe_list"][0]
         assert recipe_data["prompt"] == "Test video prompt"
         assert recipe_data["media_path"] == "/path/to/image.jpg"
@@ -101,7 +98,7 @@ class TestVideoRecipeFile:
                             "seed": 99999,
                             "recipe_type": "WanVideoRecipeType",
                         }
-                    ]
+                    ],
                 }
             ]
         }
@@ -135,12 +132,12 @@ class TestVideoRecipeFile:
 
         # Should start with empty data
         assert recipe.video_data == []
-        
+
         # The original corrupted file should be renamed to .old
         assert old_recipe_path.exists()
         with open(old_recipe_path, "r", encoding="utf-8") as f:
             assert f.read() == corrupted_content
-            
+
         # A new empty file should be created or the file should be valid JSON
         if recipe_path.exists():
             with open(recipe_path, "r", encoding="utf-8") as f:
@@ -159,8 +156,10 @@ class TestVideoRecipeFile:
             for sub_video in range(2):
                 video_recipe = WanVideoRecipe(
                     prompt=f"Scene {scene} sub-video {sub_video}",
-                    media_path=f"/path/to/scene_{scene}_image.jpg" if sub_video == 0 else None,
-                    seed=scene * 100 + sub_video
+                    media_path=(
+                        f"/path/to/scene_{scene}_image.jpg" if sub_video == 0 else None
+                    ),
+                    seed=scene * 100 + sub_video,
                 )
                 video_recipes.append(video_recipe)
             recipe.add_video_data(video_recipes)
@@ -216,10 +215,14 @@ class TestVideoRecipeBuilder:
         # Create narrator and image assets folder structure
         video_folder = story_folder / "video"
         video_folder.mkdir()
-        
+
         # Create empty narrator and image asset file for dependency
-        narrator_image_asset_file = video_folder / "test_story_chapter_001_narrator_and_image_assets.json"
-        empty_assets = {"assets": [{"narrator": "", "image": ""}, {"narrator": "", "image": ""}]}
+        narrator_image_asset_file = (
+            video_folder / "test_story_chapter_001_narrator_and_image_assets.json"
+        )
+        empty_assets = {
+            "assets": [{"narrator": "", "image": ""}, {"narrator": "", "image": ""}]
+        }
         with open(narrator_image_asset_file, "w", encoding="utf-8") as f:
             json.dump(empty_assets, f)
 
@@ -254,8 +257,12 @@ class TestVideoRecipeBuilder:
                     # First sub-video should have image path, others should not
                     first_recipe = scene_data["recipe_list"][0]
                     assert first_recipe["recipe_type"] == "WanVideoRecipeType"
-                    assert first_recipe["prompt"] == f"First visual description" if scene_index == 0 else "Second visual description"
-                    
+                    assert (
+                        first_recipe["prompt"] == f"First visual description"
+                        if scene_index == 0
+                        else "Second visual description"
+                    )
+
                     for sub_video_index in range(1, 3):
                         sub_recipe = scene_data["recipe_list"][sub_video_index]
                         assert sub_recipe["media_path"] is None
@@ -283,7 +290,9 @@ class TestVideoRecipeBuilder:
                     new_content = json.load(f)
 
                 # The content should be essentially the same
-                assert len(original_content["video_data"]) == len(new_content["video_data"])
+                assert len(original_content["video_data"]) == len(
+                    new_content["video_data"]
+                )
 
                 # Check that prompts are the same (main content unchanged)
                 for i in range(len(original_content["video_data"])):
@@ -327,13 +336,16 @@ class TestVideoRecipeBuilder:
         # Create video folder and asset dependencies
         video_folder = story_folder / "video"
         video_folder.mkdir()
-        
-        narrator_image_asset_file = video_folder / "three_prompt_story_chapter_001_narrator_and_image_assets.json"
+
+        narrator_image_asset_file = (
+            video_folder
+            / "three_prompt_story_chapter_001_narrator_and_image_assets.json"
+        )
         empty_assets = {
             "assets": [
                 {"narrator": "", "image": ""},
                 {"narrator": "", "image": ""},
-                {"narrator": "", "image": ""}
+                {"narrator": "", "image": ""},
             ]
         }
         with open(narrator_image_asset_file, "w", encoding="utf-8") as f:
