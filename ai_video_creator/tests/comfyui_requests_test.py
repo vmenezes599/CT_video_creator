@@ -194,9 +194,9 @@ class TestComfyUIRequests:
         ) as mock_process_workflow:
             # Simulate: success, failure, success
             mock_process_workflow.side_effect = [
-                "/path/output1.png",
-                None,
-                "/path/output3.png",
+                ["/path/output1.png"],
+                [],  # Empty list instead of None for failure
+                ["/path/output3.png"],
             ]
 
             # Act
@@ -205,8 +205,8 @@ class TestComfyUIRequests:
             )
 
             # Assert - Should only contain successful outputs
-            assert len(result) == 3
-            assert result == ["/path/output1.png", None, "/path/output3.png"]
+            assert len(result) == 2  # Only non-None results
+            assert result == ["/path/output1.png", "/path/output3.png"]
             assert mock_process_workflow.call_count == 3
             assert mock_sleep.call_count == 3
 
@@ -340,49 +340,53 @@ class TestComfyUIRequests:
         # Arrange
         history_entry = {"outputs": {"images": ["file1.png", "file2.png"]}}
         mock_get_output_name.return_value = ["output_image.png", "backup_image.png"]
-        mock_path_join.return_value = "/path/to/output/output_image.png"
+        mock_path_join.side_effect = [
+            "/path/to/output/output_image.png",
+            "/path/to/output/backup_image.png",
+        ]
 
         # Act
-        output_path = comfyui_requests._get_output_path(history_entry)
+        output_paths = comfyui_requests._get_output_paths(history_entry)
 
         # Assert
-        assert output_path == "/path/to/output/output_image.png"
+        assert output_paths == [
+            "/path/to/output/output_image.png",
+            "/path/to/output/backup_image.png",
+        ]
         mock_get_output_name.assert_called_once_with(history_entry)
-        # Verify it uses the first output name and joins with COMFYUI_OUTPUT_FOLDER
-        mock_path_join.assert_called_once_with(
-            COMFYUI_OUTPUT_FOLDER, "output_image.png"
-        )
+        # Verify it uses both output names and joins with COMFYUI_OUTPUT_FOLDER
+        assert mock_path_join.call_count == 2
 
     @patch(
         "ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name"
     )
     def test_get_output_path_no_outputs(self, mock_get_output_name, comfyui_requests):
-        """Test output path when no outputs are found - tests None return behavior."""
+        """Test output path when no outputs are found - tests empty list return behavior."""
         # Arrange
         history_entry = {"outputs": {}}
         mock_get_output_name.return_value = []  # No output names found
 
         # Act
-        output_path = comfyui_requests._get_output_path(history_entry)
+        output_paths = comfyui_requests._get_output_paths(history_entry)
 
         # Assert
-        assert output_path is None
+        assert output_paths == []
         mock_get_output_name.assert_called_once_with(history_entry)
 
     @patch(
         "ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name"
     )
     def test_get_output_path_none_outputs(self, mock_get_output_name, comfyui_requests):
-        """Test output path when helper returns None - tests None handling."""
+        """Test output path when helper returns None - tests empty list handling."""
         # Arrange
         history_entry = {"outputs": {"images": ["test.png"]}}
         mock_get_output_name.return_value = None
 
         # Act
-        output_path = comfyui_requests._get_output_path(history_entry)
+        output_paths = comfyui_requests._get_output_paths(history_entry)
 
         # Assert
-        assert output_path is None
+        assert output_paths == []
 
     def test_create_workflow_summary_short_summary(
         self, comfyui_requests, mock_workflow
@@ -474,8 +478,8 @@ class TestComfyUIRequests:
         ) as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
-            comfyui_requests, "_get_output_path"
-        ) as mock_get_path:
+            comfyui_requests, "_get_output_paths"
+        ) as mock_get_paths:
 
             # Setup mocks
             mock_response = Mock()
@@ -485,18 +489,18 @@ class TestComfyUIRequests:
             mock_get_history.return_value = {
                 "status": {"status_str": "success", "completed": True}
             }
-            mock_get_path.return_value = "/output/result.png"
+            mock_get_paths.return_value = ["/output/result.png"]
 
             # Act
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
             # Assert
-            assert result == "/output/result.png"
+            assert result == ["/output/result.png"]
             mock_submit.assert_called_once_with(mock_workflow)
             mock_wait.assert_called_once_with("prompt_123")
             mock_get_history.assert_called_once()
             mock_check_success.assert_called_once()
-            mock_get_path.assert_called_once()
+            mock_get_paths.assert_called_once()
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     def test_process_single_workflow_runtime_error_retry(
@@ -515,8 +519,8 @@ class TestComfyUIRequests:
         ) as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
-            comfyui_requests, "_get_output_path"
-        ) as mock_get_path:
+            comfyui_requests, "_get_output_paths"
+        ) as mock_get_paths:
 
             # Setup mocks - first attempt fails, second succeeds
             mock_response = Mock()
@@ -530,13 +534,13 @@ class TestComfyUIRequests:
                 RuntimeError("First attempt failed"),
                 None,
             ]  # Fail then succeed
-            mock_get_path.return_value = "/output/result.png"
+            mock_get_paths.return_value = ["/output/result.png"]
 
             # Act
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
             # Assert
-            assert result == "/output/result.png"
+            assert result == ["/output/result.png"]
             assert mock_submit.call_count == 2  # Should retry once
             assert mock_check_success.call_count == 2
             assert mock_sleep.call_count == 1  # Sleep between retries
@@ -558,8 +562,8 @@ class TestComfyUIRequests:
         ) as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
-            comfyui_requests, "_get_output_path"
-        ) as mock_get_path:
+            comfyui_requests, "_get_output_paths"
+        ) as mock_get_paths:
 
             # Setup mocks - first submit fails with RequestException, second succeeds
             mock_response = Mock()
@@ -572,13 +576,13 @@ class TestComfyUIRequests:
             mock_get_history.return_value = {
                 "status": {"status_str": "success", "completed": True}
             }
-            mock_get_path.return_value = "/output/retry_result.png"
+            mock_get_paths.return_value = ["/output/retry_result.png"]
 
             # Act
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
             # Assert
-            assert result == "/output/retry_result.png"
+            assert result == ["/output/retry_result.png"]
             assert mock_submit.call_count == 2
             assert mock_sleep.call_count == 1
 
@@ -599,7 +603,7 @@ class TestComfyUIRequests:
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
             # Assert
-            assert result is None  # Should return None after all retries exhausted
+            assert result == []  # Should return empty list after all retries exhausted
             assert (
                 mock_submit.call_count == 2
             )  # Should try exactly max_retries_per_request times
@@ -635,7 +639,7 @@ class TestComfyUIRequests:
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
             # Assert
-            assert result is None
+            assert result == []
             # Should retry up to max_retries_per_request times (default is 5 from fixture, but we set it to 3)
             assert mock_submit.call_count == comfyui_requests.max_retries_per_request
             assert mock_wait.call_count == comfyui_requests.max_retries_per_request

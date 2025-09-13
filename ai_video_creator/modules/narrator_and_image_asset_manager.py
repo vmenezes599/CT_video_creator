@@ -44,6 +44,19 @@ class NarratorAndImageAssetsFile:
 
                 self.save_assets_to_file()
 
+        except json.JSONDecodeError:
+            logger.error(
+                f"Error decoding JSON from {self.asset_file_path.name} - renaming to .old and starting with empty assets"
+            )
+            # Rename corrupted file to .old for backup
+            old_file_path = Path(str(self.asset_file_path) + ".old")
+            if self.asset_file_path.exists():
+                self.asset_file_path.rename(old_file_path)
+            self.narrator_assets = []
+            self.image_assets = []
+            # Create a new empty file
+            self.save_assets_to_file()
+
         except FileNotFoundError:
             logger.debug(
                 f"Asset file not found: {self.asset_file_path.name} - starting with empty assets"

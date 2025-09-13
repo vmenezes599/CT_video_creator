@@ -130,13 +130,12 @@ class ComfyUIRequests:
         except RequestException as e:
             logger.error("Error occurred while cleaning memory in ComfyUI: {}", e)
 
-    def _get_output_path(self, history_entry: dict) -> list[str]:
+    def _get_output_paths(self, history_entry: dict) -> list[str]:
         """
-        Get the output file path for a completed workflow.
+        Get the output file paths for a completed workflow.
 
-        :param workflow: The workflow that was processed
-        :param index: Index of the workflow in the batch
-        :return: Full path to output file or None if not found
+        :param history_entry: The history entry from ComfyUI
+        :return: List of full paths to output files or empty list if not found
         """
         output_names = comfyui_get_history_output_name(history_entry)
         result = []
@@ -168,9 +167,7 @@ class ComfyUIRequests:
         Process a single workflow through the complete pipeline.
 
         :param workflow: The workflow to process
-        :param index: Current workflow index (0-based)
-        :param total: Total number of workflows
-        :return: Output file path or None if processing failed
+        :return: List of output file paths or empty list if processing failed
         """
         _, display_summary = self._create_workflow_summary(workflow)
 
@@ -197,12 +194,13 @@ class ComfyUIRequests:
 
                 if history_entry:
                     self._check_for_output_success(history_entry)
-                    output_path = self._get_output_path(history_entry)
+                    output_paths = self._get_output_paths(history_entry)
 
                     self._send_clean_memory_request()
 
-                    return output_path
-                tries += 1
+                    return output_paths
+                else:
+                    tries += 1
 
             except RuntimeError:
                 tries += 1
@@ -217,7 +215,7 @@ class ComfyUIRequests:
             except RequestException as e:
                 tries += 1
                 logger.error(
-                    "Connection error during request %s (attempt %d/%d): %s",
+                    "Connection error during request {} (attempt {}/{}): {}",
                     display_summary,
                     tries,
                     self.max_retries_per_request,
@@ -228,7 +226,7 @@ class ComfyUIRequests:
 
         # If all retries exhausted
         logger.error(
-            "Failed to process workflow after %d attempts: %s",
+            "Failed to process workflow after {} attempts: {}",
             self.max_retries_per_request,
             display_summary,
         )
@@ -254,7 +252,7 @@ class ComfyUIRequests:
             # Add delay between requests
             time.sleep(self.delay_seconds)
 
-        logger.info(f"Finished sending requests to ComfyUI.")
+        logger.info("Finished sending requests to ComfyUI.")
 
         return output_image_paths
 

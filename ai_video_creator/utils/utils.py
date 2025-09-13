@@ -2,6 +2,9 @@
 
 import os
 import copy
+import shutil
+
+from pathlib import Path
 
 
 def get_next_available_filename(file_path: str) -> str:
@@ -34,3 +37,75 @@ def ensure_collection_index_exists(
     """
     while len(collection) <= index:
         collection.append(copy.deepcopy(empty_value))
+
+
+def safe_move(src, dst):
+    """
+    Move src to dst, avoiding overwrites by appending a numeric suffix.
+    If dst is a directory, the source filename is preserved.
+    If dst is a file path, it uses that as the target name.
+    Returns the final destination path.
+    """
+    src = Path(src)
+    dst = Path(dst)
+
+    # If dst is a directory or doesn't exist but has no suffix, treat as directory
+    if dst.is_dir() or (not dst.exists() and not dst.suffix):
+        dst_dir = dst
+        dst = dst_dir / src.name
+    else:
+        dst_dir = dst.parent
+
+    # Ensure destination directory exists
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    if dst.exists():
+        stem, suffix = dst.stem, dst.suffix
+        counter = 1
+        # Keep incrementing until we find a free filename
+        while True:
+            new_name = f"{stem}_{counter}{suffix}"
+            new_dst = dst_dir / new_name
+            if not new_dst.exists():
+                dst = new_dst
+                break
+            counter += 1
+
+    shutil.move(str(src), str(dst))
+    return dst
+
+
+def safe_copy(src, dst):
+    """
+    Copy src to dst, avoiding overwrites by appending a numeric suffix.
+    If dst is a directory, the source filename is preserved.
+    If dst is a file path, it uses that as the target name.
+    Preserves metadata like shutil.copy2.
+    Returns the final destination path.
+    """
+    src = Path(src)
+    dst = Path(dst)
+
+    # If dst is a directory or doesn't exist but has no suffix, treat as directory
+    if dst.is_dir() or (not dst.exists() and not dst.suffix):
+        dst_dir = dst
+        dst = dst_dir / src.name
+    else:
+        dst_dir = dst.parent
+
+    # Ensure destination directory exists
+    dst_dir.mkdir(parents=True, exist_ok=True)
+
+    if dst.exists():
+        stem, suffix = dst.stem, dst.suffix
+        counter = 1
+        while True:
+            new_name = f"{stem}_{counter}{suffix}"
+            new_dst = dst_dir / new_name
+            if not new_dst.exists():
+                dst = new_dst
+                break
+            counter += 1
+
+    shutil.copy2(src, dst)
+    return dst

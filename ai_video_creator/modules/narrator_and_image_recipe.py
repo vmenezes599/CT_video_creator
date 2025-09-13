@@ -67,7 +67,15 @@ class NarratorAndImageRecipeFile:
             logger.info(
                 f"Recipe file not found: {file_path.name} - starting with empty recipe"
             )
-        except (IOError, json.JSONDecodeError) as e:
+        except json.JSONDecodeError:
+            logger.error(f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe")
+            # Rename corrupted file to .old for backup
+            old_file_path = Path(str(file_path) + ".old")
+            if file_path.exists():
+                file_path.rename(old_file_path)
+            # Create a new empty file
+            self.save_current_state()
+        except IOError as e:
             logger.error(f"Error loading video recipe from {file_path.name}: {e}")
 
     def _create_recipe_from_dict(self, data: dict):
@@ -125,8 +133,8 @@ class NarratorAndImageRecipeBuilder:
             f" {story_folder.name}, chapter: {chapter_prompt_index}"
         )
 
-        self.__paths = VideoCreatorPaths(story_folder, chapter_prompt_index)
-        self.__chapter_prompt_path = self.__paths.chapter_prompt_path
+        self._paths = VideoCreatorPaths(story_folder, chapter_prompt_index)
+        self.__chapter_prompt_path = self._paths.chapter_prompt_path
 
         # Load video prompt
         self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
@@ -184,12 +192,12 @@ class NarratorAndImageRecipeBuilder:
         with begin_file_logging(
             name="VideoRecipeBuilder",
             log_level="TRACE",
-            base_folder=self.__paths.video_path,
+            base_folder=self._paths.video_path,
         ):
             logger.info("Starting video recipe creation process")
 
             self._recipe = NarratorAndImageRecipeFile(
-                self.__paths.narrator_and_image_recipe_file
+                self._paths.narrator_and_image_recipe_file
             )
 
             if not self._verify_recipe_against_prompt():

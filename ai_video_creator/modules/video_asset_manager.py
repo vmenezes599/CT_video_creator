@@ -39,7 +39,7 @@ class VideoAssetsFile:
                 for index, asset in enumerate(assets):
 
                     # Load video asset, skip None/empty values
-                    video_value = asset.get("video")
+                    video_value = asset.get("video_asset")
                     if video_value is not None and video_value != "":
                         self.video_assets[index] = Path(video_value)
                     else:
@@ -54,11 +54,25 @@ class VideoAssetsFile:
 
                 self.save_assets_to_file()
 
+        except json.JSONDecodeError:
+            logger.error(
+                f"Error decoding JSON from {self.asset_file_path.name} - renaming to .old and starting with empty assets"
+            )
+            # Rename corrupted file to .old for backup
+            old_file_path = Path(str(self.asset_file_path) + ".old")
+            if self.asset_file_path.exists():
+                self.asset_file_path.rename(old_file_path)
+            self.video_assets = []
+            self.sub_video_assets = []
+            # Create a new empty file
+            self.save_assets_to_file()
+
         except FileNotFoundError:
             logger.debug(
                 f"Asset file not found: {self.asset_file_path.name} - starting with empty assets"
             )
             self.video_assets = []
+            self.sub_video_assets = []
 
     def save_assets_to_file(self) -> None:
         """Save the current state of the video assets to a file."""
@@ -70,7 +84,7 @@ class VideoAssetsFile:
                 ):
                     videos = {
                         "index": i + 1,
-                        "video_asset": str(video_asset),
+                        "video_asset": str(video_asset) if video_asset else None,
                         "sub_video_assets": [
                             (str(sub_video_asset) if sub_video_asset else None)
                             for sub_video_asset in sub_video_assets
@@ -118,8 +132,22 @@ class VideoAssetsFile:
         """Check if a scene has video asset."""
         if scene_index < 0 or scene_index >= len(self.video_assets):
             return False
-        video = self.video_assets[scene_index]
-        return video is not None and video.exists() and video.is_file()
+        video_asset = self.video_assets[scene_index]
+        return (
+            video_asset is not None and video_asset.exists() and video_asset.is_file()
+        )
+
+    def has_sub_videos(self, scene_index: int, sub_scene_index: int) -> bool:
+        """Check if a scene has sub-video assets."""
+        if scene_index < 0 or scene_index >= len(self.sub_video_assets):
+            return False
+        if sub_scene_index < 0 or sub_scene_index >= len(
+            self.sub_video_assets[scene_index]
+        ):
+            return False
+
+        sub_video = self.sub_video_assets[scene_index][sub_scene_index]
+        return sub_video is not None and sub_video.exists() and sub_video.is_file()
 
     def get_missing_videos(self) -> list[int]:
         """Get a summary of missing videos per scene."""
@@ -172,63 +200,86 @@ class VideoAssetManager:
             f"Asset synchronization completed - video assets: {len(self.video_assets.video_assets)}"
         )
 
+    def _set_next_recipe_media_path(
+        self, scene_index: int, recipe_index: int, media_path: Path
+    ) -> None:
+        """Set the media path of the next recipe in the list, if it exists."""
+        video_recipe_list = self.recipe.video_data[scene_index]
+        next_recipe_index = recipe_index + 1
+        if next_recipe_index < len(video_recipe_list):
+            next_recipe = video_recipe_list[next_recipe_index]
+            next_recipe.media_path = media_path
+            logger.debug(
+                f"Set media path for next recipe at scene {scene_index}, recipe {next_recipe_index}: {media_path.name}"
+            )
+            self.recipe.save_current_state()
+
+    def _generate_sub_video_file_path(
+        self, scene_index: int, recipe_index: int
+    ) -> Path:
+        """Generate a unique sub-video file path for a specific scene and recipe index."""
+        return (
+            self.__paths.videos_asset_folder
+            / f"{self.output_file_prefix}_sub_video_{scene_index+1:03}_{recipe_index+1:02}.mp4"
+        )
+
     def _generate_sub_videos_assets(self, scene_index: int) -> None:
         """Generate sub-videos assets for a specific scene."""
         try:
             logger.info(f"Generating video asset for scene {scene_index}")
             video_recipe_list = self.recipe.video_data[scene_index]
 
-            sub_videos_paths = self.video_assets.sub_video_assets[scene_index]
-            for sub_video_index, recipe in enumerate(video_recipe_list):
-                if (
-                    sub_video_index < len(sub_videos_paths)
-                    and sub_videos_paths[sub_video_index] is not None
-                    and sub_videos_paths[sub_video_index].exists()
-                ):
+            for recipe_index, recipe in enumerate(video_recipe_list):
+                if self.video_assets.has_sub_videos(scene_index, recipe_index):
                     logger.debug(
-                        f"Sub-video {sub_video_index} already exists, skipping generation."
+                        f"Sub-video {recipe_index} already exists, skipping generation."
                     )
                     continue
 
                 video_generator: IVideoGenerator = recipe.GENERATOR()
-                sub_video_file_path = (
-                    self.__paths.videos_asset_folder
-                    / f"{self.output_file_prefix}_sub_video_{scene_index+1:03}_{sub_video_index+1:02}.mp4"
+                sub_video_file_path = self._generate_sub_video_file_path(
+                    scene_index, recipe_index
                 )
 
                 logger.debug(
                     f"Using video generator: {type(video_generator).__name__} for file: {sub_video_file_path.name}"
                 )
 
-                # output_sub_video = video_generator.media_to_video(recipe, sub_video_file_path)
+                output_sub_video = video_generator.media_to_video(
+                    recipe, sub_video_file_path
+                )
 
-                output_sub_video = Path(
-                    f"mock_video_2_video/{sub_video_file_path.stem}.mock.mp4"
+                self._set_next_recipe_media_path(
+                    scene_index, recipe_index, output_sub_video
                 )
 
                 self.video_assets.set_scene_sub_video(
-                    scene_index, sub_video_index, output_sub_video
+                    scene_index, recipe_index, output_sub_video
                 )
-                self.video_assets.save_assets_to_file()  # Save progress immediately
-            logger.info(
-                f"Successfully generated video for scene {scene_index}: {output_sub_video.name}"
-            )
+                self.video_assets.save_assets_to_file()
+
+                logger.info(
+                    f"Successfully generated video for scene {scene_index}: {output_sub_video.name}"
+                )
 
         except (IOError, OSError, RuntimeError) as e:
             logger.error(f"Failed to generate video for scene {scene_index}: {e}")
+
+    def _generate_video_file_path(self, scene_index: int) -> Path:
+        """Generate a unique video file path for a specific scene."""
+        return (
+            self.__paths.videos_asset_folder
+            / f"{self.output_file_prefix}_video_{scene_index+1:03}.mp4"
+        )
 
     def _generate_video_asset(self, scene_index: int):
         """Generate assets for a specific scene."""
         try:
             logger.info(f"Generating video asset for scene {scene_index}")
 
-            video_file_path = (
-                self.__paths.videos_asset_folder
-                / f"{self.output_file_prefix}_video_{scene_index+1:03}.mp4"
-            )
-
             self._generate_sub_videos_assets(scene_index)
 
+            video_file_path = self._generate_video_file_path(scene_index)
             # output_video = self._concatenate_sub_videos(scene_index, video_file_path)
 
             output_video = Path(
@@ -236,7 +287,7 @@ class VideoAssetManager:
             )
 
             self.video_assets.set_scene_video(scene_index, output_video)
-            self.video_assets.save_assets_to_file()  # Save progress immediately
+            self.video_assets.save_assets_to_file()
             logger.info(
                 f"Successfully generated video for scene {scene_index}: {output_video.name}"
             )
@@ -253,16 +304,8 @@ class VideoAssetManager:
         ):
             logger.info("Starting video asset generation process")
 
-            missing_narrator_and_images = (
-                self.__narrator_and_image_assets.get_missing_narrator_and_image_assets()
-            )
-            if (
-                "image" in missing_narrator_and_images
-                and len(missing_narrator_and_images["image"]) > 0
-            ):
-                logger.error(
-                    f"Cannot generate videos - {len(missing_narrator_and_images)} scenes are missing image assets"
-                )
+            if not self.__narrator_and_image_assets.is_complete():
+                logger.error("Cannot generate videos - Scenes are missing image assets")
                 return
 
             missing_videos = self.video_assets.get_missing_videos()
@@ -281,13 +324,18 @@ class VideoAssetManager:
 
         logger.info("Starting video asset cleanup process")
 
-        # Get list of valid (non-None) asset files to keep
         valid_video_assets = [
             asset for asset in self.video_assets.video_assets if asset is not None
         ]
-        assets_to_keep = set(valid_video_assets)
+        valid_sub_video_assets = [
+            sub_asset
+            for sublist in self.video_assets.sub_video_assets
+            for sub_asset in sublist
+            if sub_asset is not None
+        ]
+        assets_to_keep = set(valid_video_assets + valid_sub_video_assets)
 
-        for file in self.__paths.video_asset_file.glob("*"):
+        for file in self.__paths.videos_asset_folder.glob("*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue

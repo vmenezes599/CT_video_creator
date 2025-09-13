@@ -2,8 +2,9 @@
 AI Video Generation Module
 """
 
+import copy
 import random
-import shutil
+
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import override
@@ -11,6 +12,7 @@ from logging_utils import logger
 
 from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
 from ai_video_creator.environment_variables import COMFYUI_INPUT_FOLDER
+from ai_video_creator.utils.utils import safe_move, safe_copy
 
 from .ComfyUI_automation.comfyui_video_workflows import WanI2VWorkflow, WanV2VWorkflow
 
@@ -60,36 +62,39 @@ class WanGenerator(IVideoGenerator):
     def _move_asset_to_output_path(self, target_path: Path, asset_path: Path) -> Path:
         """Move asset to the database folder and return the new path."""
         if not asset_path.exists():
-            logger.error(f"Asset file does not exist: {asset_path}")
-            raise FileNotFoundError(f"Asset file does not exist: {asset_path}")
+            logger.warning(
+                f"Asset file does not exist while trying to move it: {asset_path}"
+            )
+            logger.warning("Sometimes ComfyUI return temporary files. Ignoring...")
+            return Path("")
 
         complete_target_path = target_path / asset_path.name
-        shutil.move(asset_path, complete_target_path)
+        complete_target_path = safe_move(asset_path, complete_target_path)
         logger.trace(f"Asset moved successfully to: {complete_target_path}")
         return complete_target_path
 
-    def _send_media_to_comfyui_input_folder(self, media_path: Path) -> Path:
+    def _copy_media_to_comfyui_input_folder(self, media_path: Path) -> Path:
         """Move asset to the database folder and return the new path."""
         if not media_path.exists():
             logger.error(f"Media file does not exist: {media_path}")
             raise FileNotFoundError(f"Media file does not exist: {media_path}")
 
-        comfyui_input_folder = COMFYUI_INPUT_FOLDER
+        comfyui_input_folder = Path(COMFYUI_INPUT_FOLDER)
         complete_target_path = comfyui_input_folder / media_path.name
-        shutil.copy(media_path, complete_target_path)
-        logger.trace(f"Media copied successfully to: {complete_target_path}")
+        complete_target_path = safe_copy(media_path, complete_target_path)
+        logger.debug(f"Media copied successfully to: {complete_target_path}")
         return complete_target_path
 
     def _delete_media_from_comfyui_input_folder(self, media_path: Path) -> None:
         """Delete asset from the ComfyUI input folder."""
         if not media_path.exists():
-            logger.warning(f"Media file does not exist, cannot delete: {media_path}")
+            logger.error(f"Media file does not exist, cannot delete: {media_path}")
             return
 
         try:
             media_path.unlink()
-            logger.trace(f"Media deleted successfully from: {media_path}")
-        except Exception as e:
+            logger.debug(f"Media deleted successfully from: {media_path}")
+        except OSError as e:
             logger.error(f"Error deleting media file {media_path}: {e}")
 
     @override
@@ -97,21 +102,27 @@ class WanGenerator(IVideoGenerator):
         """
         Generate a video based on the recipe.
         """
-        if recipe.media_path.suffix.lower() in [
+
+        new_media_path = self._copy_media_to_comfyui_input_folder(recipe.media_path)
+
+        changed_recipe = copy.deepcopy(recipe)
+        changed_recipe.media_path = Path(new_media_path.name)
+
+        if changed_recipe.media_path.suffix.lower() in [
             ".png",
             ".jpg",
             ".jpeg",
             ".bmp",
             ".gif",
         ]:
-            return self.image_to_video(recipe, output_file_path)
-        elif recipe.media_path.suffix.lower() in [
+            result = self.image_to_video(changed_recipe, output_file_path)
+        elif changed_recipe.media_path.suffix.lower() in [
             ".mp4",
             ".mov",
             ".avi",
             ".mkv",
         ]:
-            return self.video_to_video(recipe, output_file_path)
+            result = self.video_to_video(changed_recipe, output_file_path)
         else:
             logger.error(
                 f"Unsupported media format: {recipe.media_path.suffix} for file {recipe.media_path}"
@@ -119,6 +130,10 @@ class WanGenerator(IVideoGenerator):
             raise ValueError(
                 f"Unsupported media format: {recipe.media_path.suffix} for file {recipe.media_path}"
             )
+
+        self._delete_media_from_comfyui_input_folder(new_media_path)
+
+        return result
 
     def image_to_video(self, recipe: "WanVideoRecipe", output_file_path: Path) -> Path:
         """
@@ -141,9 +156,10 @@ class WanGenerator(IVideoGenerator):
         moved_files = [
             self._move_asset_to_output_path(output_file_path.parent, Path(file))
             for file in output_file_names
+            if Path(file).suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]
         ]
 
-        return moved_files
+        return moved_files[0]
 
     def video_to_video(self, recipe: "WanVideoRecipe", output_file_path: Path) -> Path:
         """
@@ -166,9 +182,10 @@ class WanGenerator(IVideoGenerator):
         moved_files = [
             self._move_asset_to_output_path(output_file_path.parent, Path(file))
             for file in output_file_names
+            if Path(file).suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]
         ]
 
-        return moved_files
+        return moved_files[0]
 
 
 class WanVideoRecipe(VideoRecipeBase):

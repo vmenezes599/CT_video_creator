@@ -1,345 +1,346 @@
 {
-  "1": {
-    "inputs": {
-      "unet_name": "wan22I2VA14BGGUF_a14bLow.gguf"
+    "1": {
+        "inputs": {
+            "unet_name": "wan22I2VA14BGGUF_a14bLow.gguf"
+        },
+        "class_type": "UnetLoaderGGUF",
+        "_meta": {
+            "title": "Unet Loader (GGUF)"
+        }
     },
-    "class_type": "UnetLoaderGGUF",
-    "_meta": {
-      "title": "Unet Loader (GGUF)"
-    }
-  },
-  "2": {
-    "inputs": {
-      "lora_name": "Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors",
-      "strength_model": 1,
-      "model": [
-        "6",
-        0
-      ]
+    "2": {
+        "inputs": {
+            "lora_name": "Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors",
+            "strength_model": 1,
+            "model": [
+                "6",
+                0
+            ]
+        },
+        "class_type": "LoraLoaderModelOnly",
+        "_meta": {
+            "title": "LoraLoaderModelOnly"
+        }
     },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "LoraLoaderModelOnly"
-    }
-  },
-  "3": {
-    "inputs": {
-      "shift": 5,
-      "model": [
-        "2",
-        0
-      ]
+    "3": {
+        "inputs": {
+            "shift": 5,
+            "model": [
+                "2",
+                0
+            ]
+        },
+        "class_type": "ModelSamplingSD3",
+        "_meta": {
+            "title": "ModelSamplingSD3"
+        }
     },
-    "class_type": "ModelSamplingSD3",
-    "_meta": {
-      "title": "ModelSamplingSD3"
-    }
-  },
-  "4": {
-    "inputs": {
-      "lora_name": "Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors",
-      "strength_model": 1,
-      "model": [
-        "1",
-        0
-      ]
+    "4": {
+        "inputs": {
+            "lora_name": "Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors",
+            "strength_model": 1,
+            "model": [
+                "1",
+                0
+            ]
+        },
+        "class_type": "LoraLoaderModelOnly",
+        "_meta": {
+            "title": "LoraLoaderModelOnly"
+        }
     },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "LoraLoaderModelOnly"
-    }
-  },
-  "5": {
-    "inputs": {
-      "shift": 5,
-      "model": [
-        "4",
-        0
-      ]
+    "5": {
+        "inputs": {
+            "shift": 5,
+            "model": [
+                "4",
+                0
+            ]
+        },
+        "class_type": "ModelSamplingSD3",
+        "_meta": {
+            "title": "ModelSamplingSD3"
+        }
     },
-    "class_type": "ModelSamplingSD3",
-    "_meta": {
-      "title": "ModelSamplingSD3"
-    }
-  },
-  "6": {
-    "inputs": {
-      "unet_name": "wan22I2VA14BGGUF_a14bHigh.gguf"
+    "6": {
+        "inputs": {
+            "unet_name": "wan22I2VA14BGGUF_a14bHigh.gguf"
+        },
+        "class_type": "UnetLoaderGGUF",
+        "_meta": {
+            "title": "Unet Loader (GGUF)"
+        }
     },
-    "class_type": "UnetLoaderGGUF",
-    "_meta": {
-      "title": "Unet Loader (GGUF)"
-    }
-  },
-  "7": {
-    "inputs": {
-      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
-      "clip": [
-        "28",
-        0
-      ]
+    "7": {
+        "inputs": {
+            "vae_name": "wan_2.1_vae.safetensors"
+        },
+        "class_type": "VAELoader",
+        "_meta": {
+            "title": "Load VAE"
+        }
     },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Negative Prompt)"
-    }
-  },
-  "8": {
-    "inputs": {
-      "vae_name": "wan_2.1_vae.safetensors"
+    "8": {
+        "inputs": {
+            "model_name": "RealESRGAN_x4plus.pth"
+        },
+        "class_type": "UpscaleModelLoader",
+        "_meta": {
+            "title": "Load Upscale Model"
+        }
     },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
-  },
-  "9": {
-    "inputs": {
-      "text": "A close-up portrait of a woman with light skin and blue eyes, smiling at the camera. she appears to be in her mid-twenties, with long brown hair tied back in a ponytail, and is wearing a black and white leopard print blouse with a gold necklace. the woman is sitting in the middle of the frame, with her upper body visible, and she is looking directly at the viewer with a warm, inviting expression. her eyes are a bright blue color, and her hair is styled in loose waves. she is wearing gold earrings and has a mole on her left cheek. the background shows a dimly lit room with a wooden fence and a table and chairs, and the lighting is soft and warm, creating a cozy atmosphere.",
-      "clip": [
-        "28",
-        0
-      ]
+    "9": {
+        "inputs": {
+            "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+            "type": "wan",
+            "device": "default"
+        },
+        "class_type": "CLIPLoader",
+        "_meta": {
+            "title": "Load CLIP"
+        }
     },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Positive Prompt)"
-    }
-  },
-  "10": {
-    "inputs": {
-      "width": [
-        "11",
-        1
-      ],
-      "height": [
-        "11",
-        2
-      ],
-      "length": 81,
-      "batch_size": 1,
-      "positive": [
-        "9",
-        0
-      ],
-      "negative": [
-        "7",
-        0
-      ],
-      "vae": [
-        "8",
-        0
-      ],
-      "start_image": [
-        "11",
-        0
-      ]
+    "10": {
+        "inputs": {
+            "text": "A close-up portrait of a woman with light skin and blue eyes, smiling at the camera. she appears to be in her mid-twenties, with long brown hair tied back in a ponytail, and is wearing a black and white leopard print blouse with a gold necklace. the woman is sitting in the middle of the frame, with her upper body visible, and she is looking directly at the viewer with a warm, inviting expression. her eyes are a bright blue color, and her hair is styled in loose waves. she is wearing gold earrings and has a mole on her left cheek. the background shows a dimly lit room with a wooden fence and a table and chairs, and the lighting is soft and warm, creating a cozy atmosphere.",
+            "clip": [
+                "9",
+                0
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP Text Encode (Positive Prompt)"
+        }
     },
-    "class_type": "WanImageToVideo",
-    "_meta": {
-      "title": "WanImageToVideo"
-    }
-  },
-  "11": {
-    "inputs": {
-      "width": 832,
-      "height": 480,
-      "upscale_method": "nearest-exact",
-      "keep_proportion": "resize",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 1,
-      "device": "cpu",
-      "image": [
-        "46",
-        0
-      ]
+    "11": {
+        "inputs": {
+            "width": [
+                "22",
+                1
+            ],
+            "height": [
+                "22",
+                2
+            ],
+            "length": 81,
+            "batch_size": 1,
+            "positive": [
+                "10",
+                0
+            ],
+            "negative": [
+                "14",
+                0
+            ],
+            "vae": [
+                "7",
+                0
+            ],
+            "start_image": [
+                "22",
+                0
+            ]
+        },
+        "class_type": "WanImageToVideo",
+        "_meta": {
+            "title": "WanImageToVideo"
+        }
     },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
-  "13": {
-    "inputs": {
-      "add_noise": "enable",
-      "noise_seed": 12345,
-      "steps": 4,
-      "cfg": 1,
-      "sampler_name": "uni_pc",
-      "scheduler": "normal",
-      "start_at_step": 0,
-      "end_at_step": 2,
-      "return_with_leftover_noise": "enable",
-      "model": [
-        "3",
-        0
-      ],
-      "positive": [
-        "10",
-        0
-      ],
-      "negative": [
-        "10",
-        1
-      ],
-      "latent_image": [
-        "10",
-        2
-      ]
+    "12": {
+        "inputs": {
+            "add_noise": "disable",
+            "noise_seed": 0,
+            "steps": 4,
+            "cfg": 1,
+            "sampler_name": "uni_pc",
+            "scheduler": "normal",
+            "start_at_step": 2,
+            "end_at_step": 4,
+            "return_with_leftover_noise": "disable",
+            "model": [
+                "5",
+                0
+            ],
+            "positive": [
+                "11",
+                0
+            ],
+            "negative": [
+                "11",
+                1
+            ],
+            "latent_image": [
+                "13",
+                0
+            ]
+        },
+        "class_type": "KSamplerAdvanced",
+        "_meta": {
+            "title": "KSampler (Advanced)"
+        }
     },
-    "class_type": "KSamplerAdvanced",
-    "_meta": {
-      "title": "KSampler (Advanced)"
-    }
-  },
-  "14": {
-    "inputs": {
-      "add_noise": "disable",
-      "noise_seed": 0,
-      "steps": 4,
-      "cfg": 1,
-      "sampler_name": "uni_pc",
-      "scheduler": "normal",
-      "start_at_step": 2,
-      "end_at_step": 4,
-      "return_with_leftover_noise": "disable",
-      "model": [
-        "5",
-        0
-      ],
-      "positive": [
-        "10",
-        0
-      ],
-      "negative": [
-        "10",
-        1
-      ],
-      "latent_image": [
-        "13",
-        0
-      ]
+    "13": {
+        "inputs": {
+            "add_noise": "enable",
+            "noise_seed": 12345,
+            "steps": 4,
+            "cfg": 1,
+            "sampler_name": "uni_pc",
+            "scheduler": "normal",
+            "start_at_step": 0,
+            "end_at_step": 2,
+            "return_with_leftover_noise": "enable",
+            "model": [
+                "3",
+                0
+            ],
+            "positive": [
+                "11",
+                0
+            ],
+            "negative": [
+                "11",
+                1
+            ],
+            "latent_image": [
+                "11",
+                2
+            ]
+        },
+        "class_type": "KSamplerAdvanced",
+        "_meta": {
+            "title": "KSampler (Advanced)"
+        }
     },
-    "class_type": "KSamplerAdvanced",
-    "_meta": {
-      "title": "KSampler (Advanced)"
-    }
-  },
-  "15": {
-    "inputs": {
-      "samples": [
-        "14",
-        0
-      ],
-      "vae": [
-        "8",
-        0
-      ]
+    "14": {
+        "inputs": {
+            "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+            "clip": [
+                "9",
+                0
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP Text Encode (Negative Prompt)"
+        }
     },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
-  "17": {
-    "inputs": {
-      "model_name": "RealESRGAN_x4plus.pth"
+    "15": {
+        "inputs": {
+            "ckpt_name": "rife49.pth",
+            "clear_cache_after_n_frames": 10,
+            "multiplier": 2,
+            "fast_mode": true,
+            "ensemble": true,
+            "scale_factor": 1,
+            "frames": [
+                "16",
+                0
+            ]
+        },
+        "class_type": "RIFE VFI",
+        "_meta": {
+            "title": "RIFE VFI (recommend rife47 and rife49)"
+        }
     },
-    "class_type": "UpscaleModelLoader",
-    "_meta": {
-      "title": "Load Upscale Model"
-    }
-  },
-  "19": {
-    "inputs": {
-      "ckpt_name": "rife49.pth",
-      "clear_cache_after_n_frames": 10,
-      "multiplier": 2,
-      "fast_mode": true,
-      "ensemble": true,
-      "scale_factor": 1,
-      "frames": [
-        "57",
-        0
-      ]
+    "16": {
+        "inputs": {
+            "samples": [
+                "12",
+                0
+            ],
+            "vae": [
+                "7",
+                0
+            ]
+        },
+        "class_type": "VAEDecode",
+        "_meta": {
+            "title": "VAE Decode"
+        }
     },
-    "class_type": "RIFE VFI",
-    "_meta": {
-      "title": "RIFE VFI (recommend rife47 and rife49)"
-    }
-  },
-  "27": {
-    "inputs": {
-      "images": [
-        "11",
-        0
-      ]
+    "17": {
+        "inputs": {
+            "frame_rate": 32,
+            "loop_count": 0,
+            "filename_prefix": "WanI2VOutput",
+            "format": "video/h264-mp4",
+            "pix_fmt": "yuv420p",
+            "crf": 19,
+            "save_metadata": true,
+            "trim_to_audio": false,
+            "pingpong": false,
+            "save_output": true,
+            "images": [
+                "15",
+                0
+            ]
+        },
+        "class_type": "VHS_VideoCombine",
+        "_meta": {
+            "title": "Video Combine 🎥🅥🅗🅢"
+        }
     },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
-  "28": {
-    "inputs": {
-      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
-      "type": "wan",
-      "device": "default"
+    "21": {
+        "inputs": {
+            "images": [
+                "22",
+                0
+            ]
+        },
+        "class_type": "PreviewImage",
+        "_meta": {
+            "title": "Preview Image"
+        }
     },
-    "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "Load CLIP"
-    }
-  },
-  "46": {
-    "inputs": {
-      "video": "WanI2VOutput_00005.mp4",
-      "force_rate": 0,
-      "custom_width": 0,
-      "custom_height": 0,
-      "frame_load_cap": 0,
-      "skip_first_frames": 160,
-      "select_every_nth": 1,
-      "format": "Wan"
+    "22": {
+        "inputs": {
+            "width": 832,
+            "height": 480,
+            "upscale_method": "nearest-exact",
+            "keep_proportion": "crop",
+            "pad_color": "0, 0, 0",
+            "crop_position": "center",
+            "divisible_by": 1,
+            "device": "cpu",
+            "image": [
+                "23",
+                0
+            ]
+        },
+        "class_type": "ImageResizeKJv2",
+        "_meta": {
+            "title": "Resize Image v2"
+        }
     },
-    "class_type": "VHS_LoadVideo",
-    "_meta": {
-      "title": "Load Video (Upload) 🎥🅥🅗🅢"
-    }
-  },
-  "56": {
-    "inputs": {
-      "frame_rate": 28,
-      "loop_count": 0,
-      "filename_prefix": "WanI2VOutput",
-      "format": "video/h264-mp4",
-      "pix_fmt": "yuv420p",
-      "crf": 19,
-      "save_metadata": true,
-      "trim_to_audio": false,
-      "pingpong": false,
-      "save_output": true,
-      "images": [
-        "19",
-        0
-      ]
+    "23": {
+        "inputs": {
+            "video": "WanI2VOutput_00009.mp4",
+            "force_rate": 0,
+            "custom_width": 0,
+            "custom_height": 0,
+            "frame_load_cap": 1,
+            "skip_first_frames": 160,
+            "select_every_nth": 1,
+            "format": "Wan"
+        },
+        "class_type": "VHS_LoadVideo",
+        "_meta": {
+            "title": "Load Video (Upload) 🎥🅥🅗🅢"
+        }
     },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Video Combine 🎥🅥🅗🅢"
+    "26": {
+        "inputs": {
+            "output": "",
+            "input": [
+                "23",
+                1
+            ]
+        },
+        "class_type": "Display Int (rgthree)",
+        "_meta": {
+            "title": "Display Int (rgthree)"
+        }
     }
-  },
-  "57": {
-    "inputs": {
-      "anything": [
-        "15",
-        0
-      ]
-    },
-    "class_type": "easy cleanGpuUsed",
-    "_meta": {
-      "title": "Clean VRAM Used"
-    }
-  }
 }

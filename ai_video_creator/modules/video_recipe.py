@@ -67,7 +67,15 @@ class VideoRecipeFile:
             logger.info(
                 f"Recipe file not found: {file_path.name} - starting with empty recipe"
             )
-        except (IOError, json.JSONDecodeError) as e:
+        except json.JSONDecodeError:
+            logger.error(f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe")
+            # Rename corrupted file to .old for backup
+            old_file_path = Path(str(file_path) + ".old")
+            if file_path.exists():
+                file_path.rename(old_file_path)
+            # Create a new empty file
+            self.save_current_state()
+        except IOError as e:
             logger.error(f"Error loading video recipe from {file_path.name}: {e}")
 
     def _create_recipe_from_dict(self, data: dict):
@@ -101,6 +109,9 @@ class VideoRecipeFile:
     def save_current_state(self) -> None:
         """Save the current state of the video recipe to a file."""
         try:
+            # Ensure parent directory exists
+            self.recipe_path.parent.mkdir(parents=True, exist_ok=True)
+            
             with open(self.recipe_path, "w", encoding="utf-8") as file:
                 json.dump(self.to_dict(), file, ensure_ascii=False, indent=4)
         except IOError as e:
@@ -153,18 +164,21 @@ class VideoRecipeBuilder:
             f"Creating Wan video recipes for {len(self.__video_prompt)} prompts"
         )
 
-        for prompt, image_asset in zip(
-            self.__video_prompt, self.__image_assets.image_assets
-        ):
+        for i, prompt in enumerate(self.__video_prompt):
+            # Get corresponding image asset if available, otherwise None
+            image_asset = (
+                self.__image_assets.image_assets[i] 
+                if i < len(self.__image_assets.image_assets) 
+                else None
+            )
+            
             recipe_list = []
             recipe = self._create_wan_video_recipe(
                 prompt=prompt, image_asset=image_asset, seed=seed
             )
             recipe_list.append(recipe)
             for _ in range(sub_videos_length - 1):
-                recipe = self._create_wan_video_recipe(
-                    prompt=prompt, image_asset=image_asset, seed=seed
-                )
+                recipe = self._create_wan_video_recipe(prompt=prompt, seed=seed)
                 recipe_list.append(recipe)
 
             self._recipe.add_video_data(recipe_list)
@@ -179,7 +193,7 @@ class VideoRecipeBuilder:
         """Create video recipe from story folder and chapter prompt index."""
         return WanVideoRecipe(
             prompt=prompt.visual_description,
-            media_path=str(image_asset),
+            media_path=str(image_asset) if image_asset else None,
             seed=seed,
         )
 
