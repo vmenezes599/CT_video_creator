@@ -2,6 +2,7 @@
 Helpers for FFmpeg operations, including running commands and probing audio durations.
 """
 
+import json
 import subprocess
 from pathlib import Path
 
@@ -48,12 +49,12 @@ def extend_audio_to_duration(
 ) -> Path:
     """
     Extend the audio clip to the target duration.
-    
+
     Args:
         input_path: Path to the input audio file
         output_path: Path for the output audio file
         extra_time: Number of seconds to extend the audio
-        
+
     Returns:
         Path to the extended audio file
     """
@@ -218,5 +219,129 @@ def concatenate_videos(
     # Clean up concat list file
     if concat_list_path.exists():
         concat_list_path.unlink()
+
+    return output_path
+
+
+def _probe(path: Path) -> dict:
+    r = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-print_format",
+            "json",
+            "-show_streams",
+            "-show_format",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return json.loads(r.stdout)
+
+
+def _fps_and_duration(probe: dict) -> tuple[float, float]:
+    v = next(s for s in probe["streams"] if s["codec_type"] == "video")
+    # Duration might be on stream or on format
+    duration = float(v.get("duration") or probe["format"]["duration"])
+    fr = v.get("r_frame_rate", "0/1")
+    if "/" in fr:
+        num, den = fr.split("/")
+        fps = float(num) / float(den) if float(den) != 0 else float(num)
+    else:
+        fps = float(fr)
+    return fps, duration
+
+
+def _reencode_with_optional_trim(src: Path, dst: Path, trim_seconds: float | None):
+    cmd = ["ffmpeg", "-y", "-i", str(src)]
+    if trim_seconds is not None:
+        cmd += ["-t", f"{trim_seconds:.6f}"]
+    cmd += [
+        "-c:v",
+        "h264_nvenc",
+        "-preset",
+        "p5",
+        "-crf",
+        "23",
+        "-c:a",
+        "aac",
+        "-movflags",
+        "+faststart",
+        "-pix_fmt",
+        "yuv420p",
+        str(dst),
+    ]
+    subprocess.run(cmd, check=True)
+
+
+def concatenate_videos_remove_last_frame_except_last(
+    video_segments, output_path
+) -> Path:
+    """
+    Remove exactly one frame from the end of every segment except the final one,
+    re-encode to uniform settings, then concatenate via concat demuxer (copy).
+    """
+    video_segments = [Path(s) for s in video_segments]
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    temp_dir = output_path.parent / "temp_concat_segments"
+    temp_dir.mkdir(exist_ok=True)
+
+    processed: list[Path] = []
+    try:
+        for i, seg in enumerate(video_segments):
+            probe = _probe(seg)
+            fps, duration = _fps_and_duration(probe)
+
+            is_last = i == len(video_segments) - 1
+            if not is_last:
+                # remove one frame: trim to duration - (1/fps)
+                target = max(0.001, duration - (1.0 / fps))
+            else:
+                target = None  # keep intact (no trimming)
+
+            out = temp_dir / f"seg_{i:03d}.mp4"
+            _reencode_with_optional_trim(seg, out, target)
+            processed.append(out)
+
+        # concat list
+        list_file = output_path.parent / "concat_list.txt"
+        with open(list_file, "w", encoding="utf-8") as f:
+            for p in processed:
+                f.write(f"file '{p.resolve()}'\n")
+
+        # final concat (stream copy—fast, no extra generation loss)
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(list_file),
+                "-c",
+                "copy",
+                "-bsf:a",
+                "aac_adtstoasc",
+                str(output_path),
+            ],
+            check=True,
+        )
+
+        list_file.unlink(missing_ok=True)
+    finally:
+        # cleanup temp files/dir
+        for p in processed:
+            p.unlink(missing_ok=True)
+        try:
+            temp_dir.rmdir()
+        except OSError:
+            pass
 
     return output_path

@@ -6,7 +6,7 @@ from logging_utils import begin_file_logging, logger
 from ai_video_creator.generators import IVideoGenerator
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.utils import ensure_collection_index_exists
-from ai_video_creator.utils import concatenate_videos
+from ai_video_creator.utils import concatenate_videos_remove_last_frame_except_last
 
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
 from .video_recipe import VideoRecipe
@@ -135,7 +135,7 @@ class VideoAssetManager:
             self._generate_sub_videos_assets(scene_index)
 
             video_file_path = self._generate_video_file_path(scene_index)
-            output_video = concatenate_videos(
+            output_video = concatenate_videos_remove_last_frame_except_last(
                 self.video_assets.sub_video_assets[scene_index], video_file_path
             )
 

@@ -58,7 +58,7 @@ def create_narrators_and_images_from_recipe(
     cleanup_logging(log_id)
 
 
-def create_video_recipe_from_images(story_path: Path, chapter_index: int) -> None:
+def create_sub_videos_recipe_from_images(story_path: Path, chapter_index: int) -> None:
     """
     Create a video recipe from existing images and narrator audio files.
     """
@@ -72,7 +72,7 @@ def create_video_recipe_from_images(story_path: Path, chapter_index: int) -> Non
     cleanup_logging(log_id)
 
 
-def create_video_assets_from_video_recipe(story_path: Path, chapter_index: int) -> None:
+def create_sub_videos_from_video_recipe(story_path: Path, chapter_index: int) -> None:
     """
     Create videos from the images in the recipe.
     """
@@ -86,7 +86,7 @@ def create_video_assets_from_video_recipe(story_path: Path, chapter_index: int) 
     cleanup_logging(log_id)
 
 
-def create_video_from_scenes(story_path: Path, chapter_index: int) -> None:
+def assemble_final_video(story_path: Path, chapter_index: int) -> None:
     """
     Assemble a chapter video from the recipe.
 

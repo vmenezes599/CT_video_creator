@@ -4,9 +4,9 @@ from pathlib import Path
 from .video_creator import (
     create_narrator_and_image_recipe_from_prompt,
     create_narrators_and_images_from_recipe,
-    create_video_assets_from_video_recipe,
-    create_video_recipe_from_images,
-    create_video_from_scenes,
+    create_sub_videos_from_video_recipe,
+    create_sub_videos_recipe_from_images,
+    assemble_final_video,
 )
 
 
@@ -17,8 +17,8 @@ def main():
 
     create_narrator_and_image_recipe_from_prompt(story_path, chapter_index)
     create_narrators_and_images_from_recipe(story_path, chapter_index)
-    create_video_recipe_from_images(story_path, chapter_index)
-    create_video_assets_from_video_recipe(story_path, chapter_index)
+    create_sub_videos_recipe_from_images(story_path, chapter_index)
+    create_sub_videos_from_video_recipe(story_path, chapter_index)
     # create_video_from_scenes(story_path, chapter_index)
 
 
