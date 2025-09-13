@@ -6,15 +6,17 @@ from pathlib import Path
 
 from logging_utils import setup_console_logging, cleanup_logging
 
-from .modules.narrator_and_image_recipe import NarratorAndImageRecipeBuilder
-from .modules.narrator_and_image_asset_manager import NarratorAndImageAssetManager
-from .modules.video_recipe import VideoRecipeBuilder
-from .modules.video_asset_manager import VideoAssetManager
-from .modules.video_effect_manager import MediaEffectsManager
-from .modules.video_assembler import VideoAssembler
+from .modules.narrator_and_image import NarratorAndImageRecipeBuilder
+from .modules.narrator_and_image import NarratorAndImageAssetManager
+from .modules.video import VideoRecipeBuilder
+from .modules.video import VideoAssetManager
+from .modules.video import MediaEffectsManager
+from .modules.video import VideoAssembler
 
 
-def create_narrator_and_image_recipe_from_prompt(story_path: Path, chapter_index: int) -> None:
+def create_narrator_and_image_recipe_from_prompt(
+    story_path: Path, chapter_index: int
+) -> None:
     """
     Create a video from a video prompt file.
 
