@@ -23,7 +23,7 @@ class VideoCreatorPaths:
         self.narrator_and_image_asset_folder = (
             self.video_path / "assets" / "narrator_and_image"
         )
-        self.videos_asset_folder = self.video_path / "assets" / "video"
+        self.videos_asset_folder = self.video_path / "assets" / "sub_videos"
 
         # Create directories if they don't exist
         self.narrator_and_image_asset_folder.mkdir(parents=True, exist_ok=True)
@@ -39,8 +39,12 @@ class VideoCreatorPaths:
         self.narrator_and_image_asset_file = (
             self.video_path / f"{self.name_stem}_narrator_and_image_assets.json"
         )
-        self.video_recipe_file = self.video_path / f"{self.name_stem}_video_recipe.json"
-        self.video_asset_file = self.video_path / f"{self.name_stem}_video_assets.json"
+        self.video_recipe_file = (
+            self.video_path / f"{self.name_stem}_sub_video_recipe.json"
+        )
+        self.video_asset_file = (
+            self.video_path / f"{self.name_stem}_sub_video_assets.json"
+        )
         self.video_effects_file = (
             self.video_path / f"{self.name_stem}_video_effects.json"
         )
