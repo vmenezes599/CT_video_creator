@@ -46,7 +46,9 @@ class SubVideoAssetManager:
         recipe_size = len(self.recipe.video_data)
         logger.debug(f"Synchronizing assets with recipe - target size: {recipe_size}")
 
-        ensure_collection_index_exists(self.video_assets.assembled_sub_video, recipe_size - 1)
+        ensure_collection_index_exists(
+            self.video_assets.assembled_sub_video, recipe_size - 1
+        )
         ensure_collection_index_exists(
             self.video_assets.sub_video_assets, recipe_size - 1, []
         )
@@ -114,11 +116,13 @@ class SubVideoAssetManager:
                 self.video_assets.save_assets_to_file()
 
                 logger.info(
-                    f"Successfully generated video for scene {scene_index}: {output_sub_video.name}"
+                    f"Successfully generated sub video for scene {scene_index}({recipe_index+1}/{len(video_recipe_list)}): {output_sub_video.name}"
                 )
 
         except (IOError, OSError, RuntimeError) as e:
-            logger.error(f"Failed to generate video for scene {scene_index}: {e}")
+            logger.error(
+                f"Failed to generate sub video for scene {scene_index}({recipe_index+1}/{len(video_recipe_list)}): {e}"
+            )
 
     def _generate_video_file_path(self, scene_index: int) -> Path:
         """Generate a unique video file path for a specific scene."""
@@ -178,7 +182,9 @@ class SubVideoAssetManager:
         logger.info("Starting video asset cleanup process")
 
         valid_video_assets = [
-            asset for asset in self.video_assets.assembled_sub_video if asset is not None
+            asset
+            for asset in self.video_assets.assembled_sub_video
+            if asset is not None
         ]
         valid_sub_video_assets = [
             sub_asset
