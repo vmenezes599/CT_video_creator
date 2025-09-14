@@ -111,7 +111,12 @@ def assemble_final_video(story_path: Path, chapter_index: int) -> None:
 def clean_unused_assets(story_path: Path, chapter_index: int) -> None:
     """Clean up video assets for a specific story folder."""
 
-    video_asset_manager = NarratorAndImageAssetManager(
+    narrator_and_image_asset_manager = NarratorAndImageAssetManager(
+        story_folder=story_path, chapter_index=chapter_index
+    )
+    narrator_and_image_asset_manager.clean_unused_assets()
+
+    video_asset_manager = VideoAssetManager(
         story_folder=story_path, chapter_index=chapter_index
     )
     video_asset_manager.clean_unused_assets()
