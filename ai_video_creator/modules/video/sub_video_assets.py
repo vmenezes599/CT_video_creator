@@ -7,13 +7,13 @@ from logging_utils import logger
 from ai_video_creator.utils import ensure_collection_index_exists
 
 
-class VideoAssets:
+class SubVideoAssets:
     """Class to manage video assets data and persistence only."""
 
     def __init__(self, asset_file_path: Path):
         """Initialize VideoAssets with file path and expected scene count."""
         self.asset_file_path = asset_file_path
-        self.video_assets: list[Path] = []
+        self.assembled_sub_video: list[Path] = []
         self.sub_video_assets: list[list[Path]] = []
         self._load_assets_from_file()
 
@@ -25,7 +25,7 @@ class VideoAssets:
                 data: dict = json.load(file)
 
                 assets = data.get("assets", [])
-                ensure_collection_index_exists(self.video_assets, len(assets) - 1)
+                ensure_collection_index_exists(self.assembled_sub_video, len(assets) - 1)
                 ensure_collection_index_exists(
                     self.sub_video_assets, len(assets) - 1, []
                 )
@@ -36,9 +36,9 @@ class VideoAssets:
                     # Load video asset, skip None/empty values
                     video_value = asset.get("video_asset")
                     if video_value is not None and video_value != "":
-                        self.video_assets[index] = Path(video_value)
+                        self.assembled_sub_video[index] = Path(video_value)
                     else:
-                        self.video_assets[index] = None
+                        self.assembled_sub_video[index] = None
 
                     sub_video_assets = asset.get("sub_video_assets", [])
                     for sub_video in sub_video_assets:
@@ -57,7 +57,7 @@ class VideoAssets:
             old_file_path = Path(str(self.asset_file_path) + ".old")
             if self.asset_file_path.exists():
                 self.asset_file_path.rename(old_file_path)
-            self.video_assets = []
+            self.assembled_sub_video = []
             self.sub_video_assets = []
             # Create a new empty file
             self.save_assets_to_file()
@@ -66,7 +66,7 @@ class VideoAssets:
             logger.debug(
                 f"Asset file not found: {self.asset_file_path.name} - starting with empty assets"
             )
-            self.video_assets = []
+            self.assembled_sub_video = []
             self.sub_video_assets = []
 
     def save_assets_to_file(self) -> None:
@@ -75,7 +75,7 @@ class VideoAssets:
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 assets = []
                 for i, (video_asset, sub_video_assets) in enumerate(
-                    zip(self.video_assets, self.sub_video_assets)
+                    zip(self.assembled_sub_video, self.sub_video_assets)
                 ):
                     videos = {
                         "index": i + 1,
@@ -99,9 +99,9 @@ class VideoAssets:
 
     def set_scene_video(self, scene_index: int, video_file_path: Path) -> None:
         """Set video file path for a specific scene."""
-        ensure_collection_index_exists(self.video_assets, scene_index)
+        ensure_collection_index_exists(self.assembled_sub_video, scene_index)
         ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
-        self.video_assets[scene_index] = video_file_path
+        self.assembled_sub_video[scene_index] = video_file_path
         logger.debug(f"Set video for scene {scene_index}: {video_file_path.name}")
 
     def set_scene_sub_video(
@@ -119,15 +119,15 @@ class VideoAssets:
 
     def clear_scene_assets(self, scene_index: int) -> None:
         """Clear all assets for a specific scene."""
-        ensure_collection_index_exists(self.video_assets, scene_index)
-        self.video_assets[scene_index] = None
+        ensure_collection_index_exists(self.assembled_sub_video, scene_index)
+        self.assembled_sub_video[scene_index] = None
         logger.debug(f"Cleared all assets for scene {scene_index}")
 
     def has_video(self, scene_index: int) -> bool:
         """Check if a scene has video asset."""
-        if scene_index < 0 or scene_index >= len(self.video_assets):
+        if scene_index < 0 or scene_index >= len(self.assembled_sub_video):
             return False
-        video_asset = self.video_assets[scene_index]
+        video_asset = self.assembled_sub_video[scene_index]
         return (
             video_asset is not None and video_asset.exists() and video_asset.is_file()
         )
@@ -147,7 +147,7 @@ class VideoAssets:
     def get_missing_videos(self) -> list[int]:
         """Get a summary of missing videos per scene."""
         missing = []
-        for i, _ in enumerate(self.video_assets):
+        for i, _ in enumerate(self.assembled_sub_video):
             if not self.has_video(i):
                 missing.append(i)
         return missing

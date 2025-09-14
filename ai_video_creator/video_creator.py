@@ -9,7 +9,7 @@ from logging_utils import setup_console_logging, cleanup_logging
 from .modules.narrator_and_image import NarratorAndImageRecipeBuilder
 from .modules.narrator_and_image import NarratorAndImageAssetManager
 from .modules.video import VideoRecipeBuilder
-from .modules.video import VideoAssetManager
+from .modules.video import SubVideoAssetManager
 from .modules.video import MediaEffectsManager
 from .modules.video import VideoAssembler
 
@@ -78,7 +78,7 @@ def create_sub_videos_from_video_recipe(story_path: Path, chapter_index: int) ->
     """
     log_id = setup_console_logging("CreateVideosFromImages", log_level="TRACE")
 
-    video_asset_manager = VideoAssetManager(
+    video_asset_manager = SubVideoAssetManager(
         story_folder=story_path, chapter_index=chapter_index
     )
     video_asset_manager.generate_video_assets()
@@ -116,7 +116,7 @@ def clean_unused_assets(story_path: Path, chapter_index: int) -> None:
     )
     narrator_and_image_asset_manager.clean_unused_assets()
 
-    video_asset_manager = VideoAssetManager(
+    video_asset_manager = SubVideoAssetManager(
         story_folder=story_path, chapter_index=chapter_index
     )
     video_asset_manager.clean_unused_assets()

@@ -10,10 +10,10 @@ from ai_video_creator.utils import concatenate_videos_remove_last_frame_except_l
 
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
 from .video_recipe import VideoRecipe
-from .video_assets import VideoAssets
+from .sub_video_assets import SubVideoAssets
 
 
-class VideoAssetManager:
+class SubVideoAssetManager:
     """Class to manage video assets creation."""
 
     def __init__(self, story_folder: Path, chapter_index: int):
@@ -32,7 +32,7 @@ class VideoAssetManager:
             self.__paths.narrator_and_image_asset_file
         )
         self.recipe = VideoRecipe(self.__paths.video_recipe_file)
-        self.video_assets = VideoAssets(self.__paths.video_asset_file)
+        self.video_assets = SubVideoAssets(self.__paths.video_asset_file)
 
         # Ensure video_assets lists have the same size as recipe
         self._synchronize_assets_with_image_assets()
@@ -46,13 +46,13 @@ class VideoAssetManager:
         recipe_size = len(self.recipe.video_data)
         logger.debug(f"Synchronizing assets with recipe - target size: {recipe_size}")
 
-        ensure_collection_index_exists(self.video_assets.video_assets, recipe_size - 1)
+        ensure_collection_index_exists(self.video_assets.assembled_sub_video, recipe_size - 1)
         ensure_collection_index_exists(
             self.video_assets.sub_video_assets, recipe_size - 1, []
         )
 
         logger.debug(
-            f"Asset synchronization completed - video assets: {len(self.video_assets.video_assets)}"
+            f"Asset synchronization completed - video assets: {len(self.video_assets.assembled_sub_video)}"
         )
 
     def _set_next_recipe_media_path(
@@ -178,7 +178,7 @@ class VideoAssetManager:
         logger.info("Starting video asset cleanup process")
 
         valid_video_assets = [
-            asset for asset in self.video_assets.video_assets if asset is not None
+            asset for asset in self.video_assets.assembled_sub_video if asset is not None
         ]
         valid_sub_video_assets = [
             sub_asset

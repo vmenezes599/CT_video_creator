@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ai_video_creator.modules.video import VideoAssetManager
+from ai_video_creator.modules.video import SubVideoAssetManager
 
 
 class TestVideoAssetManager:
@@ -110,10 +110,10 @@ class TestVideoAssetManager:
     def test_asset_manager_initialization(self, story_setup_with_recipe):
         """Test VideoAssetManager initialization with recipe synchronization."""
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             assert len(manager.recipe.video_data) == 2
-            assert len(manager.video_assets.video_assets) == 2
+            assert len(manager.video_assets.assembled_sub_video) == 2
             assert len(manager.video_assets.sub_video_assets) == 2
 
             # Initially, no videos should exist
@@ -123,7 +123,7 @@ class TestVideoAssetManager:
     def test_asset_manager_creates_asset_file(self, story_setup_with_recipe):
         """Test that VideoAssetManager creates and manages asset files properly."""
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             manager.video_assets.set_scene_video(0, Path("/generated/video_001.mp4"))
             manager.video_assets.set_scene_sub_video(
@@ -178,10 +178,10 @@ class TestVideoAssetManager:
             json.dump(existing_data, f)
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
-            assert manager.video_assets.video_assets[0] == Path("/existing/video1.mp4")
-            assert manager.video_assets.video_assets[1] == Path("/existing/video2.mp4")
+            assert manager.video_assets.assembled_sub_video[0] == Path("/existing/video1.mp4")
+            assert manager.video_assets.assembled_sub_video[1] == Path("/existing/video2.mp4")
             assert len(manager.video_assets.sub_video_assets[0]) == 2
             assert manager.video_assets.sub_video_assets[0][0] == Path(
                 "/existing/sub1.mp4"
@@ -213,18 +213,18 @@ class TestVideoAssetManager:
             json.dump(existing_data, f)
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
-            assert len(manager.video_assets.video_assets) == 2
+            assert len(manager.video_assets.assembled_sub_video) == 2
             assert len(manager.video_assets.sub_video_assets) == 2
 
-            assert manager.video_assets.video_assets[0] == Path("/existing/video1.mp4")
+            assert manager.video_assets.assembled_sub_video[0] == Path("/existing/video1.mp4")
             assert len(manager.video_assets.sub_video_assets[0]) == 1
             assert manager.video_assets.sub_video_assets[0][0] == Path(
                 "/existing/sub1.mp4"
             )
 
-            assert manager.video_assets.video_assets[1] is None
+            assert manager.video_assets.assembled_sub_video[1] is None
             assert manager.video_assets.sub_video_assets[1] == []
 
     def test_cleanup_assets_removes_unused_files(self, story_setup_with_recipe):
@@ -256,7 +256,7 @@ class TestVideoAssetManager:
             file_path.touch()
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             # Set up some assets to be kept
             manager.video_assets.set_scene_video(0, valid_video1)
@@ -294,7 +294,7 @@ class TestVideoAssetManager:
         invalid_file.touch()
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             # Set only one asset, leaving others as None
             manager.video_assets.set_scene_video(0, valid_file)
@@ -330,7 +330,7 @@ class TestVideoAssetManager:
         main_file.touch()
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             # Run cleanup with no assets set (all should be deleted except directories)
             manager.clean_unused_assets()
@@ -371,7 +371,7 @@ class TestVideoAssetManager:
             json.dump(complete_narrator_image_data, f)
 
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             # Mock the video generation process
             with patch.object(manager, "_generate_video_asset") as mock_generate:
@@ -386,7 +386,7 @@ class TestVideoAssetManager:
     ):
         """Test that video generation is skipped when image assets are missing."""
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             # The default setup has incomplete narrator and image assets
             # Should skip video generation
@@ -399,7 +399,7 @@ class TestVideoAssetManager:
     def test_sub_video_file_path_generation(self, story_setup_with_recipe):
         """Test sub-video file path generation."""
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             # Test path generation
             path1 = manager._generate_sub_video_file_path(0, 0)
@@ -411,7 +411,7 @@ class TestVideoAssetManager:
     def test_video_file_path_generation(self, story_setup_with_recipe):
         """Test main video file path generation."""
         with patch("logging_utils.logger"):
-            manager = VideoAssetManager(story_setup_with_recipe, 0)
+            manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             # Test path generation
             path1 = manager._generate_video_file_path(0)
