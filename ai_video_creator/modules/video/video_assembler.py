@@ -13,11 +13,12 @@ from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
 from ai_video_creator.generators import SubtitleGenerator
 from ai_video_creator.utils import (
     burn_subtitles_to_video,
-    create_video_segment_from_image_and_audio,
+    create_video_segment_from_sub_video_and_audio,
     concatenate_videos,
     VideoCreatorPaths,
 )
 
+from .sub_video_assets import SubVideoAssets
 from .video_effect_manager import MediaEffects
 
 
@@ -40,10 +41,12 @@ class VideoAssembler:
         ):
             self.__subtitle_generator = SubtitleGenerator()
 
-            self.assets = NarratorAndImageAssets(
+            self.narrator_and_image_assets = NarratorAndImageAssets(
                 self.__paths.narrator_and_image_asset_file
             )
-            if not self.assets.is_complete():
+
+            self.video_assets = SubVideoAssets(self.__paths.video_asset_file)
+            if not self.video_assets.is_complete():
                 raise ValueError(
                     "Video assets are incomplete. Please ensure all required assets are present."
                 )
@@ -55,20 +58,18 @@ class VideoAssembler:
             self.output_path = self.__paths.video_output_file
             self._temp_files = []
 
-    def _combine_image_audio_video_segment(
-        self, image_path: str, audio_path: str
-    ) -> str:
+    def _combine_video_audio_segment(self, video_path: str, audio_path: str) -> str:
         """
-        Generate a video segment from an image and audio file.
+        Generate a video segment from a video and audio file.
         """
-        image_path_obj = Path(image_path)
+        video_path_obj = Path(video_path)
         temp_file = (
             self.__paths.narrator_and_image_asset_folder
-            / f"temp_{image_path_obj.stem}.mp4"
+            / f"temp_{video_path_obj.stem}.mp4"
         )
 
-        output_path = create_video_segment_from_image_and_audio(
-            image_path=image_path, audio_path=audio_path, output_path=temp_file
+        output_path = create_video_segment_from_sub_video_and_audio(
+            sub_video_path=video_path, audio_path=audio_path, output_path=temp_file
         )
 
         self._temp_files.append(output_path)
@@ -119,21 +120,21 @@ class VideoAssembler:
         logger.info("Cleanup completed")
 
     def _apply_media_effects(
-        self, narrator_file_paths: list[Path], image_file_paths: list[Path]
+        self, narrator_file_paths: list[Path], video_file_paths: list[Path]
     ) -> tuple[Path, Path]:
         """
-        Apply media effects to the audio and image files.
+        Apply media effects to the audio and video files.
         """
-        processed_images: list[Path] = []
+        processed_videos: list[Path] = []
         for image_path, image_effects in zip(
-            image_file_paths, self.effects.image_effects
+            video_file_paths, self.effects.image_effects
         ):
             processed_image_path = image_path
             for effect in image_effects:
                 if effect:
-                    processed_image_path = effect.apply(processed_image_path)
-                    self._temp_files.append(processed_image_path)
-            processed_images.append(processed_image_path)
+                    processed_video_path = effect.apply(processed_video_path)
+                    self._temp_files.append(processed_video_path)
+            processed_videos.append(processed_video_path)
 
         processed_narrators: list[Path] = []
         for audio_path, audio_effects in zip(
@@ -146,7 +147,7 @@ class VideoAssembler:
                     self._temp_files.append(processed_narrator_path)
             processed_narrators.append(processed_narrator_path)
 
-        return processed_narrators, processed_images
+        return processed_narrators, processed_videos
 
     def _create_video_segments(self) -> None:
         """
@@ -154,28 +155,26 @@ class VideoAssembler:
         """
 
         # Extract data from video recipe
-        narrator_file_paths = self.assets.narrator_assets
-        image_file_paths = self.assets.image_assets
+        narrator_file_paths = self.narrator_and_image_assets.narrator_assets
+        video_file_paths = self.video_assets.assembled_sub_video
 
         logger.info(
-            f"Processing {len(narrator_file_paths)} audio files and {len(image_file_paths)} images"
+            f"Processing {len(narrator_file_paths)} audio files and {len(video_file_paths)} video files"
         )
 
-        processed_narrators, processed_images = self._apply_media_effects(
-            narrator_file_paths, image_file_paths
+        processed_narrators, processed_videos = self._apply_media_effects(
+            narrator_file_paths, video_file_paths
         )
 
         video_segments = []
-        for i, (image_path, audio_path) in enumerate(
-            zip(processed_images, processed_narrators), 1
+        for i, (video_path, audio_path) in enumerate(
+            zip(processed_videos, processed_narrators), 1
         ):
             logger.info(
-                f"Processing segment {i}/{len(narrator_file_paths)}: {Path(image_path).name}"
+                f"Processing segment {i}/{len(narrator_file_paths)}: {Path(video_path).name}"
             )
 
-            video_segment = self._combine_image_audio_video_segment(
-                image_path, audio_path
-            )
+            video_segment = self._combine_video_audio_segment(video_path, audio_path)
             video_segments.append(video_segment)
 
         logger.info(f"Created {len(video_segments)} video segments")

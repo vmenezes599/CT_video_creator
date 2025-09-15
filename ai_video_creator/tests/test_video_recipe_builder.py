@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ai_video_creator.modules.video import VideoRecipeBuilder
+from ai_video_creator.modules.video import SubVideoRecipeBuilder
 
 
 class TestVideoRecipeBuilder:
@@ -61,7 +61,7 @@ class TestVideoRecipeBuilder:
         # Mock only external dependencies
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.video.video_recipe_builder.begin_file_logging"):
-                builder = VideoRecipeBuilder(story_setup, 0)
+                builder = SubVideoRecipeBuilder(story_setup, 0)
                 builder.create_video_recipe(sub_videos_length=3)
 
                 # Verify recipe file was created
@@ -100,7 +100,7 @@ class TestVideoRecipeBuilder:
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.video.video_recipe_builder.begin_file_logging"):
                 # Create first recipe
-                builder1 = VideoRecipeBuilder(story_setup, 0)
+                builder1 = SubVideoRecipeBuilder(story_setup, 0)
                 builder1.create_video_recipe(sub_videos_length=2)
 
                 recipe_file = builder1._VideoRecipeBuilder__paths.video_recipe_file
@@ -110,7 +110,7 @@ class TestVideoRecipeBuilder:
                     original_content = json.load(f)
 
                 # Create second builder - should use existing recipe
-                builder2 = VideoRecipeBuilder(story_setup, 0)
+                builder2 = SubVideoRecipeBuilder(story_setup, 0)
                 builder2.create_video_recipe(sub_videos_length=2)
 
                 # Content should be the same (recipes should not be recreated)
@@ -181,7 +181,7 @@ class TestVideoRecipeBuilder:
 
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.video.video_recipe_builder.begin_file_logging"):
-                builder = VideoRecipeBuilder(story_folder, 0)
+                builder = SubVideoRecipeBuilder(story_folder, 0)
                 builder.create_video_recipe(sub_videos_length=4)
 
                 recipe_file = builder._VideoRecipeBuilder__paths.video_recipe_file
@@ -224,7 +224,7 @@ class TestVideoRecipeBuilder:
 
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.video.video_recipe_builder.begin_file_logging"):
-                builder = VideoRecipeBuilder(story_folder, 0)
+                builder = SubVideoRecipeBuilder(story_folder, 0)
                 # Should not crash, should handle missing assets gracefully
                 builder.create_video_recipe(sub_videos_length=2)
 

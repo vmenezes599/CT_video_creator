@@ -25,7 +25,9 @@ class SubVideoAssets:
                 data: dict = json.load(file)
 
                 assets = data.get("assets", [])
-                ensure_collection_index_exists(self.assembled_sub_video, len(assets) - 1)
+                ensure_collection_index_exists(
+                    self.assembled_sub_video, len(assets) - 1
+                )
                 ensure_collection_index_exists(
                     self.sub_video_assets, len(assets) - 1, []
                 )
@@ -151,3 +153,8 @@ class SubVideoAssets:
             if not self.has_video(i):
                 missing.append(i)
         return missing
+
+    def is_complete(self) -> bool:
+        """Check if all scenes have video assets."""
+
+        return len(self.get_missing_videos()) == 0

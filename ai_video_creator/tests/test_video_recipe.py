@@ -7,8 +7,8 @@ import json
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 from ai_video_creator.generators import WanVideoRecipe
 from ai_video_creator.modules.video import (
-    VideoRecipe,
-    VideoRecipeDefaultSettings,
+    SubVideoRecipe,
+    SubVideoRecipeDefaultSettings,
 )
 
 
@@ -18,11 +18,11 @@ class TestVideoRecipeDefaultSettings:
     def test_default_settings(self):
         """Test that default settings have correct values."""
         assert (
-            VideoRecipeDefaultSettings.NARRATOR_VOICE
+            SubVideoRecipeDefaultSettings.NARRATOR_VOICE
             == f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3"
         )
         assert (
-            VideoRecipeDefaultSettings.BACKGROUND_MUSIC
+            SubVideoRecipeDefaultSettings.BACKGROUND_MUSIC
             == f"{DEFAULT_ASSETS_FOLDER}/background_music.mp3"
         )
 
@@ -33,7 +33,7 @@ class TestVideoRecipeFile:
     def test_empty_recipe_creation(self, tmp_path):
         """Test creating an empty recipe."""
         recipe_path = tmp_path / "test_recipe.json"
-        recipe = VideoRecipe(recipe_path)
+        recipe = SubVideoRecipe(recipe_path)
 
         assert recipe.recipe_path == recipe_path
         assert recipe.video_data == []
@@ -41,7 +41,7 @@ class TestVideoRecipeFile:
     def test_recipe_with_data(self, tmp_path):
         """Test recipe with actual data - core functionality."""
         recipe_path = tmp_path / "test_recipe.json"
-        recipe = VideoRecipe(recipe_path)
+        recipe = SubVideoRecipe(recipe_path)
 
         # Add real video recipe data
         video_recipe = WanVideoRecipe(
@@ -103,7 +103,7 @@ class TestVideoRecipeFile:
             json.dump(test_data, f)
 
         # Load the recipe
-        recipe = VideoRecipe(recipe_path)
+        recipe = SubVideoRecipe(recipe_path)
 
         # Verify data was loaded correctly
         assert len(recipe.video_data) == 1
@@ -124,7 +124,7 @@ class TestVideoRecipeFile:
             f.write(corrupted_content)
 
         # Load the recipe - should handle error gracefully
-        recipe = VideoRecipe(recipe_path)
+        recipe = SubVideoRecipe(recipe_path)
 
         # Should start with empty data
         assert recipe.video_data == []
@@ -144,7 +144,7 @@ class TestVideoRecipeFile:
     def test_recipe_with_multiple_video_scenes(self, tmp_path):
         """Test recipe with multiple video scenes."""
         recipe_path = tmp_path / "multi_scene_recipe.json"
-        recipe = VideoRecipe(recipe_path)
+        recipe = SubVideoRecipe(recipe_path)
 
         # Add multiple scenes with sub-videos
         for scene in range(3):

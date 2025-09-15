@@ -19,7 +19,7 @@ def main():
     create_narrators_and_images_from_recipe(story_path, chapter_index)
     create_sub_videos_recipe_from_images(story_path, chapter_index)
     create_sub_videos_from_video_recipe(story_path, chapter_index)
-    # assemble_final_video(story_path, chapter_index)
+    assemble_final_video(story_path, chapter_index)
 
 
 if __name__ == "__main__":

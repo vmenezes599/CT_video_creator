@@ -9,7 +9,7 @@ from ai_video_creator.utils import ensure_collection_index_exists
 from ai_video_creator.utils import concatenate_videos_remove_last_frame_except_last
 
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
-from .video_recipe import VideoRecipe
+from .sub_video_recipe import SubVideoRecipe
 from .sub_video_assets import SubVideoAssets
 
 
@@ -31,7 +31,7 @@ class SubVideoAssetManager:
         self.__narrator_and_image_assets = NarratorAndImageAssets(
             self.__paths.narrator_and_image_asset_file
         )
-        self.recipe = VideoRecipe(self.__paths.video_recipe_file)
+        self.recipe = SubVideoRecipe(self.__paths.video_recipe_file)
         self.video_assets = SubVideoAssets(self.__paths.video_asset_file)
 
         # Ensure video_assets lists have the same size as recipe

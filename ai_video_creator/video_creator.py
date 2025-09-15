@@ -8,7 +8,7 @@ from logging_utils import setup_console_logging, cleanup_logging
 
 from .modules.narrator_and_image import NarratorAndImageRecipeBuilder
 from .modules.narrator_and_image import NarratorAndImageAssetManager
-from .modules.video import VideoRecipeBuilder
+from .modules.video import SubVideoRecipeBuilder
 from .modules.video import SubVideoAssetManager
 from .modules.video import MediaEffectsManager
 from .modules.video import VideoAssembler
@@ -64,7 +64,7 @@ def create_sub_videos_recipe_from_images(story_path: Path, chapter_index: int) -
     """
     log_id = setup_console_logging("CreateVideoRecipeFromImages", log_level="TRACE")
 
-    video_recipe_builder = VideoRecipeBuilder(
+    video_recipe_builder = SubVideoRecipeBuilder(
         story_folder=story_path, chapter_prompt_index=chapter_index
     )
     video_recipe_builder.create_video_recipe()

@@ -172,7 +172,7 @@
                 "15",
                 2
             ],
-            "length": 81,
+            "length": 61,
             "batch_size": 1,
             "positive": [
                 "12",
@@ -260,27 +260,9 @@
             "title": "Load Upscale Model"
         }
     },
-    "19": {
-        "inputs": {
-            "ckpt_name": "rife49.pth",
-            "clear_cache_after_n_frames": 10,
-            "multiplier": 2,
-            "fast_mode": true,
-            "ensemble": true,
-            "scale_factor": 1,
-            "frames": [
-                "9",
-                0
-            ]
-        },
-        "class_type": "RIFE VFI",
-        "_meta": {
-            "title": "RIFE VFI (recommend rife47 and rife49)"
-        }
-    },
     "20": {
         "inputs": {
-            "frame_rate": 32,
+            "frame_rate": 12,
             "loop_count": 0,
             "filename_prefix": "WanI2VOutput",
             "format": "video/h264-mp4",
@@ -291,7 +273,7 @@
             "pingpong": false,
             "save_output": true,
             "images": [
-                "19",
+                "9",
                 0
             ]
         },

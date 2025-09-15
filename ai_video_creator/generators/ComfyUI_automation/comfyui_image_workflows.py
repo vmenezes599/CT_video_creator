@@ -481,6 +481,7 @@ class FluxWorkflow(UnetWorkflowBase):
         self.set_seed(random.randint(0, 2**64 - 1))
         self.set_lora("")
         self.set_output_filename("output")
+        self.set_image_resolution((832, 480))
 
     def _enable_lora(self) -> None:
         """

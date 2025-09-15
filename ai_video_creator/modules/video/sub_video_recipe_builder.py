@@ -3,18 +3,20 @@ Video executor for create_video command.
 """
 
 from pathlib import Path
+from math import ceil
 
 from logging_utils import begin_file_logging, logger
-from ai_video_creator.prompt import Prompt
-
-from ai_video_creator.generators import WanVideoRecipe
 
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
+from ai_video_creator.generators import WanVideoRecipe
 from ai_video_creator.utils import VideoCreatorPaths
-from .video_recipe import VideoRecipe
+from ai_video_creator.prompt import Prompt
+from ai_video_creator.utils import get_audio_duration
+
+from .sub_video_recipe import SubVideoRecipe
 
 
-class VideoRecipeBuilder:
+class SubVideoRecipeBuilder:
     """Video recipe for creating videos from stories."""
 
     def __init__(self, story_folder: Path, chapter_prompt_index: int):
@@ -34,10 +36,13 @@ class VideoRecipeBuilder:
 
         # Load video prompt
         self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
-        self.__image_assets = NarratorAndImageAssets(
+        self.__narrator_and_image_assets = NarratorAndImageAssets(
             self.__paths.narrator_and_image_asset_file
         )
         self._recipe = None
+
+        self._min_sub_videos = 3
+        self._default_sub_video_duration_seconds = 5
 
     def _verify_recipe_against_prompt(self) -> None:
         """Verify the recipe against the prompt to ensure all required data is present."""
@@ -46,15 +51,27 @@ class VideoRecipeBuilder:
         if (
             not self._recipe.video_data
             or len(self._recipe.video_data) != len(self.__video_prompt)
-            or len(self.__image_assets.image_assets) != len(self.__video_prompt)
+            or len(self.__narrator_and_image_assets.image_assets)
+            != len(self.__video_prompt)
         ):
             return False
 
         return True
 
-    def _create_video_recipes(
-        self, sub_videos_length: int, seed: int | None = None
-    ) -> None:
+    def _calculate_sub_videos_count(self, sub_video_index: int) -> int:
+        """Calculate the number of sub-videos to generate per prompt."""
+
+        audio_duration = get_audio_duration(
+            str(self.__narrator_and_image_assets.narrator_assets[sub_video_index])
+        )
+
+        sub_video_count = ceil(
+            audio_duration / (2.0 * self._default_sub_video_duration_seconds)
+        )
+
+        return max(sub_video_count, self._min_sub_videos)
+
+    def _create_video_recipes(self, seed: int | None = None) -> None:
         """Create video recipe from story folder and chapter prompt index."""
         logger.info(
             f"Creating Wan video recipes for {len(self.__video_prompt)} prompts"
@@ -62,9 +79,10 @@ class VideoRecipeBuilder:
 
         for i, prompt in enumerate(self.__video_prompt):
             # Get corresponding image asset if available, otherwise None
+            sub_video_count = self._calculate_sub_videos_count(i)
             image_asset = (
-                self.__image_assets.image_assets[i]
-                if i < len(self.__image_assets.image_assets)
+                self.__narrator_and_image_assets.image_assets[i]
+                if i < len(self.__narrator_and_image_assets.image_assets)
                 else None
             )
 
@@ -73,11 +91,13 @@ class VideoRecipeBuilder:
                 prompt=prompt, image_asset=image_asset, seed=seed
             )
             recipe_list.append(recipe)
-            for _ in range(sub_videos_length - 1):
+            for _ in range(sub_video_count - 1):
                 recipe = self._create_wan_video_recipe(prompt=prompt, seed=seed)
                 recipe_list.append(recipe)
 
-            self._recipe.add_video_data(recipe_list)
+            self._recipe.add_video_data(
+                recipe_list, {"helper_story_text": prompt.narrator}
+            )
 
         logger.info(
             f"Successfully created {len(self.__video_prompt)} Wan video recipes"
@@ -93,7 +113,7 @@ class VideoRecipeBuilder:
             seed=seed,
         )
 
-    def create_video_recipe(self, sub_videos_length: int = 5) -> None:
+    def create_video_recipe(self) -> None:
         """Create video recipe from story folder and chapter prompt index."""
 
         with begin_file_logging(
@@ -103,10 +123,10 @@ class VideoRecipeBuilder:
         ):
             logger.info("Starting video recipe creation process")
 
-            self._recipe = VideoRecipe(self.__paths.video_recipe_file)
+            self._recipe = SubVideoRecipe(self.__paths.video_recipe_file)
 
             if not self._verify_recipe_against_prompt():
                 self._recipe.clean()
-                self._create_video_recipes(sub_videos_length)
+                self._create_video_recipes()
 
             logger.info("Video recipe creation completed successfully")

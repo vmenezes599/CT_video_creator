@@ -215,7 +215,7 @@
     },
     "70": {
         "inputs": {
-            "int": 1216
+            "int": 832
         },
         "class_type": "Int Literal",
         "_meta": {
@@ -224,7 +224,7 @@
     },
     "71": {
         "inputs": {
-            "int": 832
+            "int": 480
         },
         "class_type": "Int Literal",
         "_meta": {

@@ -12,20 +12,21 @@ from ai_video_creator.generators import VideoRecipeBase, WanVideoRecipe
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 
 
-class VideoRecipeDefaultSettings:
+class SubVideoRecipeDefaultSettings:
     """Default settings for video recipe."""
 
     NARRATOR_VOICE = f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3"
     BACKGROUND_MUSIC = f"{DEFAULT_ASSETS_FOLDER}/background_music.mp3"
 
 
-class VideoRecipe:
+class SubVideoRecipe:
     """Video recipe for creating videos from stories."""
 
     def __init__(self, recipe_path: Path):
         """Initialize VideoRecipe with default settings."""
         self.recipe_path = recipe_path
 
+        self.extra_data: list[dict] = []
         self.video_data: list[list[VideoRecipeBase]] = []
 
         self.__from_dict(recipe_path)
@@ -36,9 +37,13 @@ class VideoRecipe:
         while len(iteratable) <= index:
             iteratable.append(None)
 
-    def add_video_data(self, video_data: list[VideoRecipeBase]) -> None:
+    def add_video_data(
+        self, video_data: list[VideoRecipeBase], extra_data: dict = None
+    ) -> None:
         """Add video data to the recipe."""
         self.video_data.append(video_data)
+        if extra_data:
+            self.extra_data.append(extra_data)
         self.save_current_state()
 
     def __from_dict(self, file_path: Path) -> None:
@@ -100,8 +105,13 @@ class VideoRecipe:
         result = {"video_data": []}
 
         for i, item in enumerate(self.video_data, 1):
-            item = {"index": i, "recipe_list": [recipe.to_dict() for recipe in item]}
-            result["video_data"].append(item)
+            result_item = {
+                "index": i,
+            }
+            if i - 1 < len(self.extra_data) and self.extra_data[i - 1] is not None:
+                result_item.update(**self.extra_data[i - 1])
+            result_item["recipe_list"] = [recipe.to_dict() for recipe in item]
+            result["video_data"].append(result_item)
 
         return result
 

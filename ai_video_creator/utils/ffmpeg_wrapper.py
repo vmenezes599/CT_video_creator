@@ -289,6 +289,51 @@ def create_video_segment_from_image_and_audio(
     return output_path
 
 
+def create_video_segment_from_sub_video_and_audio(
+    sub_video_path: str | Path, audio_path: str | Path, output_path: str | Path
+):
+    """
+    Generate a video segment from a sub-video and audio file.
+    """
+    sub_video_path = Path(sub_video_path)
+    audio_path = Path(audio_path)
+    output_path = Path(output_path)
+
+    if not output_path.exists():
+        video_input = ffmpeg.input(str(sub_video_path))
+        audio_input = ffmpeg.input(str(audio_path))
+
+        logger.info(f"Creating video segment from sub-video: {output_path.name}")
+
+        cmd = (
+            ffmpeg.output(
+                video_input,
+                audio_input,
+                str(output_path),
+                r=24,  # Frame rate
+                vf="scale=1280:720",  # Ensure 720p resolution
+                format="mp4",  # Use MP4 format for concatenation
+                shortest=None,
+                **{
+                    "c:v": "h264_nvenc",  # Re-encode video to H.264
+                    "preset": "p5",  # Encoding speed/quality tradeoff
+                    "crf": "23",  # Video quality (lower is better, 18–28 range)
+                    "c:a": "aac",  # Audio codec
+                    "pix_fmt": "yuv420p",
+                    "movflags": "+faststart",  # Optimize for web streaming
+                },
+            )
+            .overwrite_output()
+            .compile()
+        )
+        _run_ffmpeg_trace(cmd)
+        logger.info(f"Video segment created successfully: {output_path.name}")
+    else:
+        logger.info(f"Video segment already exists: {output_path.name}")
+
+    return output_path
+
+
 def burn_subtitles_to_video(
     video_path: str | Path, srt_path: str | Path, output_path: str | Path
 ) -> Path:
