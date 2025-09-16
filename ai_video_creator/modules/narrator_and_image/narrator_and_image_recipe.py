@@ -73,10 +73,11 @@ class NarratorAndImageRecipe:
             logger.info(
                 f"Recipe file not found: {file_path.name} - starting with empty recipe"
             )
-        except json.JSONDecodeError:
+        except (KeyError, json.JSONDecodeError) as e:
             logger.error(
                 f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe"
             )
+            logger.error(f"Details: {e}")
             # Rename corrupted file to .old for backup
             old_file_path = Path(str(file_path) + ".old")
             if file_path.exists():
