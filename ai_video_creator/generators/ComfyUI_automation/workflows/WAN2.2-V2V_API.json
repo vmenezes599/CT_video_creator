@@ -303,7 +303,7 @@
             "custom_width": 0,
             "custom_height": 0,
             "frame_load_cap": 1,
-            "skip_first_frames": 160,
+            "skip_first_frames": 60,
             "select_every_nth": 1,
             "format": "Wan"
         },

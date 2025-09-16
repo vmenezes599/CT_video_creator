@@ -185,7 +185,7 @@ class WanGenerator(IVideoGenerator):
             if Path(file).suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]
         ]
 
-        return moved_files[0]
+        return moved_files[0] if moved_files else Path("")
 
 
 class WanVideoRecipe(VideoRecipeBase):
