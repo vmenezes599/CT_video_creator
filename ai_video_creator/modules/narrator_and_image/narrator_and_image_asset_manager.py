@@ -18,7 +18,7 @@ class NarratorAndImageAssetManager:
         """Initialize VideoAssetManager with story folder and chapter index."""
 
         logger.info(
-            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
+            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index + 1}"
         )
 
         self.story_folder = story_folder
@@ -63,28 +63,28 @@ class NarratorAndImageAssetManager:
 
     def _generate_scene_assets(self, scene_index: int):
         """Generate assets for a specific scene."""
-        logger.debug(f"Generating assets for scene {scene_index}")
+        logger.debug(f"Generating assets for scene {scene_index + 1}")
 
         # Generate narrator if missing
         if not self.video_assets.has_narrator(scene_index):
-            logger.debug(f"Scene {scene_index} missing narrator - generating")
+            logger.debug(f"Scene {scene_index + 1} missing narrator - generating")
             self._generate_narrator_asset(scene_index)
         else:
-            logger.debug(f"Scene {scene_index} already has narrator - skipping")
+            logger.debug(f"Scene {scene_index + 1} already has narrator - skipping")
 
         # Generate image if missing
         if not self.video_assets.has_image(scene_index):
-            logger.debug(f"Scene {scene_index} missing image - generating")
+            logger.debug(f"Scene {scene_index + 1} missing image - generating")
             self._generate_image_asset(scene_index)
         else:
-            logger.debug(f"Scene {scene_index} already has image - skipping")
+            logger.debug(f"Scene {scene_index + 1} already has image - skipping")
 
-        logger.info(f"Scene {scene_index} asset generation completed")
+        logger.info(f"Scene {scene_index + 1} asset generation completed")
 
     def _generate_narrator_asset(self, scene_index: int):
         """Generate narrator asset for a scene."""
         try:
-            logger.info(f"Generating narrator asset for scene {scene_index}")
+            logger.info(f"Generating narrator asset for scene {scene_index + 1}")
             audio = self.recipe.narrator_data[scene_index]
             audio_generator: IAudioGenerator = audio.GENERATOR()
             output_audio_file_path = (
@@ -103,16 +103,18 @@ class NarratorAndImageAssetManager:
             self.video_assets.set_scene_narrator(scene_index, output_audio)
             self.video_assets.save_assets_to_file()  # Save progress immediately
             logger.info(
-                f"Successfully generated narrator for scene {scene_index}: {output_audio.name}"
+                f"Successfully generated narrator for scene {scene_index + 1}: {output_audio.name}"
             )
 
         except (IOError, OSError, RuntimeError) as e:
-            logger.error(f"Failed to generate narrator for scene {scene_index}: {e}")
+            logger.error(
+                f"Failed to generate narrator for scene {scene_index + 1}: {e}"
+            )
 
     def _generate_image_asset(self, scene_index: int):
         """Generate image asset for a scene."""
         try:
-            logger.info(f"Generating image asset for scene {scene_index}")
+            logger.info(f"Generating image asset for scene {scene_index + 1}")
             image = self.recipe.image_data[scene_index]
             image_generator: IImageGenerator = image.GENERATOR()
             output_image_file_path = (
@@ -131,14 +133,14 @@ class NarratorAndImageAssetManager:
             self.video_assets.save_assets_to_file()  # Save progress immediately
             for img in output_images:
                 logger.info(
-                    f"Successfully generated image for scene {scene_index}: {img.name}"
+                    f"Successfully generated image for scene {scene_index + 1}: {img.name}"
                 )
             logger.info(
-                f"Using generated image for scene {scene_index}: {first_output_image.name}"
+                f"Using generated image for scene {scene_index + 1}: {first_output_image.name}"
             )
 
         except (IOError, OSError, RuntimeError) as e:
-            logger.error(f"Failed to generate image for scene {scene_index}: {e}")
+            logger.error(f"Failed to generate image for scene {scene_index + 1}: {e}")
 
     def generate_narrator_and_image_assets(self):
         """Generate all missing assets from the recipe."""
@@ -159,7 +161,7 @@ class NarratorAndImageAssetManager:
             logger.info(f"Total scenes requiring processing: {len(all_missing_scenes)}")
 
             for scene_index in sorted(all_missing_scenes):
-                logger.info(f"Processing scene {scene_index}...")
+                logger.info(f"Processing scene {scene_index + 1}...")
                 self._generate_scene_assets(scene_index)
 
             logger.info("Video asset generation process completed successfully")

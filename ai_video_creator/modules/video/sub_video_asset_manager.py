@@ -67,7 +67,8 @@ class SubVideoAssetManager:
             next_recipe = video_recipe_list[next_recipe_index]
             next_recipe.media_path = media_path
             logger.debug(
-                f"Set media path for next recipe at scene {scene_index}, recipe {next_recipe_index}: {media_path.name}"
+                f"Set media path for next recipe at scene {scene_index + 1},"
+                f" current recipe {recipe_index + 1}, next recipe {next_recipe_index + 1}: {media_path.name}"
             )
             self.recipe.save_current_state()
 
@@ -89,7 +90,7 @@ class SubVideoAssetManager:
             for recipe_index, recipe in enumerate(video_recipe_list):
                 if self.video_assets.has_sub_videos(scene_index, recipe_index):
                     logger.debug(
-                        f"Sub-video {recipe_index} already exists, skipping generation."
+                        f"Sub-video {recipe_index + 1} already exists, skipping generation."
                     )
                     continue
 
@@ -116,12 +117,12 @@ class SubVideoAssetManager:
                 self.video_assets.save_assets_to_file()
 
                 logger.info(
-                    f"Successfully generated sub video for scene {scene_index}({recipe_index+1}/{len(video_recipe_list)}): {output_sub_video.name}"
+                    f"Successfully generated sub video for scene {scene_index + 1}({recipe_index+1}/{len(video_recipe_list)}): {output_sub_video.name}"
                 )
 
         except (IOError, OSError, RuntimeError) as e:
             logger.error(
-                f"Failed to generate sub video for scene {scene_index}({recipe_index+1}/{len(video_recipe_list)}): {e}"
+                f"Failed to generate sub video for scene {scene_index+1}({recipe_index+1}/{len(video_recipe_list)}): {e}"
             )
 
     def _generate_video_file_path(self, scene_index: int) -> Path:
@@ -134,7 +135,7 @@ class SubVideoAssetManager:
     def _generate_video_asset(self, scene_index: int):
         """Generate assets for a specific scene."""
         try:
-            logger.info(f"Generating video asset for scene {scene_index}")
+            logger.info(f"Generating video asset for scene {scene_index + 1}")
 
             self._generate_sub_videos_assets(scene_index)
 
@@ -146,11 +147,11 @@ class SubVideoAssetManager:
             self.video_assets.set_scene_video(scene_index, output_video)
             self.video_assets.save_assets_to_file()
             logger.info(
-                f"Successfully generated video for scene {scene_index}: {output_video.name}"
+                f"Successfully generated video for scene {scene_index + 1}: {output_video.name}"
             )
 
         except (IOError, OSError, RuntimeError) as e:
-            logger.error(f"Failed to generate video for scene {scene_index}: {e}")
+            logger.error(f"Failed to generate video for scene {scene_index + 1}: {e}")
 
     def generate_video_assets(self):
         """Generate a video from the image assets using ffmpeg."""
@@ -171,7 +172,7 @@ class SubVideoAssetManager:
             logger.info(f"Total scenes requiring processing: {len(missing_videos)}")
 
             for scene_index in sorted(missing_videos):
-                logger.info(f"Processing scene {scene_index}...")
+                logger.info(f"Processing scene {scene_index + 1}...")
                 self._generate_video_asset(scene_index)
 
             logger.info("Video asset generation process completed successfully")

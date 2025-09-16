@@ -27,7 +27,7 @@ class NarratorAndImageRecipeBuilder:
         """Initialize VideoRecipe with recipe data."""
         logger.info(
             "Initializing NarratorAndImageRecipeBuilder for story:"
-            f" {story_folder.name}, chapter: {chapter_prompt_index}"
+            f" {story_folder.name}, chapter: {chapter_prompt_index + 1}"
         )
 
         self._paths = VideoCreatorPaths(story_folder, chapter_prompt_index)

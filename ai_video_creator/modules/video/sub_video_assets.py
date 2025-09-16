@@ -104,7 +104,7 @@ class SubVideoAssets:
         ensure_collection_index_exists(self.assembled_sub_video, scene_index)
         ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
         self.assembled_sub_video[scene_index] = video_file_path
-        logger.debug(f"Set video for scene {scene_index}: {video_file_path.name}")
+        logger.debug(f"Set video for scene {scene_index + 1}: {video_file_path.name}")
 
     def set_scene_sub_video(
         self, scene_index: int, sub_video_index: int, sub_video_file_path: Path
@@ -116,14 +116,14 @@ class SubVideoAssets:
         )
         self.sub_video_assets[scene_index][sub_video_index] = sub_video_file_path
         logger.debug(
-            f"Appended sub-video for scene {scene_index}: {sub_video_file_path.name}"
+            f"Appended sub-video for scene {scene_index + 1}: {sub_video_file_path.name}"
         )
 
     def clear_scene_assets(self, scene_index: int) -> None:
         """Clear all assets for a specific scene."""
         ensure_collection_index_exists(self.assembled_sub_video, scene_index)
         self.assembled_sub_video[scene_index] = None
-        logger.debug(f"Cleared all assets for scene {scene_index}")
+        logger.debug(f"Cleared all assets for scene {scene_index + 1}")
 
     def has_video(self, scene_index: int) -> bool:
         """Check if a scene has video asset."""

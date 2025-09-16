@@ -16,7 +16,7 @@ class NarratorAndImageAssets:
         self.image_assets: list[Path] = []
         self._load_assets_from_file()
 
-    def _load_assets_from_file(self):  
+    def _load_assets_from_file(self):
         """Load assets from JSON file."""
         try:
             logger.debug(f"Loading video assets from: {self.asset_file_path.name}")
@@ -104,20 +104,22 @@ class NarratorAndImageAssets:
         """Set narrator file path for a specific scene."""
         self._ensure_index_exists(scene_index)
         self.narrator_assets[scene_index] = narrator_file_path
-        logger.debug(f"Set narrator for scene {scene_index}: {narrator_file_path.name}")
+        logger.debug(
+            f"Set narrator for scene {scene_index + 1}: {narrator_file_path.name}"
+        )
 
     def set_scene_image(self, scene_index: int, image_file_path: Path) -> None:
         """Set image file path for a specific scene."""
         self._ensure_index_exists(scene_index)
         self.image_assets[scene_index] = image_file_path
-        logger.debug(f"Set image for scene {scene_index}: {image_file_path.name}")
+        logger.debug(f"Set image for scene {scene_index + 1}: {image_file_path.name}")
 
     def clear_scene_assets(self, scene_index: int) -> None:
         """Clear all assets for a specific scene."""
         self._ensure_index_exists(scene_index)
         self.narrator_assets[scene_index] = None
         self.image_assets[scene_index] = None
-        logger.debug(f"Cleared all assets for scene {scene_index}")
+        logger.debug(f"Cleared all assets for scene {scene_index + 1}")
 
     def has_narrator(self, scene_index: int) -> bool:
         """Check if a scene has narrator asset."""
