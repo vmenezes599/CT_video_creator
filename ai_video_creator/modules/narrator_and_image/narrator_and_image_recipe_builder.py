@@ -87,7 +87,7 @@ class NarratorAndImageRecipeBuilder:
         """Create video recipe from story folder and chapter prompt index."""
 
         with begin_file_logging(
-            name="CreateNarratorAndImageRecipesFromPrompt",
+            name="create_narrator_and_image_recipes_from_prompt",
             log_level="TRACE",
             base_folder=self._paths.video_path,
         ):
