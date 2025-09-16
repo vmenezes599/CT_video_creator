@@ -59,7 +59,7 @@ class NarratorAndImageRecipeBuilder:
 
         for prompt in self.__video_prompt:
             recipe = FluxImageRecipe(prompt=prompt.visual_prompt, seed=seed)
-            self._recipe.add_image_data(recipe)
+            self._recipe.add_image_data(recipe, {"helper_story_text": prompt.narrator})
 
         logger.info(
             f"Successfully created {len(self.__video_prompt)} Flux image recipes"

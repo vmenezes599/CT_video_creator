@@ -61,6 +61,8 @@ class SubVideoRecipe:
                             for recipe in recipe_list
                         ]
                     )
+                    extra_data = item.get("extra_data", {})
+                    self.extra_data.append(extra_data)
 
                 logger.info(f"Successfully loaded {len(self.video_data)} video recipes")
                 self.save_current_state()
@@ -107,10 +109,9 @@ class SubVideoRecipe:
         for i, item in enumerate(self.video_data, 1):
             result_item = {
                 "index": i,
+                "extra_data": self.extra_data[i - 1],
+                "recipe_list": [recipe.to_dict() for recipe in item],
             }
-            if i - 1 < len(self.extra_data) and self.extra_data[i - 1] is not None:
-                result_item.update(**self.extra_data[i - 1])
-            result_item["recipe_list"] = [recipe.to_dict() for recipe in item]
             result["video_data"].append(result_item)
 
         return result

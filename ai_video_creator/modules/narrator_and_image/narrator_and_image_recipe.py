@@ -29,8 +29,9 @@ class NarratorAndImageRecipe:
         """Initialize NarratorAndImageRecipe with default settings."""
         self.recipe_path = recipe_path
 
-        self.narrator_data = []
-        self.image_data = []
+        self.narrator_data: list[ZonosTTSRecipe] = []
+        self.image_data: list[FluxImageRecipe] = []
+        self.extra_image_data: list[dict] = []
 
         self.__load_from_file(recipe_path)
 
@@ -39,9 +40,11 @@ class NarratorAndImageRecipe:
         self.narrator_data.append(narrator_data)
         self.save_current_state()
 
-    def add_image_data(self, image_data) -> None:
+    def add_image_data(self, image_data, extra_image_data: dict = None) -> None:
         """Add image data to the recipe."""
         self.image_data.append(image_data)
+        if extra_image_data:
+            self.extra_image_data.append(extra_image_data)
         self.save_current_state()
 
     def __load_from_file(self, file_path: Path) -> None:
@@ -56,6 +59,11 @@ class NarratorAndImageRecipe:
                 self.image_data = [
                     self._create_recipe_from_dict(item) for item in data["image_data"]
                 ]
+
+                for image_data in data["image_data"]:
+                    extra_data = image_data.get("extra_data", {})
+                    self.extra_image_data.append(extra_data)
+
                 logger.info(
                     f"Successfully loaded {len(self.narrator_data)} narrator recipes and {len(self.image_data)} image recipes"
                 )
@@ -94,6 +102,7 @@ class NarratorAndImageRecipe:
         """Clean the current recipe data."""
         self.narrator_data = []
         self.image_data = []
+        self.extra_image_data = []
 
     def to_dict(self) -> dict:
         """Convert VideoRecipe to dictionary.
@@ -105,14 +114,14 @@ class NarratorAndImageRecipe:
         for i, item in enumerate(narrator_data, 1):
             item["index"] = i
 
-        image_data = [item.to_dict() for item in self.image_data]
-        for i, item in enumerate(image_data, 1):
-            item["index"] = i
+        image_data = [
+            {"index": i, "extra_data": extra, **item.to_dict()}
+            for i, (item, extra) in enumerate(
+                zip(self.image_data, self.extra_image_data), 1
+            )
+        ]
 
-        return {
-            "narrator_data": narrator_data,
-            "image_data": image_data,
-        }
+        return {"narrator_data": narrator_data, "image_data": image_data}
 
     def save_current_state(self) -> None:
         """Save the current state of the video recipe to a file."""
