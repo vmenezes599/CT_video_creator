@@ -28,12 +28,14 @@ class VideoRecipeBase:
     def __init__(
         self,
         media_path: Path,
+        color_match_media_path: Path,
         prompt: str,
         seed: int,
         recipe_type: str,
     ):
         """Initialize VideoRecipeBase with a name."""
         self.media_path = media_path
+        self.color_match_media_path = color_match_media_path
         self.prompt = prompt
         self.seed = seed
         self.recipe_type = recipe_type
@@ -169,15 +171,22 @@ class WanGenerator(IVideoGenerator):
         :return: A list of file paths to the generated images.
         """
 
+        new_color_match_media_path = self._copy_media_to_comfyui_input_folder(
+            recipe.color_match_media_path
+        )
+
         workflow = WanV2VWorkflow()
 
         workflow.set_positive_prompt(recipe.prompt)
         workflow.set_output_filename(output_file_path.stem)
+        workflow.set_color_match_filename(str(new_color_match_media_path.name))
         workflow.set_video_path(str(recipe.media_path))
 
         workflow.set_seed(recipe.seed)
 
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
+
+        self._delete_media_from_comfyui_input_folder(new_color_match_media_path)
 
         moved_files = [
             self._move_asset_to_output_path(output_file_path.parent, Path(file))
@@ -198,20 +207,24 @@ class WanVideoRecipe(VideoRecipeBase):
     def __init__(
         self,
         prompt: str,
+        color_match_media_path: str,
         media_path: str | None = None,
         seed: int | None = None,
     ):
         """Initialize WanVideoRecipe with media data.
 
-        Args:, pr
+        Args:
+            prompt: Text prompt for media generation
             media_path: Path to the media file
+            color_match_media_path: Path to the color match media file
             seed: Seed used for media generation
         """
         super().__init__(
-            media_path=Path(media_path) if media_path else None,
+            color_match_media_path=Path(color_match_media_path),
             prompt=prompt,
-            recipe_type=self.recipe_type,
+            media_path=Path(media_path) if media_path else None,
             seed=random.randint(0, 2**64 - 1) if seed is None else seed,
+            recipe_type=self.recipe_type,
         )
 
     def to_dict(self) -> dict:
@@ -226,6 +239,7 @@ class WanVideoRecipe(VideoRecipeBase):
 
         return {
             "media_path": str(self.media_path) if self.media_path else None,
+            "color_match_media_path": str(self.color_match_media_path),
             "prompt": self.prompt,
             "available_loras": available_loras,
             "seed": self.seed,
@@ -249,13 +263,21 @@ class WanVideoRecipe(VideoRecipeBase):
             ValueError: If data format is invalid
         """
         # Validate required keys
-        required_keys = ["media_path", "prompt", "recipe_type"]
+        required_keys = [
+            "media_path",
+            "color_match_media_path",
+            "prompt",
+            "recipe_type",
+        ]
         missing_fields = set(required_keys) - data.keys()
         for field in missing_fields:
             raise KeyError(f"Missing required key: {field}")
 
         if data["media_path"] is not None and not isinstance(data["media_path"], str):
             raise ValueError("media_path must be a string")
+
+        if not isinstance(data["color_match_media_path"], str):
+            raise ValueError("color_match_media_path must be a string")
 
         if not isinstance(data["prompt"], str):
             raise ValueError("prompt must be a string")
@@ -265,6 +287,7 @@ class WanVideoRecipe(VideoRecipeBase):
 
         return cls(
             media_path=data["media_path"],
+            color_match_media_path=data["color_match_media_path"],
             prompt=data["prompt"],
             seed=data.get("seed", None),
         )

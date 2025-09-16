@@ -252,7 +252,7 @@ class ComfyUIRequests:
             # Add delay between requests
             time.sleep(self.delay_seconds)
 
-        logger.info("Finished sending requests to ComfyUI.")
+        logger.info("Finished processing all ComfyUI requests.")
 
         return output_image_paths
 

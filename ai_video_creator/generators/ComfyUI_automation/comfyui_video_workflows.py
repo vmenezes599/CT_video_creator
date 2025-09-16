@@ -165,6 +165,7 @@ class WanV2VWorkflow(WanWorkflowBase):
     OUTPUT_FILENAME_NODE_INDEX = 17
     RESOLUTION_NODE_INDEX = 22
     LOAD_VIDEO_NODE_INDEX = 23
+    COLOR_MATCH_NODE_INDEX = 29
 
     def __init__(self, load_best_config: bool = True) -> None:
         """
@@ -186,6 +187,17 @@ class WanV2VWorkflow(WanWorkflowBase):
         parameters = {
             self.LOAD_VIDEO_NODE_INDEX: {
                 "video": video_path,
+            }
+        }
+        super()._set_fields(parameters)
+
+    def set_color_match_filename(self, filename: str) -> None:
+        """
+        Set the output filename for the generated image.
+        """
+        parameters = {
+            self.COLOR_MATCH_NODE_INDEX: {
+                "image": filename,
             }
         }
         super()._set_fields(parameters)

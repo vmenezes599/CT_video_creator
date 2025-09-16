@@ -88,11 +88,18 @@ class SubVideoRecipeBuilder:
 
             recipe_list = []
             recipe = self._create_wan_video_recipe(
-                prompt=prompt, image_asset=image_asset, seed=seed
+                prompt=prompt,
+                color_match_image_asset=image_asset,
+                image_asset=image_asset,
+                seed=seed,
             )
             recipe_list.append(recipe)
             for _ in range(sub_video_count - 1):
-                recipe = self._create_wan_video_recipe(prompt=prompt, seed=seed)
+                recipe = self._create_wan_video_recipe(
+                    prompt=prompt,
+                    color_match_image_asset=image_asset,
+                    seed=seed,
+                )
                 recipe_list.append(recipe)
 
             self._recipe.add_video_data(
@@ -104,12 +111,17 @@ class SubVideoRecipeBuilder:
         )
 
     def _create_wan_video_recipe(
-        self, prompt: Prompt, image_asset: Path | None = None, seed: int | None = None
+        self,
+        prompt: Prompt,
+        color_match_image_asset: Path,
+        image_asset: Path | None = None,
+        seed: int | None = None,
     ) -> None:
         """Create video recipe from story folder and chapter prompt index."""
         return WanVideoRecipe(
             prompt=prompt.visual_description,
             media_path=str(image_asset) if image_asset else None,
+            color_match_media_path=str(color_match_image_asset),
             seed=seed,
         )
 
