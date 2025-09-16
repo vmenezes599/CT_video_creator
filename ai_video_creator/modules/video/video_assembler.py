@@ -190,8 +190,8 @@ class VideoAssembler:
             output_filename: Name of the output video file
         """
         with begin_file_logging(
-            name="VideoAssembler",
             log_level="TRACE",
+            name="AssembleFinalVideo",
             base_folder=self.__paths.video_path,
         ):
             logger.info("Starting video assembly process")

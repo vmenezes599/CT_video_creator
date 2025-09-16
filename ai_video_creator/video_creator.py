@@ -26,12 +26,12 @@ def create_narrator_and_image_recipe_from_prompt(
     Returns:
         None
     """
-    log_id = setup_console_logging("CreateVideoRecipe", log_level="TRACE")
+    log_id = setup_console_logging("CreateNarratorAndImageRecipesFromPrompt", log_level="TRACE")
 
     video_recipe_builder = NarratorAndImageRecipeBuilder(
         story_folder=story_path, chapter_prompt_index=chapter_index
     )
-    video_recipe_builder.create_narrator_and_image_recipe()
+    video_recipe_builder.create_narrator_and_image_recipes()
 
     cleanup_logging(log_id)
 
@@ -58,11 +58,11 @@ def create_narrators_and_images_from_recipe(
     cleanup_logging(log_id)
 
 
-def create_sub_videos_recipe_from_images(story_path: Path, chapter_index: int) -> None:
+def create_sub_video_recipes_from_images(story_path: Path, chapter_index: int) -> None:
     """
     Create a video recipe from existing images and narrator audio files.
     """
-    log_id = setup_console_logging("CreateVideoRecipeFromImages", log_level="TRACE")
+    log_id = setup_console_logging("CreateSubVideoRecipesFromImages", log_level="TRACE")
 
     video_recipe_builder = SubVideoRecipeBuilder(
         story_folder=story_path, chapter_prompt_index=chapter_index
@@ -72,11 +72,11 @@ def create_sub_videos_recipe_from_images(story_path: Path, chapter_index: int) -
     cleanup_logging(log_id)
 
 
-def create_sub_videos_from_video_recipe(story_path: Path, chapter_index: int) -> None:
+def create_sub_videos_from_sub_video_recipes(story_path: Path, chapter_index: int) -> None:
     """
     Create videos from the images in the recipe.
     """
-    log_id = setup_console_logging("CreateVideosFromImages", log_level="TRACE")
+    log_id = setup_console_logging("CreateSubVideosFromSubVideoRecipes", log_level="TRACE")
 
     video_asset_manager = SubVideoAssetManager(
         story_folder=story_path, chapter_index=chapter_index
@@ -100,7 +100,7 @@ def assemble_final_video(story_path: Path, chapter_index: int) -> None:
 
     raise NotImplementedError("Temporary disabled for fixing issues.")
 
-    log_id = setup_console_logging("AssembleChapterVideo", log_level="TRACE")
+    log_id = setup_console_logging("AssembleFinalVideo", log_level="TRACE")
 
     video_assembler = VideoAssembler(
         story_folder=story_path,

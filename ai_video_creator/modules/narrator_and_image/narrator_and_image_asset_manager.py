@@ -143,7 +143,7 @@ class NarratorAndImageAssetManager:
     def generate_narrator_and_image_assets(self):
         """Generate all missing assets from the recipe."""
         with begin_file_logging(
-            name="VideoAssetManager",
+            name="CreateNarratorAndImagesFromRecipe",
             log_level="TRACE",
             base_folder=self.__paths.video_path,
         ):

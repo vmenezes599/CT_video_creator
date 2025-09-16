@@ -83,11 +83,11 @@ class NarratorAndImageRecipeBuilder:
             f"Successfully created {len(self.__video_prompt)} Zonos TTS narrator recipes"
         )
 
-    def create_narrator_and_image_recipe(self) -> None:
+    def create_narrator_and_image_recipes(self) -> None:
         """Create video recipe from story folder and chapter prompt index."""
 
         with begin_file_logging(
-            name="VideoRecipeBuilder",
+            name="CreateNarratorAndImageRecipesFromPrompt",
             log_level="TRACE",
             base_folder=self._paths.video_path,
         ):

@@ -51,7 +51,7 @@ class TestNarratorAndImageRecipeBuilder:
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.narrator_and_image.narrator_and_image_recipe_builder.begin_file_logging"):
                 builder = NarratorAndImageRecipeBuilder(story_setup, 0)
-                builder.create_narrator_and_image_recipe()
+                builder.create_narrator_and_image_recipes()
 
                 # Verify recipe file was created
                 recipe_file = builder._paths.narrator_and_image_recipe_file
@@ -99,7 +99,7 @@ class TestNarratorAndImageRecipeBuilder:
             with patch("ai_video_creator.modules.narrator_and_image.narrator_and_image_recipe_builder.begin_file_logging"):
                 # Create first recipe
                 builder1 = NarratorAndImageRecipeBuilder(story_setup, 0)
-                builder1.create_narrator_and_image_recipe()
+                builder1.create_narrator_and_image_recipes()
 
                 recipe_file = builder1._paths.narrator_and_image_recipe_file
 
@@ -109,7 +109,7 @@ class TestNarratorAndImageRecipeBuilder:
 
                 # Create second builder - should use existing recipe
                 builder2 = NarratorAndImageRecipeBuilder(story_setup, 0)
-                builder2.create_narrator_and_image_recipe()
+                builder2.create_narrator_and_image_recipes()
 
                 # Content should be the same (recipes should not be recreated)
                 with open(recipe_file, "r", encoding="utf-8") as f:
@@ -176,7 +176,7 @@ class TestNarratorAndImageRecipeBuilder:
         with patch("logging_utils.logger"):
             with patch("ai_video_creator.modules.narrator_and_image.narrator_and_image_recipe_builder.begin_file_logging"):
                 builder = NarratorAndImageRecipeBuilder(story_folder, 0)
-                builder.create_narrator_and_image_recipe()
+                builder.create_narrator_and_image_recipes()
 
                 recipe_file = builder._paths.narrator_and_image_recipe_file
                 with open(recipe_file, "r", encoding="utf-8") as f:
