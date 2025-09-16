@@ -191,7 +191,7 @@ class VideoAssembler:
         """
         with begin_file_logging(
             log_level="TRACE",
-            name="AssembleFinalVideo",
+            name="assemble_final_video",
             base_folder=self.__paths.video_path,
         ):
             logger.info("Starting video assembly process")
