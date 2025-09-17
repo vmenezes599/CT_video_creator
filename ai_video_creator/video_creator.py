@@ -27,7 +27,7 @@ def create_narrator_and_image_recipe_from_prompt(
         None
     """
     log_id = setup_console_logging(
-        "CreateNarratorAndImageRecipesFromPrompt", log_level="TRACE"
+        "create_narrator_and_image_recipes_from_prompt", log_level="TRACE"
     )
 
     video_recipe_builder = NarratorAndImageRecipeBuilder(
