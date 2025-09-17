@@ -156,7 +156,7 @@ class SubVideoAssetManager:
     def generate_video_assets(self):
         """Generate a video from the image assets using ffmpeg."""
         with begin_file_logging(
-            name="create_subvideos_from_subvideo_recipes",
+            name="create_sub_videos_from_sub_video_recipes",
             log_level="TRACE",
             base_folder=self.__paths.video_path,
         ):

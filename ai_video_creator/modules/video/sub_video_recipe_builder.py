@@ -129,7 +129,7 @@ class SubVideoRecipeBuilder:
         """Create video recipe from story folder and chapter prompt index."""
 
         with begin_file_logging(
-            name="create_subvideo_recipes_from_images",
+            name="create_sub_video_recipes_from_images",
             log_level="TRACE",
             base_folder=self.__paths.video_path,
         ):

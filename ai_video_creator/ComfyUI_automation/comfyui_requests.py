@@ -197,6 +197,7 @@ class ComfyUIRequests:
                     output_paths = self._get_output_paths(history_entry)
 
                     self._send_clean_memory_request()
+                    time.sleep(self.delay_seconds)
 
                     return output_paths
                 else:
