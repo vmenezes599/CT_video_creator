@@ -475,8 +475,13 @@ def concatenate_videos_remove_last_frame_except_last(
 
     # If output already exists, return it
     if output_path.exists():
-        logger.info(f"Output video already exists: {output_path.name}")
-        return output_path
+        index = 1
+        new_output_path = output_path.with_stem(output_path.stem + f"_{index}")
+        while new_output_path.exists():
+            index += 1
+            new_output_path = output_path.with_stem(output_path.stem + f"_{index}")
+        output_path = new_output_path
+        logger.debug(f"Output file exists, using new path: {output_path}")
 
     temp_dir = output_path.parent / "temp_concat_segments"
 
