@@ -8,7 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from logging_utils import logger
 
-from ai_video_creator.ComfyUI_automation.comfyui_requests import ComfyUIRequests
+from ai_video_creator.ComfyUI_automation import ComfyUIRequests
 from .ComfyUI_automation.comfyui_image_workflows import FluxWorkflow
 
 

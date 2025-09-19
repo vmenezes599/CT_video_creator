@@ -60,19 +60,6 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
 
-    def _set_output_filename(
-        self, output_filename_node_index: int, filename: str
-    ) -> None:
-        """
-        Set the output filename for the generated image.
-        """
-        parameters = {
-            output_filename_node_index: {
-                "filename_prefix": filename,
-            }
-        }
-        super()._set_fields(parameters)
-
     def _set_resolution(
         self,
         resolution_node_index: int,
@@ -223,5 +210,48 @@ class WanV2VWorkflow(WanWorkflowBase):
     def set_output_filename(self, filename: str) -> None:
         """
         Set the output filename for the generated image.
+        """
+        self._set_output_filename(self.OUTPUT_FILENAME_NODE_INDEX, filename)
+
+
+class VideoUpscaleFrameInterpWorkflow(ComfyUIWorkflowBase):
+    """
+    Class to handle the workflow for video upscaling and frame interpolation in ComfyUI.
+    """
+
+    VIDEO_UPSCALE_FRAME_INTERP_WORKFLOW_PATH = (
+        f"{WORKFLOW_DIR}/Video-Upscale-FrameInterp_API.json"
+    )
+
+    OUTPUT_FILENAME_NODE_INDEX = 4
+    LOAD_VIDEO_NODE_INDEX = 5
+
+    def __init__(self, load_best_config: bool = True) -> None:
+        """
+        Initialize the VideoUpscaleFrameInterpWorkflow class.
+        """
+        super().__init__(self.VIDEO_UPSCALE_FRAME_INTERP_WORKFLOW_PATH)
+
+        # Loading best configurations for the workflow
+        if load_best_config:
+            self._load_best_configurations()
+
+    def _load_best_configurations(self) -> None:
+        pass
+
+    def set_video_path(self, video_path: str) -> None:
+        """
+        Set the input video path.
+        """
+        parameters = {
+            self.LOAD_VIDEO_NODE_INDEX: {
+                "video": video_path,
+            }
+        }
+        super()._set_fields(parameters)
+
+    def set_output_filename(self, filename: str) -> None:
+        """
+        Set the output filename for the generated video.
         """
         self._set_output_filename(self.OUTPUT_FILENAME_NODE_INDEX, filename)

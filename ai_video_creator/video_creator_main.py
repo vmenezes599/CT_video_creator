@@ -12,7 +12,7 @@ from .video_creator import (
 
 def main():
     """Main function to run the AI Video Creator application."""
-    story_path = Path("stories/The retainer")
+    story_path = Path("stories/To Mars")
     chapter_index = 0
 
     create_narrator_and_image_recipe_from_prompt(story_path, chapter_index)

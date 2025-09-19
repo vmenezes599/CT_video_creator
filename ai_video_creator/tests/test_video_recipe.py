@@ -45,7 +45,10 @@ class TestVideoRecipeFile:
 
         # Add real video recipe data
         video_recipe = WanVideoRecipe(
-            prompt="Test video prompt", media_path="/path/to/image.jpg", seed=12345
+            prompt="Test video prompt",
+            color_match_media_path="/path/to/color_match_image.jpg",
+            media_path="/path/to/image.jpg",
+            seed=12345,
         )
 
         recipe.add_video_data([video_recipe])
@@ -152,6 +155,11 @@ class TestVideoRecipeFile:
             for sub_video in range(2):
                 video_recipe = WanVideoRecipe(
                     prompt=f"Scene {scene} sub-video {sub_video}",
+                    color_match_media_path=(
+                        f"/path/to/scene_{scene}_color_match.jpg"
+                        if sub_video == 0
+                        else None
+                    ),
                     media_path=(
                         f"/path/to/scene_{scene}_image.jpg" if sub_video == 0 else None
                     ),

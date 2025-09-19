@@ -106,7 +106,7 @@ def assemble_final_video(story_path: Path, chapter_index: int) -> None:
         None
     """
 
-    raise NotImplementedError("Temporary disabled for fixing issues.")
+    # raise NotImplementedError("Temporary disabled for fixing issues.")
 
     log_id = setup_console_logging("assemble_final_video", log_level="TRACE")
 

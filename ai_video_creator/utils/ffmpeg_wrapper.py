@@ -289,31 +289,165 @@ def create_video_segment_from_image_and_audio(
     return output_path
 
 
-def create_video_segment_from_sub_video_and_audio(
+def create_video_segment_from_sub_video_and_audio_reverse_video(
     sub_video_path: str | Path, audio_path: str | Path, output_path: str | Path
-):
+) -> Path:
     """
     Generate a video segment from a sub-video and audio file.
+    The final video duration will always match the audio duration:
+    - If audio is longer than video: the video will be reversed and played again to fill the duration
+    - If video is longer than audio: the video will be cut short to match audio duration
+    - If durations match: video plays normally with audio
     """
     sub_video_path = Path(sub_video_path)
     audio_path = Path(audio_path)
     output_path = Path(output_path)
 
+    # Input validation
+    if not sub_video_path.exists():
+        raise FileNotFoundError(f"Video file does not exist: {sub_video_path}")
+    if not audio_path.exists():
+        raise FileNotFoundError(f"Audio file does not exist: {audio_path}")
+
     if not output_path.exists():
+        # Get durations of both video and audio
+        audio_duration = get_audio_duration(str(audio_path))
+        video_probe = _probe(sub_video_path)
+        fps, video_duration = _fps_and_duration(video_probe)
+
+        logger.info(
+            f"Creating video segment from sub-video (with reverse): {output_path.name}"
+        )
+        logger.debug(
+            f"Video duration: {video_duration:.2f}s, Audio duration: {audio_duration:.2f}s, FPS: {fps}"
+        )
+
         video_input = ffmpeg.input(str(sub_video_path))
         audio_input = ffmpeg.input(str(audio_path))
 
-        logger.info(f"Creating video segment from sub-video: {output_path.name}")
+        # Create video filter based on duration comparison
+        if audio_duration > video_duration:
+            # Audio is longer - play video forward then reverse to fill the duration
+            extra_duration = audio_duration - video_duration
+            logger.debug(
+                f"Extending video by {extra_duration:.2f}s (playing in reverse)"
+            )
+
+            # Calculate how many full forward+reverse cycles we need
+            cycle_duration = video_duration * 2  # forward + reverse
+            needed_cycles = int(audio_duration / cycle_duration) + 1
+            
+            # Use video's actual frame rate instead of hardcoded 24
+            cycle_frames = int(fps * cycle_duration)
+
+            # Create forward+reverse pattern that repeats enough times to fill audio duration
+            # Scale first, then split into forward and reverse, concat them, repeat the cycle, and trim
+            video_filter = f"scale=1280:720[scaled];[scaled]split=2[fwd][rev_src];[rev_src]reverse[rev];[fwd][rev]concat=n=2:v=1:a=0[cycle];[cycle]loop=loop={needed_cycles-1}:size={cycle_frames}:start=0[looped];[looped]trim=duration={audio_duration}"
+
+        elif video_duration > audio_duration:
+            # Video is longer - cut it short to match audio duration
+            logger.debug(
+                f"Video is longer than audio, will be cut from {video_duration:.2f}s to {audio_duration:.2f}s"
+            )
+            video_filter = "scale=1280:720"
+        else:
+            # Same duration - just scale
+            video_filter = "scale=1280:720"
 
         cmd = (
             ffmpeg.output(
                 video_input,
                 audio_input,
                 str(output_path),
-                r=24,  # Frame rate
-                vf="scale=1280:720",  # Ensure 720p resolution
+                r=fps,  # Use source video frame rate
+                vf=video_filter,
                 format="mp4",  # Use MP4 format for concatenation
-                shortest=None,
+                t=audio_duration,  # Use audio duration as the final duration
+                **{
+                    "c:v": "h264_nvenc",  # Re-encode video to H.264
+                    "preset": "p5",  # Encoding speed/quality tradeoff
+                    "crf": "23",  # Video quality (lower is better, 18–28 range)
+                    "c:a": "aac",  # Audio codec
+                    "pix_fmt": "yuv420p",
+                    "movflags": "+faststart",  # Optimize for web streaming
+                },
+            )
+            .overwrite_output()
+            .compile()
+        )
+        _run_ffmpeg_trace(cmd)
+        logger.info(f"Video segment created successfully: {output_path.name}")
+    else:
+        logger.info(f"Video segment already exists: {output_path.name}")
+
+    return output_path
+
+
+def create_video_segment_from_sub_video_and_audio_freeze_last_frame(
+    sub_video_path: str | Path, audio_path: str | Path, output_path: str | Path
+) -> Path:
+    """
+    Generate a video segment from a sub-video and audio file.
+    The final video duration will always match the audio duration:
+    - If audio is longer than video: the last frame will be frozen until audio finishes
+    - If video is longer than audio: the video will be cut short to match audio duration
+    - If durations match: video plays normally with audio
+    """
+    sub_video_path = Path(sub_video_path)
+    audio_path = Path(audio_path)
+    output_path = Path(output_path)
+
+    # Input validation
+    if not sub_video_path.exists():
+        raise FileNotFoundError(f"Video file does not exist: {sub_video_path}")
+    if not audio_path.exists():
+        raise FileNotFoundError(f"Audio file does not exist: {audio_path}")
+
+    if not output_path.exists():
+        # Get durations of both video and audio
+        audio_duration = get_audio_duration(str(audio_path))
+        video_probe = _probe(sub_video_path)
+        fps, video_duration = _fps_and_duration(video_probe)
+
+        logger.info(f"Creating video segment from sub-video: {output_path.name}")
+        logger.debug(
+            f"Video duration: {video_duration:.2f}s, Audio duration: {audio_duration:.2f}s, FPS: {fps}"
+        )
+
+        video_input = ffmpeg.input(str(sub_video_path))
+        audio_input = ffmpeg.input(str(audio_path))
+
+        # Create video filter based on duration comparison
+        if audio_duration > video_duration:
+            # Audio is longer - freeze last frame
+            extra_duration = audio_duration - video_duration
+            logger.debug(
+                f"Extending video by {extra_duration:.2f}s (freezing last frame)"
+            )
+
+            # Use tpad filter to freeze the last frame for the extra duration needed
+            video_filter = (
+                f"scale=1280:720,tpad=stop_mode=clone:stop_duration={extra_duration}"
+            )
+        elif video_duration > audio_duration:
+            # Video is longer - cut it short to match audio duration
+            logger.debug(
+                f"Video is longer than audio, will be cut from {video_duration:.2f}s to {audio_duration:.2f}s"
+            )
+            video_filter = "scale=1280:720"
+        else:
+            # Same duration - just scale
+            video_filter = "scale=1280:720"
+
+        cmd = (
+            ffmpeg.output(
+                video_input,
+                audio_input,
+                str(output_path),
+                r=fps,  # Use source video frame rate
+                vf=video_filter,
+                format="mp4",  # Use MP4 format for concatenation
+                t=audio_duration,  # Use audio duration as the final duration
                 **{
                     "c:v": "h264_nvenc",  # Re-encode video to H.264
                     "preset": "p5",  # Encoding speed/quality tradeoff

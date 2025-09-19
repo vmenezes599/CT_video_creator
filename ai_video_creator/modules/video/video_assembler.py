@@ -9,11 +9,21 @@ from pathlib import Path
 
 from logging_utils import begin_file_logging, logger
 
+from ai_video_creator.ComfyUI_automation import (
+    ComfyUIRequests,
+    copy_media_to_comfyui_input_folder,
+    delete_media_from_comfyui_input_folder,
+)
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
+from ai_video_creator.generators.ComfyUI_automation import (
+    VideoUpscaleFrameInterpWorkflow,
+)
 from ai_video_creator.generators import SubtitleGenerator
 from ai_video_creator.utils import (
     burn_subtitles_to_video,
-    create_video_segment_from_sub_video_and_audio,
+    create_video_segment_from_sub_video_and_audio_freeze_last_frame,
+    create_video_segment_from_sub_video_and_audio_reverse_video,
+    create_video_segment_from_image_and_audio,
     concatenate_videos,
     VideoCreatorPaths,
 )
@@ -58,7 +68,24 @@ class VideoAssembler:
             self.output_path = self.__paths.video_output_file
             self._temp_files = []
 
-    def _combine_video_audio_segment(self, video_path: str, audio_path: str) -> str:
+    def _combine_image_audio_segment(self, image_path: str, audio_path: str) -> str:
+        """
+        Generate a video segment from a image and audio file.
+        """
+        image_path_obj = Path(image_path)
+        temp_file = (
+            self.__paths.narrator_and_image_asset_folder
+            / f"temp_{image_path_obj.stem}.mp4"
+        )
+
+        output_path = create_video_segment_from_image_and_audio(
+            image_path=image_path, audio_path=audio_path, output_path=temp_file
+        )
+
+        self._temp_files.append(output_path)
+        return output_path
+
+    def _combine_sub_video_audio_segment(self, video_path: str, audio_path: str) -> str:
         """
         Generate a video segment from a video and audio file.
         """
@@ -68,7 +95,7 @@ class VideoAssembler:
             / f"temp_{video_path_obj.stem}.mp4"
         )
 
-        output_path = create_video_segment_from_sub_video_and_audio(
+        output_path = create_video_segment_from_sub_video_and_audio_reverse_video(
             sub_video_path=video_path, audio_path=audio_path, output_path=temp_file
         )
 
@@ -119,23 +146,44 @@ class VideoAssembler:
                 file_path.unlink()
         logger.info("Cleanup completed")
 
-    def _apply_media_effects(
-        self, narrator_file_paths: list[Path], video_file_paths: list[Path]
-    ) -> tuple[Path, Path]:
+    def _apply_image_effects(self, image_file_paths: list[Path]) -> list[Path]:
         """
-        Apply media effects to the audio and video files.
+        Apply media effects to the image files.
+        """
+        processed_images: list[Path] = []
+        for image_path, image_effects in zip(
+            image_file_paths, self.effects.image_effects
+        ):
+            processed_image_path = image_path
+            for effect in image_effects:
+                if effect:
+                    processed_image_path = effect.apply(processed_image_path)
+                    self._temp_files.append(processed_image_path)
+            processed_images.append(processed_image_path)
+
+        return processed_images
+
+    def _apply_video_effects(self, video_file_paths: list[Path]) -> list[Path]:
+        """
+        Apply media effects to the video files.
         """
         processed_videos: list[Path] = []
         for image_path, image_effects in zip(
             video_file_paths, self.effects.image_effects
         ):
-            processed_image_path = image_path
+            processed_video_path = image_path
             for effect in image_effects:
                 if effect:
                     processed_video_path = effect.apply(processed_video_path)
                     self._temp_files.append(processed_video_path)
             processed_videos.append(processed_video_path)
 
+        return processed_videos
+
+    def _apply_narrator_effects(self, narrator_file_paths: list[Path]) -> list[Path]:
+        """
+        Apply media effects to the audio files.
+        """
         processed_narrators: list[Path] = []
         for audio_path, audio_effects in zip(
             narrator_file_paths, self.effects.narrator_effects
@@ -147,11 +195,75 @@ class VideoAssembler:
                     self._temp_files.append(processed_narrator_path)
             processed_narrators.append(processed_narrator_path)
 
-        return processed_narrators, processed_videos
+        return processed_narrators
 
-    def _create_video_segments(self) -> None:
+    def _create_video_segments_from_images(self) -> list[Path]:
         """
         Create video segments from the assets defined in the video recipe.
+        """
+
+        # Extract data from video recipe
+        narrator_file_paths = self.narrator_and_image_assets.narrator_assets
+        image_file_paths = self.narrator_and_image_assets.image_assets
+
+        logger.info(
+            f"Processing {len(narrator_file_paths)} audio files and {len(image_file_paths)} image files"
+        )
+
+        processed_narrators = self._apply_narrator_effects(narrator_file_paths)
+        processed_images = self._apply_image_effects(image_file_paths)
+
+        video_segments = []
+        for i, (image_path, audio_path) in enumerate(
+            zip(processed_images, processed_narrators), 1
+        ):
+            logger.info(
+                f"Processing segment {i}/{len(narrator_file_paths)}: {Path(image_path).name}"
+            )
+
+            video_segment = self._combine_image_audio_segment(image_path, audio_path)
+            video_segments.append(video_segment)
+
+        logger.info(f"Created {len(video_segments)} video segments")
+
+        return video_segments
+
+    def _upscale_and_frame_interp_videos(
+        self, video_file_paths: list[Path]
+    ) -> list[Path]:
+        """
+        Upscale and apply frame interpolation to the video files if needed.
+        """
+        requests = ComfyUIRequests()
+
+        workflows: list[VideoUpscaleFrameInterpWorkflow] = []
+        copied_files: list[Path] = []
+
+        for video_path in video_file_paths:
+            comfyui_video_path = copy_media_to_comfyui_input_folder(video_path)
+            copied_files.append(comfyui_video_path)
+
+            workflow = VideoUpscaleFrameInterpWorkflow()
+            workflow.set_video_path(comfyui_video_path.name)
+            workflow.set_output_filename(comfyui_video_path.stem)
+            workflows.append(workflow)
+
+        processed_videos = requests.comfyui_ensure_send_all_prompts(workflows)
+
+        # Clean up copied files after processing
+        for copied_file in copied_files:
+            delete_media_from_comfyui_input_folder(copied_file)
+
+        processed_videos_paths = [Path(video) for video in processed_videos]
+
+        for video in processed_videos_paths:
+            self._temp_files.append(video)
+
+        return processed_videos_paths
+
+    def _create_video_segments_from_sub_videos(self):
+        """
+        Create video segments from the sub-videos defined in the video recipe.
         """
 
         # Extract data from video recipe
@@ -162,9 +274,11 @@ class VideoAssembler:
             f"Processing {len(narrator_file_paths)} audio files and {len(video_file_paths)} video files"
         )
 
-        processed_narrators, processed_videos = self._apply_media_effects(
-            narrator_file_paths, video_file_paths
-        )
+        # processed_videos = self._upscale_and_frame_interp_videos(video_file_paths)
+        processed_videos = video_file_paths
+
+        processed_videos = self._apply_video_effects(processed_videos)
+        processed_narrators = self._apply_narrator_effects(narrator_file_paths)
 
         video_segments = []
         for i, (video_path, audio_path) in enumerate(
@@ -174,7 +288,9 @@ class VideoAssembler:
                 f"Processing segment {i}/{len(narrator_file_paths)}: {Path(video_path).name}"
             )
 
-            video_segment = self._combine_video_audio_segment(video_path, audio_path)
+            video_segment = self._combine_sub_video_audio_segment(
+                video_path, audio_path
+            )
             video_segments.append(video_segment)
 
         logger.info(f"Created {len(video_segments)} video segments")
@@ -196,7 +312,8 @@ class VideoAssembler:
         ):
             logger.info("Starting video assembly process")
 
-            video_segments = self._create_video_segments()
+            # video_segments = self._create_video_segments_from_images()
+            video_segments = self._create_video_segments_from_sub_videos()
             self._compose(video_segments)
 
             logger.info(f"Video assembly completed successfully: {self.output_path}")

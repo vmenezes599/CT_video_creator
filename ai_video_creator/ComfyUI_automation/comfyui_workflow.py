@@ -132,3 +132,16 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
         Get the JSON configuration.
         """
         return self.workflow
+
+    def _set_output_filename(
+        self, output_filename_node_index: int, filename: str
+    ) -> None:
+        """
+        Set the output filename for the generated file.
+        """
+        parameters = {
+            output_filename_node_index: {
+                "filename_prefix": filename,
+            }
+        }
+        self._set_fields(parameters)
