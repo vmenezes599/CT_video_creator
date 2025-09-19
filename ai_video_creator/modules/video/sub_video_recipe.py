@@ -42,8 +42,8 @@ class SubVideoRecipe:
     ) -> None:
         """Add video data to the recipe."""
         self.video_data.append(video_data)
-        if extra_data:
-            self.extra_data.append(extra_data)
+        # Always append extra_data to keep indices aligned, use empty dict if None
+        self.extra_data.append(extra_data if extra_data else {})
         self.save_current_state()
 
     def __from_dict(self, file_path: Path) -> None:

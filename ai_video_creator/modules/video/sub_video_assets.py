@@ -76,16 +76,19 @@ class SubVideoAssets:
         try:
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 assets = []
-                for i, (video_asset, sub_video_assets) in enumerate(
-                    zip(self.assembled_sub_video, self.sub_video_assets)
-                ):
+                # Ensure both lists have the same length
+                max_length = max(len(self.assembled_sub_video), len(self.sub_video_assets))
+                
+                for i in range(max_length):
+                    video_asset = self.assembled_sub_video[i] if i < len(self.assembled_sub_video) else None
+                    sub_video_assets = self.sub_video_assets[i] if i < len(self.sub_video_assets) else []
+                    
                     videos = {
                         "index": i + 1,
                         "video_asset": str(video_asset) if video_asset else None,
                         "sub_video_assets": [
-                            (str(sub_video_asset) if sub_video_asset else None)
+                            str(sub_video_asset) if sub_video_asset else None
                             for sub_video_asset in sub_video_assets
-                            if sub_video_asset is not None and sub_video_assets != []
                         ],
                     }
 

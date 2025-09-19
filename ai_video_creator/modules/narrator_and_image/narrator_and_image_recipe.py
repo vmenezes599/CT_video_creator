@@ -43,8 +43,8 @@ class NarratorAndImageRecipe:
     def add_image_data(self, image_data, extra_image_data: dict = None) -> None:
         """Add image data to the recipe."""
         self.image_data.append(image_data)
-        if extra_image_data:
-            self.extra_image_data.append(extra_image_data)
+        # Always append extra_image_data to maintain alignment with image_data
+        self.extra_image_data.append(extra_image_data or {})
         self.save_current_state()
 
     def __load_from_file(self, file_path: Path) -> None:

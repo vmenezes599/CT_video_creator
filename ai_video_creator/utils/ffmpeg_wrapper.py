@@ -336,7 +336,7 @@ def create_video_segment_from_sub_video_and_audio_reverse_video(
             # Calculate how many full forward+reverse cycles we need
             cycle_duration = video_duration * 2  # forward + reverse
             needed_cycles = int(audio_duration / cycle_duration) + 1
-            
+
             # Use video's actual frame rate instead of hardcoded 24
             cycle_frames = int(fps * cycle_duration)
 
@@ -512,7 +512,7 @@ def burn_subtitles_to_video(
     return output_path
 
 
-def concatenate_videos(
+def concatenate_videos_no_reencoding(
     video_segments: list[str | Path], output_path: str | Path
 ) -> Path:
     """
@@ -541,6 +541,66 @@ def concatenate_videos(
         cmd = (
             ffmpeg.input(str(concat_list_path), format="concat", safe=0)
             .output(str(output_path), c="copy", **{"bsf:a": "aac_adtstoasc"})
+            .overwrite_output()
+            .compile()
+        )
+        _run_ffmpeg_trace(cmd)
+        logger.info("Video concatenation completed successfully")
+    else:
+        logger.info(f"Final video already exists: {output_path.name}")
+
+    # Clean up concat list file
+    if concat_list_path.exists():
+        concat_list_path.unlink()
+
+    return output_path
+
+
+def concatenate_videos_with_reencoding(
+    video_segments: list[str | Path],
+    output_path: str | Path,
+    width: int = 1920,
+    height: int = 1080,
+) -> Path:
+    """
+    Concatenate video segments into a single video file with specified resolution.
+
+    Args:
+        video_segments: List of paths to video segment files
+        output_path: Path for the concatenated output video
+        width: Target video width in pixels (default: 1920)
+        height: Target video height in pixels (default: 1080)
+
+    Returns:
+        Path to the concatenated video file
+    """
+    video_segments = [Path(segment) for segment in video_segments]
+    output_path = Path(output_path)
+
+    logger.info(f"Concatenating {len(video_segments)} video segments")
+
+    # Create concat list file in the same directory as output
+    concat_list_path = output_path.parent / "concat_list.txt"
+
+    with open(concat_list_path, "w", encoding="utf-8") as f:
+        for segment in video_segments:
+            f.write(f"file '{segment.resolve()}'\n")
+
+    if not output_path.exists():
+        cmd = (
+            ffmpeg.input(str(concat_list_path), format="concat", safe=0)
+            .output(
+                str(output_path),
+                vf=f"scale={width}:{height}",
+                **{
+                    "c:v": "h264_nvenc",  # Re-encode video to H.264
+                    "preset": "p5",  # Encoding speed/quality tradeoff
+                    "crf": "23",  # Video quality (lower is better, 18–28 range)
+                    "c:a": "aac",  # Audio codec
+                    "pix_fmt": "yuv420p",
+                    "movflags": "+faststart",  # Optimize for web streaming
+                },
+            )
             .overwrite_output()
             .compile()
         )

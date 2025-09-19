@@ -60,75 +60,77 @@ class TestVideoRecipeBuilder:
         """Test that VideoRecipeBuilder creates the correct JSON file structure."""
         # Mock only external dependencies
         with patch("logging_utils.logger"):
-            with patch("ai_video_creator.modules.video.video_recipe_builder.begin_file_logging"):
-                builder = SubVideoRecipeBuilder(story_setup, 0)
-                builder.create_video_recipe(sub_videos_length=3)
+            with patch("ai_video_creator.modules.video.sub_video_recipe_builder.begin_file_logging"):
+                with patch("ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration", return_value=10.0):
+                    builder = SubVideoRecipeBuilder(story_setup, 0)
+                    builder.create_video_recipe()
 
-                # Verify recipe file was created
-                recipe_file = builder._VideoRecipeBuilder__paths.video_recipe_file
-                assert recipe_file.exists()
+                    # Verify recipe file was created
+                    recipe_file = builder._SubVideoRecipeBuilder__paths.video_recipe_file
+                    assert recipe_file.exists()
 
-                # Load and verify the file structure
-                with open(recipe_file, "r", encoding="utf-8") as f:
-                    saved_recipe = json.load(f)
+                    # Load and verify the file structure
+                    with open(recipe_file, "r", encoding="utf-8") as f:
+                        saved_recipe = json.load(f)
 
-                # Verify correct structure
-                assert "video_data" in saved_recipe
-                assert len(saved_recipe["video_data"]) == 2  # Two scenes
+                    # Verify correct structure
+                    assert "video_data" in saved_recipe
+                    assert len(saved_recipe["video_data"]) == 2  # Two scenes
 
-                # Verify each scene has 3 sub-videos
-                for scene_index in range(2):
-                    scene_data = saved_recipe["video_data"][scene_index]
-                    assert scene_data["index"] == scene_index + 1
-                    assert len(scene_data["recipe_list"]) == 3
+                    # Verify each scene has 3 sub-videos
+                    for scene_index in range(2):
+                        scene_data = saved_recipe["video_data"][scene_index]
+                        assert scene_data["index"] == scene_index + 1
+                        assert len(scene_data["recipe_list"]) == 3
 
-                    # First sub-video should have image path, others should not
-                    first_recipe = scene_data["recipe_list"][0]
-                    assert first_recipe["recipe_type"] == "WanVideoRecipeType"
-                    assert (
-                        first_recipe["prompt"] == f"First visual description"
-                        if scene_index == 0
-                        else "Second visual description"
-                    )
+                        # First sub-video should have image path, others should not
+                        first_recipe = scene_data["recipe_list"][0]
+                        assert first_recipe["recipe_type"] == "WanVideoRecipeType"
+                        assert (
+                            first_recipe["prompt"] == f"First visual description"
+                            if scene_index == 0
+                            else "Second visual description"
+                        )
 
-                    for sub_video_index in range(1, 3):
-                        sub_recipe = scene_data["recipe_list"][sub_video_index]
-                        assert sub_recipe["media_path"] is None
+                        for sub_video_index in range(1, 3):
+                            sub_recipe = scene_data["recipe_list"][sub_video_index]
+                            assert sub_recipe["media_path"] is None
 
     def test_recipe_builder_with_existing_valid_recipe(self, story_setup):
         """Test that builder doesn't recreate valid existing recipes."""
         with patch("logging_utils.logger"):
-            with patch("ai_video_creator.modules.video.video_recipe_builder.begin_file_logging"):
-                # Create first recipe
-                builder1 = SubVideoRecipeBuilder(story_setup, 0)
-                builder1.create_video_recipe(sub_videos_length=2)
+            with patch("ai_video_creator.modules.video.sub_video_recipe_builder.begin_file_logging"):
+                with patch("ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration", return_value=10.0):
+                    # Create first recipe
+                    builder1 = SubVideoRecipeBuilder(story_setup, 0)
+                    builder1.create_video_recipe()
 
-                recipe_file = builder1._VideoRecipeBuilder__paths.video_recipe_file
+                    recipe_file = builder1._SubVideoRecipeBuilder__paths.video_recipe_file
 
-                # Load the original content
-                with open(recipe_file, "r", encoding="utf-8") as f:
-                    original_content = json.load(f)
+                    # Load the original content
+                    with open(recipe_file, "r", encoding="utf-8") as f:
+                        original_content = json.load(f)
 
-                # Create second builder - should use existing recipe
-                builder2 = SubVideoRecipeBuilder(story_setup, 0)
-                builder2.create_video_recipe(sub_videos_length=2)
+                    # Create second builder - should use existing recipe
+                    builder2 = SubVideoRecipeBuilder(story_setup, 0)
+                    builder2.create_video_recipe()
 
-                # Content should be the same (recipes should not be recreated)
-                with open(recipe_file, "r", encoding="utf-8") as f:
-                    new_content = json.load(f)
+                    # Content should be the same (recipes should not be recreated)
+                    with open(recipe_file, "r", encoding="utf-8") as f:
+                        new_content = json.load(f)
 
-                # The content should be essentially the same
-                assert len(original_content["video_data"]) == len(
-                    new_content["video_data"]
-                )
+                    # The content should be essentially the same
+                    assert len(original_content["video_data"]) == len(
+                        new_content["video_data"]
+                    )
 
-                # Check that prompts are the same (main content unchanged)
-                for i in range(len(original_content["video_data"])):
-                    original_recipes = original_content["video_data"][i]["recipe_list"]
-                    new_recipes = new_content["video_data"][i]["recipe_list"]
-                    assert len(original_recipes) == len(new_recipes)
-                    for j in range(len(original_recipes)):
-                        assert original_recipes[j]["prompt"] == new_recipes[j]["prompt"]
+                    # Check that prompts are the same (main content unchanged)
+                    for i in range(len(original_content["video_data"])):
+                        original_recipes = original_content["video_data"][i]["recipe_list"]
+                        new_recipes = new_content["video_data"][i]["recipe_list"]
+                        assert len(original_recipes) == len(new_recipes)
+                        for j in range(len(original_recipes)):
+                            assert original_recipes[j]["prompt"] == new_recipes[j]["prompt"]
 
     def test_recipe_builder_with_different_story_data(self, tmp_path):
         """Test recipe builder with different story structures."""
@@ -180,25 +182,26 @@ class TestVideoRecipeBuilder:
             json.dump(empty_assets, f)
 
         with patch("logging_utils.logger"):
-            with patch("ai_video_creator.modules.video.video_recipe_builder.begin_file_logging"):
-                builder = SubVideoRecipeBuilder(story_folder, 0)
-                builder.create_video_recipe(sub_videos_length=4)
+            with patch("ai_video_creator.modules.video.sub_video_recipe_builder.begin_file_logging"):
+                with patch("ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration", return_value=10.0):
+                    builder = SubVideoRecipeBuilder(story_folder, 0)
+                    builder.create_video_recipe()
 
-                recipe_file = builder._VideoRecipeBuilder__paths.video_recipe_file
-                with open(recipe_file, "r", encoding="utf-8") as f:
-                    saved_recipe = json.load(f)
+                    recipe_file = builder._SubVideoRecipeBuilder__paths.video_recipe_file
+                    with open(recipe_file, "r", encoding="utf-8") as f:
+                        saved_recipe = json.load(f)
 
-                # Should have 3 scenes
-                assert len(saved_recipe["video_data"]) == 3
+                    # Should have 3 scenes
+                    assert len(saved_recipe["video_data"]) == 3
 
-                # Verify all prompts are correctly saved
-                for i in range(3):
-                    scene_data = saved_recipe["video_data"][i]
-                    assert len(scene_data["recipe_list"]) == 4
-                    # All recipes in a scene should have the same prompt (visual description)
-                    expected_prompt = f"Visual {i+1}"
-                    for recipe in scene_data["recipe_list"]:
-                        assert recipe["prompt"] == expected_prompt
+                    # Verify all prompts are correctly saved
+                    for i in range(3):
+                        scene_data = saved_recipe["video_data"][i]
+                        assert len(scene_data["recipe_list"]) == 3  # Changed from 4 to 3 based on audio duration calculation
+                        # All recipes in a scene should have the same prompt (visual description)
+                        expected_prompt = f"Visual {i+1}"
+                        for recipe in scene_data["recipe_list"]:
+                            assert recipe["prompt"] == expected_prompt
 
     def test_recipe_builder_handles_missing_assets(self, tmp_path):
         """Test recipe builder handles missing narrator and image assets gracefully."""
@@ -223,17 +226,18 @@ class TestVideoRecipeBuilder:
         # Don't create narrator and image assets file
 
         with patch("logging_utils.logger"):
-            with patch("ai_video_creator.modules.video.video_recipe_builder.begin_file_logging"):
-                builder = SubVideoRecipeBuilder(story_folder, 0)
-                # Should not crash, should handle missing assets gracefully
-                builder.create_video_recipe(sub_videos_length=2)
+            with patch("ai_video_creator.modules.video.sub_video_recipe_builder.begin_file_logging"):
+                with patch("ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration", return_value=10.0):
+                    builder = SubVideoRecipeBuilder(story_folder, 0)
+                    # Should not crash, should handle missing assets gracefully
+                    builder.create_video_recipe()
 
-                recipe_file = builder._VideoRecipeBuilder__paths.video_recipe_file
-                assert recipe_file.exists()
+                    recipe_file = builder._SubVideoRecipeBuilder__paths.video_recipe_file
+                    assert recipe_file.exists()
 
-                with open(recipe_file, "r", encoding="utf-8") as f:
-                    saved_recipe = json.load(f)
+                    with open(recipe_file, "r", encoding="utf-8") as f:
+                        saved_recipe = json.load(f)
 
-                # Should still create video data
-                assert len(saved_recipe["video_data"]) == 1
-                assert len(saved_recipe["video_data"][0]["recipe_list"]) == 2
+                    # Should still create video data
+                    assert len(saved_recipe["video_data"]) == 1
+                    assert len(saved_recipe["video_data"][0]["recipe_list"]) == 3  # Changed from 2 to 3 based on audio duration calculation

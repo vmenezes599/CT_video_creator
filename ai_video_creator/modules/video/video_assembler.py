@@ -24,7 +24,8 @@ from ai_video_creator.utils import (
     create_video_segment_from_sub_video_and_audio_freeze_last_frame,
     create_video_segment_from_sub_video_and_audio_reverse_video,
     create_video_segment_from_image_and_audio,
-    concatenate_videos,
+    concatenate_videos_with_reencoding,
+    concatenate_videos_no_reencoding,
     VideoCreatorPaths,
 )
 
@@ -68,7 +69,19 @@ class VideoAssembler:
             self.output_path = self.__paths.video_output_file
             self._temp_files = []
 
-    def _combine_image_audio_segment(self, image_path: str, audio_path: str) -> str:
+    def __del__(self):
+        """
+        Destructor to clean up temporary files.
+        """
+        logger.info(f"Cleaning up {len(self._temp_files)} temporary files")
+        for f in self._temp_files:
+            file_path = Path(f)
+            if file_path.exists():
+                logger.debug(f"Removing temporary file: {file_path.name}")
+                file_path.unlink()
+        logger.info("Cleanup completed")
+
+    def _combine_image_with_audio(self, image_path: str, audio_path: str) -> str:
         """
         Generate a video segment from a image and audio file.
         """
@@ -85,7 +98,7 @@ class VideoAssembler:
         self._temp_files.append(output_path)
         return output_path
 
-    def _combine_sub_video_audio_segment(self, video_path: str, audio_path: str) -> str:
+    def _combine_sub_video_with_audio(self, video_path: str, audio_path: str) -> str:
         """
         Generate a video segment from a video and audio file.
         """
@@ -102,19 +115,6 @@ class VideoAssembler:
         self._temp_files.append(output_path)
         return output_path
 
-    def _concat_video_segments(self, video_segments: list[Path]) -> Path:
-        """
-        Concatenate video segments into a single video file.
-
-        :param video_segments: List of paths to video segment files
-        :return: Path to the concatenated video file
-        """
-        output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_raw")
-
-        return concatenate_videos(
-            video_segments=video_segments, output_path=output_video_path
-        )
-
     def _compose(self, video_segments: list[Path]):
         """
         Generate a video from a list of images.
@@ -124,7 +124,10 @@ class VideoAssembler:
         logger.info(f"Composing final video from {len(video_segments)} segments")
 
         # Step 2: Create concat list
-        raw_video_path = self._concat_video_segments(video_segments)
+        output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_raw")
+        raw_video_path = concatenate_videos_with_reencoding(
+            video_segments=video_segments, output_path=output_video_path
+        )
         # self._temp_files.append(raw_video_path)
 
         # Generate subtitles using SubtitleGenerator
@@ -137,14 +140,6 @@ class VideoAssembler:
         # burn_subtitles_to_video(
         #    video_path=video_path, srt_path=srt_path, output_path=self.output_path
         # )
-
-        logger.info(f"Cleaning up {len(self._temp_files)} temporary files")
-        for f in self._temp_files:
-            file_path = Path(f)
-            if file_path.exists():
-                logger.debug(f"Removing temporary file: {file_path.name}")
-                file_path.unlink()
-        logger.info("Cleanup completed")
 
     def _apply_image_effects(self, image_file_paths: list[Path]) -> list[Path]:
         """
@@ -221,31 +216,36 @@ class VideoAssembler:
                 f"Processing segment {i}/{len(narrator_file_paths)}: {Path(image_path).name}"
             )
 
-            video_segment = self._combine_image_audio_segment(image_path, audio_path)
+            video_segment = self._combine_image_with_audio(image_path, audio_path)
             video_segments.append(video_segment)
 
         logger.info(f"Created {len(video_segments)} video segments")
 
         return video_segments
 
-    def _upscale_and_frame_interp_videos(
-        self, video_file_paths: list[Path]
+    def _upscale_and_frame_interp_video_list(
+        self, sub_video_file_paths: list[Path]
     ) -> list[Path]:
         """
         Upscale and apply frame interpolation to the video files if needed.
         """
+        logger.info(
+            f"Upscaling and frame interpolating {len(sub_video_file_paths)} videos"
+        )
         requests = ComfyUIRequests()
 
         workflows: list[VideoUpscaleFrameInterpWorkflow] = []
         copied_files: list[Path] = []
 
-        for video_path in video_file_paths:
+        for video_path in sub_video_file_paths:
             comfyui_video_path = copy_media_to_comfyui_input_folder(video_path)
             copied_files.append(comfyui_video_path)
 
+            output_file_name = f"{comfyui_video_path.stem}_upscaled"
+
             workflow = VideoUpscaleFrameInterpWorkflow()
             workflow.set_video_path(comfyui_video_path.name)
-            workflow.set_output_filename(comfyui_video_path.stem)
+            workflow.set_output_filename(output_file_name)
             workflows.append(workflow)
 
         processed_videos = requests.comfyui_ensure_send_all_prompts(workflows)
@@ -259,7 +259,41 @@ class VideoAssembler:
         for video in processed_videos_paths:
             self._temp_files.append(video)
 
+        logger.info(
+            f"Finished upscaling and frame interpolating videos: {len(processed_videos_paths)}"
+        )
+
         return processed_videos_paths
+
+    def _upscale_and_frame_interp_sub_videos(
+        self, sub_video_file_paths: list[list[Path]]
+    ) -> list[Path]:
+        """
+        Upscale and apply frame interpolation to the video files if needed.
+        """
+        logger.info(
+            f"Upscaling and frame interpolating {len(sub_video_file_paths)} videos"
+        )
+
+        scalled_fragments: list[Path] = []
+
+        for sublist in sub_video_file_paths:
+            logger.info(f"Sublist with {len(sublist)} videos")
+
+            scalled_sub_videos = self._upscale_and_frame_interp_video_list(sublist)
+
+            first_in_sublist = scalled_sub_videos[0]
+            output_file_path = first_in_sublist.with_stem(
+                f"{first_in_sublist.stem}_upscaled_and_concatenated"
+            )
+            contatenated_scalled_sub_videos = concatenate_videos_no_reencoding(
+                video_segments=scalled_sub_videos,
+                output_path=output_file_path,
+            )
+            scalled_fragments.append(contatenated_scalled_sub_videos)
+            self._temp_files.append(contatenated_scalled_sub_videos)
+
+        return scalled_fragments
 
     def _create_video_segments_from_sub_videos(self):
         """
@@ -268,14 +302,17 @@ class VideoAssembler:
 
         # Extract data from video recipe
         narrator_file_paths = self.narrator_and_image_assets.narrator_assets
+        sub_video_file_paths = self.video_assets.sub_video_assets
         video_file_paths = self.video_assets.assembled_sub_video
 
         logger.info(
-            f"Processing {len(narrator_file_paths)} audio files and {len(video_file_paths)} video files"
+            f"Processing {len(narrator_file_paths)} audio files and {len(sub_video_file_paths)} video files"
         )
 
-        # processed_videos = self._upscale_and_frame_interp_videos(video_file_paths)
-        processed_videos = video_file_paths
+        # processed_videos = self._upscale_and_frame_interp_sub_videos(
+        #    sub_video_file_paths
+        # )
+        processed_videos = self._upscale_and_frame_interp_video_list(video_file_paths)
 
         processed_videos = self._apply_video_effects(processed_videos)
         processed_narrators = self._apply_narrator_effects(narrator_file_paths)
@@ -288,9 +325,7 @@ class VideoAssembler:
                 f"Processing segment {i}/{len(narrator_file_paths)}: {Path(video_path).name}"
             )
 
-            video_segment = self._combine_sub_video_audio_segment(
-                video_path, audio_path
-            )
+            video_segment = self._combine_sub_video_with_audio(video_path, audio_path)
             video_segments.append(video_segment)
 
         logger.info(f"Created {len(video_segments)} video segments")

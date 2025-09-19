@@ -61,6 +61,11 @@ class SubVideoRecipeBuilder:
     def _calculate_sub_videos_count(self, sub_video_index: int) -> int:
         """Calculate the number of sub-videos to generate per prompt."""
 
+        # Handle case where narrator assets don't exist
+        if (sub_video_index >= len(self.__narrator_and_image_assets.narrator_assets) or
+            self.__narrator_and_image_assets.narrator_assets[sub_video_index] is None):
+            return self._min_sub_videos
+
         audio_duration = get_audio_duration(
             str(self.__narrator_and_image_assets.narrator_assets[sub_video_index])
         )

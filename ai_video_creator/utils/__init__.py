@@ -11,10 +11,11 @@ from .ffmpeg_wrapper import (
     create_video_segment_from_sub_video_and_audio_freeze_last_frame,
     create_video_segment_from_sub_video_and_audio_reverse_video,
     create_video_segment_from_image_and_audio,
+    concatenate_videos_with_reencoding,
+    concatenate_videos_no_reencoding,
     extend_audio_to_duration,
     burn_subtitles_to_video,
     get_audio_duration,
-    concatenate_videos,
 )
 from .video_creator_paths import VideoCreatorPaths
 
@@ -23,12 +24,13 @@ __all__ = [
     "create_video_segment_from_sub_video_and_audio_freeze_last_frame",
     "create_video_segment_from_sub_video_and_audio_reverse_video",
     "create_video_segment_from_image_and_audio",
+    "concatenate_videos_with_reencoding",
+    "concatenate_videos_no_reencoding",
     "ensure_collection_index_exists",
     "get_next_available_filename",
     "extend_audio_to_duration",
     "burn_subtitles_to_video",
     "get_audio_duration",
-    "concatenate_videos",
     "VideoCreatorPaths",
     "safe_copy",
     "safe_move",

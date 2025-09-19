@@ -62,21 +62,24 @@ class TestVideoAssetManager:
             json.dump(narrator_image_data, f)
 
         # Create a test video recipe file
-        recipe_file = video_folder / "test_story_chapter_001_video_recipe.json"
+        recipe_file = video_folder / "test_story_chapter_001_sub_video_recipe.json"
         test_recipe = {
             "video_data": [
                 {
                     "index": 1,
+                    "extra_data": {},
                     "recipe_list": [
                         {
                             "prompt": "Test description 1",
                             "media_path": "/path/to/image1.jpg",
+                            "color_match_media_path": "/path/to/color_match1.jpg",
                             "seed": 12345,
                             "recipe_type": "WanVideoRecipeType",
                         },
                         {
                             "prompt": "Test description 1",
                             "media_path": None,
+                            "color_match_media_path": "/path/to/color_match1.jpg",
                             "seed": 67890,
                             "recipe_type": "WanVideoRecipeType",
                         },
@@ -84,16 +87,19 @@ class TestVideoAssetManager:
                 },
                 {
                     "index": 2,
+                    "extra_data": {},
                     "recipe_list": [
                         {
                             "prompt": "Test description 2",
                             "media_path": "/path/to/image2.jpg",
+                            "color_match_media_path": "/path/to/color_match2.jpg",
                             "seed": 11111,
                             "recipe_type": "WanVideoRecipeType",
                         },
                         {
                             "prompt": "Test description 2",
                             "media_path": None,
+                            "color_match_media_path": "/path/to/color_match2.jpg",
                             "seed": 22222,
                             "recipe_type": "WanVideoRecipeType",
                         },
@@ -159,15 +165,17 @@ class TestVideoAssetManager:
         """Test VideoAssetManager loading existing asset files."""
         video_folder = story_setup_with_recipe / "video"
         video_folder.mkdir(parents=True, exist_ok=True)
-        asset_file = video_folder / "test_story_chapter_001_video_assets.json"
+        asset_file = video_folder / "test_story_chapter_001_sub_video_assets.json"
 
         existing_data = {
             "assets": [
                 {
+                    "index": 1,
                     "video_asset": "/existing/video1.mp4",
                     "sub_video_assets": ["/existing/sub1.mp4", "/existing/sub2.mp4"],
                 },
                 {
+                    "index": 2,
                     "video_asset": "/existing/video2.mp4",
                     "sub_video_assets": ["/existing/sub3.mp4"],
                 },
@@ -198,11 +206,12 @@ class TestVideoAssetManager:
         """Test asset synchronization when asset file has different size than recipe."""
         video_folder = story_setup_with_recipe / "video"
         video_folder.mkdir(parents=True, exist_ok=True)
-        asset_file = video_folder / "test_story_chapter_001_video_assets.json"
+        asset_file = video_folder / "test_story_chapter_001_sub_video_assets.json"
 
         existing_data = {
             "assets": [
                 {
+                    "index": 1,
                     "video_asset": "/existing/video1.mp4",
                     "sub_video_assets": ["/existing/sub1.mp4"],
                 }
@@ -231,7 +240,7 @@ class TestVideoAssetManager:
         """Test that cleanup_assets removes files not referenced in assets."""
         video_folder = story_setup_with_recipe / "video"
         video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "video"
+        assets_folder = video_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create some asset files that should be kept
@@ -283,7 +292,7 @@ class TestVideoAssetManager:
         """Test that cleanup_assets properly handles None values in asset lists."""
         video_folder = story_setup_with_recipe / "video"
         video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "video"
+        assets_folder = video_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create some files
@@ -314,7 +323,7 @@ class TestVideoAssetManager:
         """Test that cleanup_assets only removes files, not directories."""
         video_folder = story_setup_with_recipe / "video"
         video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "video"
+        assets_folder = video_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create a subdirectory

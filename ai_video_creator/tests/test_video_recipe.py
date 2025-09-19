@@ -94,6 +94,7 @@ class TestVideoRecipeFile:
                         {
                             "prompt": "Loaded video prompt",
                             "media_path": "/loaded/image.jpg",
+                            "color_match_media_path": "/loaded/color_match.jpg",
                             "seed": 99999,
                             "recipe_type": "WanVideoRecipeType",
                         }
@@ -155,11 +156,7 @@ class TestVideoRecipeFile:
             for sub_video in range(2):
                 video_recipe = WanVideoRecipe(
                     prompt=f"Scene {scene} sub-video {sub_video}",
-                    color_match_media_path=(
-                        f"/path/to/scene_{scene}_color_match.jpg"
-                        if sub_video == 0
-                        else None
-                    ),
+                    color_match_media_path=f"/path/to/scene_{scene}_color_match.jpg",
                     media_path=(
                         f"/path/to/scene_{scene}_image.jpg" if sub_video == 0 else None
                     ),
