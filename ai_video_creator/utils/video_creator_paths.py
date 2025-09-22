@@ -30,7 +30,7 @@ class VideoCreatorPaths:
         self.videos_asset_folder.mkdir(parents=True, exist_ok=True)
 
         # Generate recipe name
-        self.name_stem = f"{story_folder.stem}_{self.chapter_prompt_path.stem}"
+        self.name_stem = f"{self.chapter_prompt_path.stem}"
 
         # Recipe file path
         self.narrator_and_image_recipe_file = (

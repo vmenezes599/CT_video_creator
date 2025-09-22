@@ -12,13 +12,48 @@ class SubVideoAssets:
 
     def __init__(self, asset_file_path: Path):
         """Initialize VideoAssets with file path and expected scene count."""
+        self.asset_file_parent = asset_file_path.parent
         self.asset_file_path = asset_file_path
         self.assembled_sub_video: list[Path] = []
         self.sub_video_assets: list[list[Path]] = []
         self._load_assets_from_file()
 
+    def __is_within_directory(self, base: Path, target: Path) -> bool:
+        """
+        Check if a target path is within a base directory.
+        Security method to prevent path traversal attacks.
+        """
+        try:
+            return base.resolve(strict=False) in target.resolve(
+                strict=False
+            ).parents or base.resolve(strict=False) == target.resolve(strict=False)
+        except (FileNotFoundError, RuntimeError, OSError):
+            return False
+
+    def __validate_asset_path(self, asset_path: Path) -> Path:
+        """
+        Validate and resolve asset path, ensuring it's within the allowed directory.
+        Returns the validated path or raises ValueError for security violations.
+        """
+        try:
+            # Resolve the path relative to asset_file_parent if it's relative
+            if not asset_path.is_absolute():
+                resolved_path = (self.asset_file_parent / asset_path).resolve(
+                    strict=False
+                )
+            else:
+                resolved_path = asset_path.resolve(strict=False)
+
+            # Security check: ensure the path is within the allowed directory
+            if not self.__is_within_directory(self.asset_file_parent, resolved_path):
+                raise ValueError(f"Path traversal attempt detected: {asset_path}")
+
+            return resolved_path
+        except (FileNotFoundError, RuntimeError, OSError) as e:
+            raise ValueError(f"Invalid path: {asset_path} - {e}") from e
+
     def _load_assets_from_file(self):
-        """Load assets from JSON file."""
+        """Load assets from JSON file with security validation."""
         try:
             logger.debug(f"Loading video assets from: {self.asset_file_path.name}")
             with open(self.asset_file_path, "r", encoding="utf-8") as file:
@@ -35,17 +70,73 @@ class SubVideoAssets:
                 # Load assets from the "assets" array format
                 for index, asset in enumerate(assets):
 
-                    # Load video asset, skip None/empty values
+                    # Load video asset with security validation
                     video_value = asset.get("video_asset")
                     if video_value is not None and video_value != "":
-                        self.assembled_sub_video[index] = Path(video_value)
+                        try:
+                            video_path = Path(video_value)
+                            # Handle both absolute and relative paths for backward compatibility
+                            if video_path.is_absolute():
+                                # Check if absolute path is within allowed directory
+                                if self.__is_within_directory(
+                                    self.asset_file_parent, video_path
+                                ):
+                                    validated_path = video_path.resolve(strict=False)
+                                    self.assembled_sub_video[index] = validated_path
+                                    logger.debug(
+                                        f"Migrated absolute video path at index {index}: {video_path}"
+                                    )
+                                else:
+                                    logger.warning(
+                                        f"Absolute video path outside allowed directory at index {index}: {video_path}"
+                                    )
+                                    self.assembled_sub_video[index] = None
+                            else:
+                                # Relative path - use existing validation
+                                validated_path = self.__validate_asset_path(video_path)
+                                self.assembled_sub_video[index] = validated_path
+                        except ValueError as e:
+                            logger.warning(f"Invalid video path at index {index}: {e}")
+                            self.assembled_sub_video[index] = None
                     else:
                         self.assembled_sub_video[index] = None
 
                     sub_video_assets = asset.get("sub_video_assets", [])
                     for sub_video in sub_video_assets:
                         if sub_video is not None and sub_video != "":
-                            self.sub_video_assets[index].append(Path(sub_video))
+                            try:
+                                sub_video_path = Path(sub_video)
+                                # Handle both absolute and relative paths for backward compatibility
+                                if sub_video_path.is_absolute():
+                                    # Check if absolute path is within allowed directory
+                                    if self.__is_within_directory(
+                                        self.asset_file_parent, sub_video_path
+                                    ):
+                                        validated_path = sub_video_path.resolve(
+                                            strict=False
+                                        )
+                                        self.sub_video_assets[index].append(
+                                            validated_path
+                                        )
+                                        logger.debug(
+                                            f"Migrated absolute sub-video path at index {index}: {sub_video_path}"
+                                        )
+                                    else:
+                                        logger.warning(
+                                            f"Absolute sub-video path outside allowed directory at index {index}: {sub_video_path}"
+                                        )
+                                        self.sub_video_assets[index].append(None)
+                                else:
+                                    # Relative path - use existing validation
+                                    validated_path = self.__validate_asset_path(
+                                        sub_video_path
+                                    )
+                                    self.sub_video_assets[index].append(validated_path)
+                            except ValueError as e:
+                                logger.warning(
+                                    f"Invalid sub-video path at index {index}: {e}"
+                                )
+                                self.sub_video_assets[index].append(None)
                         else:
                             self.sub_video_assets[index].append(None)
 
@@ -72,24 +163,51 @@ class SubVideoAssets:
             self.sub_video_assets = []
 
     def save_assets_to_file(self) -> None:
-        """Save the current state of the video assets to a file."""
+        """Save the current state of the video assets to a file with relative paths."""
         try:
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 assets = []
                 # Ensure both lists have the same length
-                max_length = max(len(self.assembled_sub_video), len(self.sub_video_assets))
-                
+                max_length = max(
+                    len(self.assembled_sub_video), len(self.sub_video_assets)
+                )
+
                 for i in range(max_length):
-                    video_asset = self.assembled_sub_video[i] if i < len(self.assembled_sub_video) else None
-                    sub_video_assets = self.sub_video_assets[i] if i < len(self.sub_video_assets) else []
-                    
+                    video_asset = (
+                        self.assembled_sub_video[i]
+                        if i < len(self.assembled_sub_video)
+                        else None
+                    )
+                    sub_video_assets = (
+                        self.sub_video_assets[i]
+                        if i < len(self.sub_video_assets)
+                        else []
+                    )
+
+                    # Convert paths to relative paths for storage
+                    video_asset_relative = None
+                    if video_asset is not None:
+                        video_asset_relative = str(
+                            video_asset.relative_to(self.asset_file_parent.resolve())
+                        )
+
+                    sub_video_assets_relative = []
+                    for sub_video_asset in sub_video_assets:
+                        if sub_video_asset is not None:
+                            sub_video_assets_relative.append(
+                                str(
+                                    sub_video_asset.relative_to(
+                                        self.asset_file_parent.resolve()
+                                    )
+                                )
+                            )
+                        else:
+                            sub_video_assets_relative.append(None)
+
                     videos = {
                         "index": i + 1,
-                        "video_asset": str(video_asset) if video_asset else None,
-                        "sub_video_assets": [
-                            str(sub_video_asset) if sub_video_asset else None
-                            for sub_video_asset in sub_video_assets
-                        ],
+                        "video_asset": video_asset_relative,
+                        "sub_video_assets": sub_video_assets_relative,
                     }
 
                     assets.append(videos)
@@ -103,24 +221,40 @@ class SubVideoAssets:
             )
 
     def set_scene_video(self, scene_index: int, video_file_path: Path) -> None:
-        """Set video file path for a specific scene."""
-        ensure_collection_index_exists(self.assembled_sub_video, scene_index)
-        ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
-        self.assembled_sub_video[scene_index] = video_file_path
-        logger.debug(f"Set video for scene {scene_index + 1}: {video_file_path.name}")
+        """Set video file path for a specific scene with security validation."""
+        try:
+            # Validate the path for security
+            validated_path = self.__validate_asset_path(video_file_path)
+
+            ensure_collection_index_exists(self.assembled_sub_video, scene_index)
+            ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
+            self.assembled_sub_video[scene_index] = validated_path
+            logger.debug(
+                f"Set video for scene {scene_index + 1}: {validated_path.name}"
+            )
+        except ValueError as e:
+            logger.error(f"Failed to set video for scene {scene_index + 1}: {e}")
+            raise
 
     def set_scene_sub_video(
         self, scene_index: int, sub_video_index: int, sub_video_file_path: Path
     ) -> None:
-        """Append a sub-video file path for a specific scene."""
-        ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
-        ensure_collection_index_exists(
-            self.sub_video_assets[scene_index], sub_video_index
-        )
-        self.sub_video_assets[scene_index][sub_video_index] = sub_video_file_path
-        logger.debug(
-            f"Appended sub-video for scene {scene_index + 1}: {sub_video_file_path.name}"
-        )
+        """Append a sub-video file path for a specific scene with security validation."""
+        try:
+            # Validate the path for security
+            validated_path = self.__validate_asset_path(sub_video_file_path)
+
+            ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
+            ensure_collection_index_exists(
+                self.sub_video_assets[scene_index], sub_video_index
+            )
+            self.sub_video_assets[scene_index][sub_video_index] = validated_path
+            logger.debug(
+                f"Set sub-video for scene {scene_index + 1}: {validated_path.name}"
+            )
+        except ValueError as e:
+            logger.error(f"Failed to set sub-video for scene {scene_index + 1}: {e}")
+            raise
 
     def clear_scene_assets(self, scene_index: int) -> None:
         """Clear all assets for a specific scene."""
