@@ -147,7 +147,7 @@ class NarratorAndImageAssetManager:
         with begin_file_logging(
             name="create_narrator_and_images_from_recipes",
             log_level="TRACE",
-            base_folder=self.__paths.video_path,
+            base_folder=self.__paths.video_folder,
         ):
             logger.info("Starting video asset generation process")
 

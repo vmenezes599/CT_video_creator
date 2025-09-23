@@ -187,7 +187,7 @@ class MediaEffectsManager:
         with begin_file_logging(
             name="MediaEffectsManager",
             log_level="TRACE",
-            base_folder=self.__paths.video_path,
+            base_folder=self.__paths.video_folder,
         ):
             logger.info(
                 f"Initializing MediaEffectsManager for story: {story_folder.name}, chapter: {chapter_index}"
@@ -245,7 +245,7 @@ class MediaEffectsManager:
         with begin_file_logging(
             name="MediaEffectsManager",
             log_level="TRACE",
-            base_folder=self.__paths.video_path,
+            base_folder=self.__paths.video_folder,
         ):
             logger.info("Adding default effect values")
 

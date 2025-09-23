@@ -48,7 +48,7 @@ class VideoAssembler:
         with begin_file_logging(
             name="VideoAssembler",
             log_level="TRACE",
-            base_folder=self.__paths.video_path,
+            base_folder=self.__paths.video_folder,
         ):
             self.__subtitle_generator = SubtitleGenerator()
 
@@ -343,7 +343,7 @@ class VideoAssembler:
         with begin_file_logging(
             log_level="TRACE",
             name="assemble_final_video",
-            base_folder=self.__paths.video_path,
+            base_folder=self.__paths.video_folder,
         ):
             logger.info("Starting video assembly process")
 
