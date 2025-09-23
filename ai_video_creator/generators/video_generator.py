@@ -23,15 +23,16 @@ from .ComfyUI_automation.comfyui_video_workflows import WanI2VWorkflow, WanV2VWo
 class VideoRecipeBase:
     """Base class for video recipes."""
 
-    media_path: Path
+    media_path: Path | None
+    color_match_media_path: Path | None
     prompt: str
     seed: int
     recipe_type = "VideoRecipeBase"
 
     def __init__(
         self,
-        media_path: Path,
-        color_match_media_path: Path,
+        media_path: Path | None,
+        color_match_media_path: Path | None,
         prompt: str,
         seed: int,
         recipe_type: str,
@@ -161,6 +162,12 @@ class WanGenerator(IVideoGenerator):
         workflow.set_color_match_filename(str(new_color_match_media_path.name))
         workflow.set_video_path(str(recipe.media_path))
 
+        for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
+            workflow.add_high_lora(lora, strength)
+
+        for lora, strength in zip(recipe.low_lora, recipe.low_lora_strength):
+            workflow.add_low_lora(lora, strength)
+
         workflow.set_seed(recipe.seed)
 
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
@@ -179,14 +186,27 @@ class WanGenerator(IVideoGenerator):
 class WanVideoRecipe(VideoRecipeBase):
     """Video recipe for creating videos from stories."""
 
+    COMPATIBLE_LORAS = [
+        "NSFW-22-H-e8.safetensors",
+        "NSFW-22-L-e8.safetensors",
+    ]
+
     GENERATOR = WanGenerator
 
+    high_lora: list[str]
+    high_lora_strength: list[float]
+    low_lora: list[str]
+    low_lora_strength: list[float]
     recipe_type = "WanVideoRecipeType"
 
     def __init__(
         self,
         prompt: str,
-        color_match_media_path: str,
+        color_match_media_path: str | None,
+        high_lora: list[str] | None = None,
+        high_lora_strength: list[float] | None = None,
+        low_lora: list[str] | None = None,
+        low_lora_strength: list[float] | None = None,
         media_path: str | None = None,
         seed: int | None = None,
     ):
@@ -194,17 +214,50 @@ class WanVideoRecipe(VideoRecipeBase):
 
         Args:
             prompt: Text prompt for media generation
-            media_path: Path to the media file
             color_match_media_path: Path to the color match media file
+            high_lora: List of high LORA models to apply
+            high_lora_strength: List of strengths for each high LORA model
+            low_lora: List of low LORA models to apply
+            low_lora_strength: List of strengths for each low LORA model
+            media_path: Path to the media file
             seed: Seed used for media generation
         """
         super().__init__(
-            color_match_media_path=Path(color_match_media_path),
+            color_match_media_path=(
+                Path(color_match_media_path) if color_match_media_path else None
+            ),
             prompt=prompt,
             media_path=Path(media_path) if media_path else None,
             seed=random.randint(0, 2**64 - 1) if seed is None else seed,
             recipe_type=self.recipe_type,
         )
+        self.high_lora = high_lora if high_lora else []
+        self.high_lora_strength = high_lora_strength if high_lora_strength else []
+
+        # Ensure high_lora and high_lora_strength have the same length
+        # high_lora is the main one, adjust high_lora_strength to match its length
+        if len(self.high_lora_strength) < len(self.high_lora):
+            # Extend with default value 1.0 if shorter
+            self.high_lora_strength.extend(
+                [1.0] * (len(self.high_lora) - len(self.high_lora_strength))
+            )
+        elif len(self.high_lora_strength) > len(self.high_lora):
+            # Clip if longer
+            self.high_lora_strength = self.high_lora_strength[: len(self.high_lora)]
+
+        self.low_lora = low_lora if low_lora else []
+        self.low_lora_strength = low_lora_strength if low_lora_strength else []
+
+        # Ensure low_lora and low_lora_strength have the same length
+        # low_lora is the main one, adjust low_lora_strength to match its length
+        if len(self.low_lora_strength) < len(self.low_lora):
+            # Extend with default value 1.0 if shorter
+            self.low_lora_strength.extend(
+                [1.0] * (len(self.low_lora) - len(self.low_lora_strength))
+            )
+        elif len(self.low_lora_strength) > len(self.low_lora):
+            # Clip if longer
+            self.low_lora_strength = self.low_lora_strength[: len(self.low_lora)]
 
     def to_dict(self) -> dict:
         """Convert ImageRecipe to dictionary.
@@ -214,12 +267,21 @@ class WanVideoRecipe(VideoRecipeBase):
         """
         # TODO: Remove this when web UI is mature?
         requests = ComfyUIRequests()
-        available_loras = requests.comfyui_get_available_loras()
+        comfyui_available_loras = requests.comfyui_get_available_loras()
+
+        # Filter to only include LoRAs that are both in ComfyUI and in COMPATIBLE_LORAS
+        available_loras = [
+            lora for lora in self.COMPATIBLE_LORAS if lora in comfyui_available_loras
+        ]
 
         return {
             "media_path": str(self.media_path) if self.media_path else None,
             "color_match_media_path": str(self.color_match_media_path),
             "prompt": self.prompt,
+            "high_lora": [str(lora) for lora in self.high_lora],
+            "high_lora_strength": [strength for strength in self.high_lora_strength],
+            "low_lora": [str(lora) for lora in self.low_lora],
+            "low_lora_strength": [strength for strength in self.low_lora_strength],
             "available_loras": available_loras,
             "seed": self.seed,
             "recipe_type": self.recipe_type,
@@ -265,8 +327,12 @@ class WanVideoRecipe(VideoRecipeBase):
             raise ValueError(f"Invalid recipe type: {cls.recipe_type}")
 
         return cls(
-            media_path=data["media_path"],
             color_match_media_path=data["color_match_media_path"],
             prompt=data["prompt"],
+            media_path=data["media_path"],
+            high_lora=data.get("high_lora", None),
+            high_lora_strength=data.get("high_lora_strength", None),
+            low_lora=data.get("low_lora", None),
+            low_lora_strength=data.get("low_lora_strength", None),
             seed=data.get("seed", None),
         )

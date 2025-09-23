@@ -48,9 +48,9 @@ class TestNarratorAndImageAssetManager:
         # Create a test recipe file in video folder
         video_folder = story_folder / "video"
         video_folder.mkdir()
-        recipe_file = (
-            video_folder / "test_story_chapter_001_narrator_and_image_recipe.json"
-        )
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir()
+        recipe_file = chapter_folder / "narrator_and_image_recipe.json"
 
         test_recipe = {
             "narrator_data": [
@@ -105,10 +105,23 @@ class TestNarratorAndImageAssetManager:
         with patch("logging_utils.logger"):
             manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            manager.video_assets.set_scene_narrator(
-                0, Path("/generated/narrator_001.mp3")
+            # Create assets folder and test files within the allowed directory
+            assets_folder = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
             )
-            manager.video_assets.set_scene_image(0, Path("/generated/image_001.jpg"))
+            assets_folder.mkdir(parents=True, exist_ok=True)
+
+            test_narrator = assets_folder / "narrator_001.mp3"
+            test_image = assets_folder / "image_001.jpg"
+            test_narrator.touch()
+            test_image.touch()
+
+            manager.video_assets.set_scene_narrator(0, test_narrator)
+            manager.video_assets.set_scene_image(0, test_image)
             manager.video_assets.save_assets_to_file()
 
             asset_file = manager.video_assets.asset_file_path
@@ -119,28 +132,45 @@ class TestNarratorAndImageAssetManager:
 
             assert "assets" in saved_data
             assert len(saved_data["assets"]) == 2
-            assert saved_data["assets"][0]["narrator"] == "/generated/narrator_001.mp3"
-            assert saved_data["assets"][0]["image"] == "/generated/image_001.jpg"
+            assert (
+                saved_data["assets"][0]["narrator"]
+                == "assets/narrator_and_image/narrator_001.mp3"
+            )
+            assert (
+                saved_data["assets"][0]["image"]
+                == "assets/narrator_and_image/image_001.jpg"
+            )
             assert saved_data["assets"][1]["narrator"] == ""
             assert saved_data["assets"][1]["image"] == ""
 
     def test_asset_manager_with_existing_assets(self, story_setup_with_recipe):
         """Test VideoAssetManager loading existing asset files."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        asset_file = (
-            video_folder / "test_story_chapter_001_narrator_and_image_assets.json"
-        )
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        asset_file = chapter_folder / "narrator_and_image_assets.json"
+
+        # Create actual asset files within the allowed directory
+        assets_folder = chapter_folder / "assets" / "narrator_and_image"
+        assets_folder.mkdir(parents=True, exist_ok=True)
+
+        narrator1 = assets_folder / "narrator1.mp3"
+        narrator2 = assets_folder / "narrator2.mp3"
+        image1 = assets_folder / "image1.jpg"
+        image2 = assets_folder / "image2.jpg"
+
+        for file in [narrator1, narrator2, image1, image2]:
+            file.touch()
 
         existing_data = {
             "assets": [
                 {
-                    "narrator": "/existing/narrator1.mp3",
-                    "image": "/existing/image1.jpg",
+                    "narrator": "assets/narrator_and_image/narrator1.mp3",
+                    "image": "assets/narrator_and_image/image1.jpg",
                 },
                 {
-                    "narrator": "/existing/narrator2.mp3",
-                    "image": "/existing/image2.jpg",
+                    "narrator": "assets/narrator_and_image/narrator2.mp3",
+                    "image": "assets/narrator_and_image/image2.jpg",
                 },
             ]
         }
@@ -151,28 +181,36 @@ class TestNarratorAndImageAssetManager:
         with patch("logging_utils.logger"):
             manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            assert manager.video_assets.narrator_assets[0] == Path(
-                "/existing/narrator1.mp3"
-            )
-            assert manager.video_assets.image_assets[0] == Path("/existing/image1.jpg")
-            assert manager.video_assets.narrator_assets[1] == Path(
-                "/existing/narrator2.mp3"
-            )
-            assert manager.video_assets.image_assets[1] == Path("/existing/image2.jpg")
+            assert manager.video_assets.narrator_assets[0] == narrator1
+            assert manager.video_assets.image_assets[0] == image1
+            assert manager.video_assets.narrator_assets[1] == narrator2
+            assert manager.video_assets.image_assets[1] == image2
 
-            assert not manager.video_assets.is_complete()
+            assert manager.video_assets.is_complete()
 
     def test_asset_synchronization_different_sizes(self, story_setup_with_recipe):
         """Test asset synchronization when asset file has different size than recipe."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        asset_file = (
-            video_folder / "test_story_chapter_001_narrator_and_image_assets.json"
-        )
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        asset_file = chapter_folder / "narrator_and_image_assets.json"
+
+        # Create actual asset files within the allowed directory
+        assets_folder = chapter_folder / "assets" / "narrator_and_image"
+        assets_folder.mkdir(parents=True, exist_ok=True)
+
+        narrator1 = assets_folder / "narrator1.mp3"
+        image1 = assets_folder / "image1.jpg"
+
+        for file in [narrator1, image1]:
+            file.touch()
 
         existing_data = {
             "assets": [
-                {"narrator": "/existing/narrator1.mp3", "image": "/existing/image1.jpg"}
+                {
+                    "narrator": "assets/narrator_and_image/narrator1.mp3",
+                    "image": "assets/narrator_and_image/image1.jpg",
+                }
             ]
         }
 
@@ -185,10 +223,8 @@ class TestNarratorAndImageAssetManager:
             assert len(manager.video_assets.narrator_assets) == 2
             assert len(manager.video_assets.image_assets) == 2
 
-            assert manager.video_assets.narrator_assets[0] == Path(
-                "/existing/narrator1.mp3"
-            )
-            assert manager.video_assets.image_assets[0] == Path("/existing/image1.jpg")
+            assert manager.video_assets.narrator_assets[0] == narrator1
+            assert manager.video_assets.image_assets[0] == image1
 
             assert manager.video_assets.narrator_assets[1] is None
             assert manager.video_assets.image_assets[1] is None
@@ -198,8 +234,9 @@ class TestNarratorAndImageAssetManager:
     def test_cleanup_assets_removes_unused_files(self, story_setup_with_recipe):
         """Test that cleanup_assets removes files not referenced in assets."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "narrator_and_image"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = chapter_folder / "assets" / "narrator_and_image"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create some asset files that should be kept
@@ -226,10 +263,16 @@ class TestNarratorAndImageAssetManager:
         with patch("logging_utils.logger"):
             manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            # Set up some assets to be kept
-            manager.video_assets.set_scene_narrator(0, valid_narrator1)
-            manager.video_assets.set_scene_image(0, valid_image1)
-            manager.video_assets.set_scene_narrator(1, valid_narrator2)
+            # Set up some assets to be kept - use relative paths from chapter folder
+            manager.video_assets.set_scene_narrator(
+                0, Path("assets/narrator_and_image/chapter_001_narrator_001.mp3")
+            )
+            manager.video_assets.set_scene_image(
+                0, Path("assets/narrator_and_image/chapter_001_image_001.png")
+            )
+            manager.video_assets.set_scene_narrator(
+                1, Path("assets/narrator_and_image/chapter_001_narrator_002.mp3")
+            )
             # Note: scene 1 has no image asset (None)
 
             # Run cleanup
@@ -250,8 +293,9 @@ class TestNarratorAndImageAssetManager:
     ):
         """Test that cleanup_assets properly handles None values in asset lists."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "narrator_and_image"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = chapter_folder / "assets" / "narrator_and_image"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create some files
@@ -264,8 +308,10 @@ class TestNarratorAndImageAssetManager:
         with patch("logging_utils.logger"):
             manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            # Set only one asset, leaving others as None
-            manager.video_assets.set_scene_narrator(0, valid_file)
+            # Set only one asset, leaving others as None - use relative path
+            manager.video_assets.set_scene_narrator(
+                0, Path("assets/narrator_and_image/valid_asset.mp3")
+            )
             # manager.video_assets.narrator_assets[1] is None
             # manager.video_assets.image_assets[0] and [1] are None
 
@@ -281,8 +327,9 @@ class TestNarratorAndImageAssetManager:
     def test_cleanup_assets_preserves_directories(self, story_setup_with_recipe):
         """Test that cleanup_assets only removes files, not directories."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "narrator_and_image"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = chapter_folder / "assets" / "narrator_and_image"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create a subdirectory
@@ -326,11 +373,15 @@ class TestNarratorAndImageAssetManager:
         mock_audio_gen = Mock()
         mock_image_gen = Mock()
 
-        # Set up return values for the generators
-        expected_audio_file = Path("fake_audio.mp3")
-        expected_image_file = Path("fake_image.png")
-        mock_audio_gen.clone_text_to_speech.return_value = expected_audio_file
-        mock_image_gen.text_to_image.return_value = [expected_image_file]
+        # The generators should return the output file path that was passed to them
+        def mock_audio_generation(recipe, output_file_path):
+            return output_file_path
+
+        def mock_image_generation(recipe, output_file_path):
+            return [output_file_path]
+
+        mock_audio_gen.clone_text_to_speech.side_effect = mock_audio_generation
+        mock_image_gen.text_to_image.side_effect = mock_image_generation
 
         # Mock the generator creation from recipe data
         with patch.object(
@@ -358,20 +409,56 @@ class TestNarratorAndImageAssetManager:
             assert mock_audio_gen.clone_text_to_speech.call_count == 2  # 2 scenes
             assert mock_image_gen.text_to_image.call_count == 2  # 2 scenes
 
+            # The actual files are generated in the chapter asset folder with specific names
+            expected_narrator_path_1 = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
+                / "chapter_001_narrator_001.mp3"
+            )
+            expected_narrator_path_2 = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
+                / "chapter_001_narrator_002.mp3"
+            )
+            expected_image_path_1 = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
+                / "chapter_001_image_001.png"
+            )
+            expected_image_path_2 = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
+                / "chapter_001_image_002.png"
+            )
+
             # Verify assets were set in the video_assets object
             assert (
                 video_asset_manager.video_assets.narrator_assets[0]
-                == expected_audio_file
+                == expected_narrator_path_1
             )
             assert (
                 video_asset_manager.video_assets.narrator_assets[1]
-                == expected_audio_file
+                == expected_narrator_path_2
             )
             assert (
-                video_asset_manager.video_assets.image_assets[0] == expected_image_file
+                video_asset_manager.video_assets.image_assets[0]
+                == expected_image_path_1
             )
             assert (
-                video_asset_manager.video_assets.image_assets[1] == expected_image_file
+                video_asset_manager.video_assets.image_assets[1]
+                == expected_image_path_2
             )
 
     @patch(
@@ -464,11 +551,15 @@ class TestNarratorAndImageAssetManager:
         mock_audio_gen = Mock()
         mock_image_gen = Mock()
 
-        # Set up return values for missing assets
-        expected_audio_file = Path("generated_audio.mp3")
-        expected_image_file = Path("generated_image.png")
-        mock_audio_gen.clone_text_to_speech.return_value = expected_audio_file
-        mock_image_gen.text_to_image.return_value = [expected_image_file]
+        # The generators should return the output file path that was passed to them
+        def mock_audio_generation(recipe, output_file_path):
+            return output_file_path
+
+        def mock_image_generation(recipe, output_file_path):
+            return [output_file_path]
+
+        mock_audio_gen.clone_text_to_speech.side_effect = mock_audio_generation
+        mock_image_gen.text_to_image.side_effect = mock_image_generation
 
         with patch.object(
             video_asset_manager.recipe.narrator_data[0],
@@ -501,15 +592,44 @@ class TestNarratorAndImageAssetManager:
             assert (
                 video_asset_manager.video_assets.narrator_assets[0] == existing_audio
             )  # Kept existing
+
+            # Generated assets should be in the expected locations with proper names
+            expected_narrator_path = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
+                / "chapter_001_narrator_002.mp3"
+            )
+            expected_image_path_1 = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
+                / "chapter_001_image_001.png"
+            )
+            expected_image_path_2 = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
+                / "chapter_001_image_002.png"
+            )
+
             assert (
                 video_asset_manager.video_assets.narrator_assets[1]
-                == expected_audio_file
+                == expected_narrator_path
             )  # Generated new
             assert (
-                video_asset_manager.video_assets.image_assets[0] == expected_image_file
+                video_asset_manager.video_assets.image_assets[0]
+                == expected_image_path_1
             )  # Generated new
             assert (
-                video_asset_manager.video_assets.image_assets[1] == expected_image_file
+                video_asset_manager.video_assets.image_assets[1]
+                == expected_image_path_2
             )  # Generated new
 
     def test_get_missing_narrator_and_image_assets_detection(
@@ -585,7 +705,9 @@ class TestNarratorAndImageAssetManager:
     @patch(
         "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.begin_file_logging"
     )
-    @patch("ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.IAudioGenerator")
+    @patch(
+        "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.IAudioGenerator"
+    )
     def test_generate_narrator_asset_error_handling(
         self, mock_audio_gen_class, mock_logging, story_setup_with_recipe
     ):
@@ -616,7 +738,9 @@ class TestNarratorAndImageAssetManager:
     @patch(
         "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.begin_file_logging"
     )
-    @patch("ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.IImageGenerator")
+    @patch(
+        "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.IImageGenerator"
+    )
     def test_generate_image_asset_error_handling(
         self, mock_image_gen_class, mock_logging, story_setup_with_recipe
     ):

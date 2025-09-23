@@ -47,11 +47,11 @@ class TestVideoAssetManager:
         # Create video folder and necessary files
         video_folder = story_folder / "video"
         video_folder.mkdir()
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir()
 
         # Create narrator and image assets file (dependency)
-        narrator_image_asset_file = (
-            video_folder / "test_story_chapter_001_narrator_and_image_assets.json"
-        )
+        narrator_image_asset_file = chapter_folder / "narrator_and_image_assets.json"
         narrator_image_data = {
             "assets": [
                 {"narrator": "/path/to/narrator1.mp3", "image": "/path/to/image1.jpg"},
@@ -61,8 +61,18 @@ class TestVideoAssetManager:
         with open(narrator_image_asset_file, "w", encoding="utf-8") as f:
             json.dump(narrator_image_data, f)
 
+        # Create asset files referenced in the recipe
+        narrator_image_assets_folder = chapter_folder / "assets" / "narrator_and_image"
+        narrator_image_assets_folder.mkdir(parents=True, exist_ok=True)
+        
+        # Create placeholder files
+        (narrator_image_assets_folder / "image1.jpg").touch()
+        (narrator_image_assets_folder / "image2.jpg").touch()
+        (narrator_image_assets_folder / "color_match1.jpg").touch()
+        (narrator_image_assets_folder / "color_match2.jpg").touch()
+
         # Create a test video recipe file
-        recipe_file = video_folder / "test_story_chapter_001_sub_video_recipe.json"
+        recipe_file = chapter_folder / "sub_video_recipe.json"
         test_recipe = {
             "video_data": [
                 {
@@ -71,15 +81,15 @@ class TestVideoAssetManager:
                     "recipe_list": [
                         {
                             "prompt": "Test description 1",
-                            "media_path": "/path/to/image1.jpg",
-                            "color_match_media_path": "/path/to/color_match1.jpg",
+                            "media_path": "assets/narrator_and_image/image1.jpg",
+                            "color_match_media_path": "assets/narrator_and_image/color_match1.jpg",
                             "seed": 12345,
                             "recipe_type": "WanVideoRecipeType",
                         },
                         {
                             "prompt": "Test description 1",
                             "media_path": None,
-                            "color_match_media_path": "/path/to/color_match1.jpg",
+                            "color_match_media_path": "assets/narrator_and_image/color_match1.jpg",
                             "seed": 67890,
                             "recipe_type": "WanVideoRecipeType",
                         },
@@ -91,15 +101,15 @@ class TestVideoAssetManager:
                     "recipe_list": [
                         {
                             "prompt": "Test description 2",
-                            "media_path": "/path/to/image2.jpg",
-                            "color_match_media_path": "/path/to/color_match2.jpg",
+                            "media_path": "assets/narrator_and_image/image2.jpg",
+                            "color_match_media_path": "assets/narrator_and_image/color_match2.jpg",
                             "seed": 11111,
                             "recipe_type": "WanVideoRecipeType",
                         },
                         {
                             "prompt": "Test description 2",
                             "media_path": None,
-                            "color_match_media_path": "/path/to/color_match2.jpg",
+                            "color_match_media_path": "assets/narrator_and_image/color_match2.jpg",
                             "seed": 22222,
                             "recipe_type": "WanVideoRecipeType",
                         },
@@ -131,13 +141,20 @@ class TestVideoAssetManager:
         with patch("logging_utils.logger"):
             manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
-            manager.video_assets.set_scene_video(0, Path("/generated/video_001.mp4"))
-            manager.video_assets.set_scene_sub_video(
-                0, 0, Path("/generated/sub_video_001_01.mp4")
-            )
-            manager.video_assets.set_scene_sub_video(
-                0, 1, Path("/generated/sub_video_001_02.mp4")
-            )
+            # Create assets folder and test files within the allowed directory
+            assets_folder = story_setup_with_recipe / "video" / "chapter_001" / "assets" / "sub_videos"
+            assets_folder.mkdir(parents=True, exist_ok=True)
+            
+            test_video = assets_folder / "video_001.mp4"
+            test_sub_video_1 = assets_folder / "sub_video_001_01.mp4"
+            test_sub_video_2 = assets_folder / "sub_video_001_02.mp4"
+            test_video.touch()
+            test_sub_video_1.touch()
+            test_sub_video_2.touch()
+
+            manager.video_assets.set_scene_video(0, test_video)
+            manager.video_assets.set_scene_sub_video(0, 0, test_sub_video_1)
+            manager.video_assets.set_scene_sub_video(0, 1, test_sub_video_2)
             manager.video_assets.save_assets_to_file()
 
             asset_file = manager.video_assets.asset_file_path
@@ -148,15 +165,15 @@ class TestVideoAssetManager:
 
             assert "assets" in saved_data
             assert len(saved_data["assets"]) == 2
-            assert saved_data["assets"][0]["video_asset"] == "/generated/video_001.mp4"
+            assert saved_data["assets"][0]["video_asset"] == "assets/sub_videos/video_001.mp4"
             assert len(saved_data["assets"][0]["sub_video_assets"]) == 2
             assert (
                 saved_data["assets"][0]["sub_video_assets"][0]
-                == "/generated/sub_video_001_01.mp4"
+                == "assets/sub_videos/sub_video_001_01.mp4"
             )
             assert (
                 saved_data["assets"][0]["sub_video_assets"][1]
-                == "/generated/sub_video_001_02.mp4"
+                == "assets/sub_videos/sub_video_001_02.mp4"
             )
             assert saved_data["assets"][1]["video_asset"] is None
             assert saved_data["assets"][1]["sub_video_assets"] == []
@@ -164,20 +181,34 @@ class TestVideoAssetManager:
     def test_asset_manager_with_existing_assets(self, story_setup_with_recipe):
         """Test VideoAssetManager loading existing asset files."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        asset_file = video_folder / "test_story_chapter_001_sub_video_assets.json"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        asset_file = chapter_folder / "sub_video_assets.json"
+
+        # Create actual asset files within the allowed directory
+        assets_folder = chapter_folder / "assets" / "sub_videos"
+        assets_folder.mkdir(parents=True, exist_ok=True)
+        
+        video1 = assets_folder / "video1.mp4"
+        video2 = assets_folder / "video2.mp4"
+        sub1 = assets_folder / "sub1.mp4"
+        sub2 = assets_folder / "sub2.mp4"
+        sub3 = assets_folder / "sub3.mp4"
+        
+        for file in [video1, video2, sub1, sub2, sub3]:
+            file.touch()
 
         existing_data = {
             "assets": [
                 {
                     "index": 1,
-                    "video_asset": "/existing/video1.mp4",
-                    "sub_video_assets": ["/existing/sub1.mp4", "/existing/sub2.mp4"],
+                    "video_asset": "assets/sub_videos/video1.mp4",
+                    "sub_video_assets": ["assets/sub_videos/sub1.mp4", "assets/sub_videos/sub2.mp4"],
                 },
                 {
                     "index": 2,
-                    "video_asset": "/existing/video2.mp4",
-                    "sub_video_assets": ["/existing/sub3.mp4"],
+                    "video_asset": "assets/sub_videos/video2.mp4",
+                    "sub_video_assets": ["assets/sub_videos/sub3.mp4"],
                 },
             ]
         }
@@ -188,32 +219,37 @@ class TestVideoAssetManager:
         with patch("logging_utils.logger"):
             manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
-            assert manager.video_assets.assembled_sub_video[0] == Path("/existing/video1.mp4")
-            assert manager.video_assets.assembled_sub_video[1] == Path("/existing/video2.mp4")
+            assert manager.video_assets.assembled_sub_video[0] == video1
+            assert manager.video_assets.assembled_sub_video[1] == video2
             assert len(manager.video_assets.sub_video_assets[0]) == 2
-            assert manager.video_assets.sub_video_assets[0][0] == Path(
-                "/existing/sub1.mp4"
-            )
-            assert manager.video_assets.sub_video_assets[0][1] == Path(
-                "/existing/sub2.mp4"
-            )
+            assert manager.video_assets.sub_video_assets[0][0] == sub1
+            assert manager.video_assets.sub_video_assets[0][1] == sub2
             assert len(manager.video_assets.sub_video_assets[1]) == 1
-            assert manager.video_assets.sub_video_assets[1][0] == Path(
-                "/existing/sub3.mp4"
-            )
+            assert manager.video_assets.sub_video_assets[1][0] == sub3
 
     def test_asset_synchronization_different_sizes(self, story_setup_with_recipe):
         """Test asset synchronization when asset file has different size than recipe."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        asset_file = video_folder / "test_story_chapter_001_sub_video_assets.json"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        asset_file = chapter_folder / "sub_video_assets.json"
+
+        # Create actual asset files within the allowed directory
+        assets_folder = chapter_folder / "assets" / "sub_videos"
+        assets_folder.mkdir(parents=True, exist_ok=True)
+        
+        video1 = assets_folder / "video1.mp4"
+        sub1 = assets_folder / "sub1.mp4"
+        
+        for file in [video1, sub1]:
+            file.touch()
 
         existing_data = {
             "assets": [
                 {
                     "index": 1,
-                    "video_asset": "/existing/video1.mp4",
-                    "sub_video_assets": ["/existing/sub1.mp4"],
+                    "video_asset": "assets/sub_videos/video1.mp4",
+                    "sub_video_assets": ["assets/sub_videos/sub1.mp4"],
                 }
             ]
         }
@@ -227,11 +263,9 @@ class TestVideoAssetManager:
             assert len(manager.video_assets.assembled_sub_video) == 2
             assert len(manager.video_assets.sub_video_assets) == 2
 
-            assert manager.video_assets.assembled_sub_video[0] == Path("/existing/video1.mp4")
+            assert manager.video_assets.assembled_sub_video[0] == video1
             assert len(manager.video_assets.sub_video_assets[0]) == 1
-            assert manager.video_assets.sub_video_assets[0][0] == Path(
-                "/existing/sub1.mp4"
-            )
+            assert manager.video_assets.sub_video_assets[0][0] == sub1
 
             assert manager.video_assets.assembled_sub_video[1] is None
             assert manager.video_assets.sub_video_assets[1] == []
@@ -239,8 +273,9 @@ class TestVideoAssetManager:
     def test_cleanup_assets_removes_unused_files(self, story_setup_with_recipe):
         """Test that cleanup_assets removes files not referenced in assets."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "sub_videos"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = chapter_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create some asset files that should be kept
@@ -291,8 +326,9 @@ class TestVideoAssetManager:
     ):
         """Test that cleanup_assets properly handles None values in asset lists."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "sub_videos"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = chapter_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create some files
@@ -322,8 +358,9 @@ class TestVideoAssetManager:
     def test_cleanup_assets_preserves_directories(self, story_setup_with_recipe):
         """Test that cleanup_assets only removes files, not directories."""
         video_folder = story_setup_with_recipe / "video"
-        video_folder.mkdir(parents=True, exist_ok=True)
-        assets_folder = video_folder / "assets" / "sub_videos"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        assets_folder = chapter_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create a subdirectory
@@ -357,23 +394,32 @@ class TestVideoAssetManager:
         """Test the video asset generation workflow."""
         # Create valid narrator and image assets first
         video_folder = story_setup_with_recipe / "video"
-        narrator_image_asset_file = (
-            video_folder / "test_story_chapter_001_narrator_and_image_assets.json"
-        )
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
+        narrator_image_asset_file = chapter_folder / "narrator_and_image_assets.json"
 
-        # Create temp files to simulate existing assets
-        temp_narrator1 = story_setup_with_recipe / "temp_narrator1.mp3"
-        temp_narrator2 = story_setup_with_recipe / "temp_narrator2.mp3"
-        temp_image1 = story_setup_with_recipe / "temp_image1.jpg"
-        temp_image2 = story_setup_with_recipe / "temp_image2.jpg"
+        # Create actual asset files within the allowed directory
+        assets_folder = chapter_folder / "assets" / "narrator_and_image"
+        assets_folder.mkdir(parents=True, exist_ok=True)
+        
+        temp_narrator1 = assets_folder / "temp_narrator1.mp3"
+        temp_narrator2 = assets_folder / "temp_narrator2.mp3"
+        temp_image1 = assets_folder / "temp_image1.jpg"
+        temp_image2 = assets_folder / "temp_image2.jpg"
 
         for temp_file in [temp_narrator1, temp_narrator2, temp_image1, temp_image2]:
             temp_file.write_text("fake content")
 
         complete_narrator_image_data = {
             "assets": [
-                {"narrator": str(temp_narrator1), "image": str(temp_image1)},
-                {"narrator": str(temp_narrator2), "image": str(temp_image2)},
+                {
+                    "narrator": "assets/narrator_and_image/temp_narrator1.mp3", 
+                    "image": "assets/narrator_and_image/temp_image1.jpg"
+                },
+                {
+                    "narrator": "assets/narrator_and_image/temp_narrator2.mp3", 
+                    "image": "assets/narrator_and_image/temp_image2.jpg"
+                },
             ]
         }
         with open(narrator_image_asset_file, "w", encoding="utf-8") as f:

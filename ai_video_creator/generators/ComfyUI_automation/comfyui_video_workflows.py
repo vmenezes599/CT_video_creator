@@ -16,11 +16,20 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
     Class to handle the workflow for Stable Diffusion in ComfyUI.
     """
 
-    def __init__(self, workflow: str, load_best_config: bool = True) -> None:
+    def __init__(
+        self,
+        workflow: str,
+        first_high_lora_node_index: int,
+        first_low_lora_node_index: int,
+        load_best_config: bool = True,
+    ) -> None:
         """
         Initialize the StableDiffusionWorkflow class.
         """
         super().__init__(workflow)
+
+        self.last_high_lora_node_index = first_high_lora_node_index
+        self.last_low_lora_node_index = first_low_lora_node_index
 
         # Loading best configurations for the workflow
         if load_best_config:
@@ -77,6 +86,49 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
 
+    def _generate_new_lora_node_dict(
+        self, lora_name: str, strength: float, previous_link: int
+    ) -> dict:
+        """Get a dictionary of LORA nodes in the workflow."""
+        lora_dict = {
+            "inputs": {
+                "lora_name": lora_name,
+                "strength_model": strength,
+                "model": [previous_link, 0],
+            },
+            "class_type": "LoraLoaderModelOnly",
+            "_meta": {"title": "LoraLoaderModelOnly"},
+        }
+
+        last_key = self.workflow.keys()[-1]
+        new_last_key = str(int(last_key) + 1)
+
+        return {new_last_key: lora_dict}
+
+    def add_high_lora(self, high_lora_name: str, strength: float) -> None:
+        """Add high LORA to the workflow."""
+        new_entry = self._generate_new_lora_node_dict(
+            high_lora_name, strength, self.last_high_lora_node_index
+        )
+
+        new_entry_key = int(new_entry.keys()[-1])
+        self._replace_node_reference(self.last_high_lora_node_index, new_entry_key)
+
+        self.workflow.update(new_entry)
+        self.last_high_lora_node_index = new_entry_key
+
+    def add_low_lora(self, low_lora_name: str, strength: float) -> None:
+        """Add low LORA to the workflow."""
+        new_entry = self._generate_new_lora_node_dict(
+            low_lora_name, strength, self.last_low_lora_node_index
+        )
+
+        new_entry_key = int(new_entry.keys()[-1])
+        self._replace_node_reference(self.last_low_lora_node_index, new_entry_key)
+
+        self.workflow.update(new_entry)
+        self.last_low_lora_node_index = new_entry_key
+
 
 class WanI2VWorkflow(WanWorkflowBase):
     """
@@ -90,12 +142,18 @@ class WanI2VWorkflow(WanWorkflowBase):
     OUTPUT_FILENAME_NODE_INDEX = 20
     RESOLUTION_NODE_INDEX = 15
     LOAD_IMAGE_NODE_INDEX = 14
+    FIRST_HIGH_LORA_NODE_INDEX = 3
+    FIRST_LOW_LORA_NODE_INDEX = 4
 
     def __init__(self, load_best_config: bool = True) -> None:
         """
         Initialize the StableDiffusionWorkflow class.
         """
-        super().__init__(self.WAN_LORA_WORKFLOW_PATH)
+        super().__init__(
+            self.WAN_LORA_WORKFLOW_PATH,
+            self.FIRST_HIGH_LORA_NODE_INDEX,
+            self.FIRST_LOW_LORA_NODE_INDEX,
+        )
 
         # Loading best configurations for the workflow
         if load_best_config:
@@ -153,12 +211,18 @@ class WanV2VWorkflow(WanWorkflowBase):
     RESOLUTION_NODE_INDEX = 22
     LOAD_VIDEO_NODE_INDEX = 23
     COLOR_MATCH_NODE_INDEX = 29
+    FIRST_HIGH_LORA_NODE_INDEX = 2
+    FIRST_LOW_LORA_NODE_INDEX = 4
 
     def __init__(self, load_best_config: bool = True) -> None:
         """
         Initialize the StableDiffusionWorkflow class.
         """
-        super().__init__(self.WAN_LORA_WORKFLOW_PATH)
+        super().__init__(
+            self.WAN_LORA_WORKFLOW_PATH,
+            self.FIRST_HIGH_LORA_NODE_INDEX,
+            self.FIRST_LOW_LORA_NODE_INDEX,
+        )
 
         # Loading best configurations for the workflow
         if load_best_config:

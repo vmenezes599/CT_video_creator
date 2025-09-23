@@ -24,6 +24,7 @@ class SubVideoRecipe:
 
     def __init__(self, recipe_path: Path):
         """Initialize VideoRecipe with default settings."""
+        self.recipe_file_parent = recipe_path.parent
         self.recipe_path = recipe_path
 
         self.extra_data: list[dict] = []
@@ -36,6 +37,40 @@ class SubVideoRecipe:
         # Extend sub_video_data if needed
         while len(iteratable) <= index:
             iteratable.append(None)
+
+    def __is_within_directory(self, base: Path, target: Path) -> bool:
+        """
+        Check if a target path is within a base directory.
+        Security method to prevent path traversal attacks.
+        """
+        try:
+            return base.resolve(strict=False) in target.resolve(
+                strict=False
+            ).parents or base.resolve(strict=False) == target.resolve(strict=False)
+        except (FileNotFoundError, RuntimeError, OSError):
+            return False
+
+    def __validate_and_resolve_path(self, asset_path: Path) -> Path:
+        """
+        Validate and resolve asset path, ensuring it's within the allowed directory.
+        Returns the validated path or raises ValueError for security violations.
+        """
+        try:
+            # Resolve the path relative to recipe_file_parent if it's relative
+            if not asset_path.is_absolute():
+                resolved_path = (self.recipe_file_parent / asset_path).resolve(
+                    strict=False
+                )
+            else:
+                resolved_path = asset_path.resolve(strict=False)
+
+            # Security check: ensure the path is within the allowed directory
+            if not self.__is_within_directory(self.recipe_file_parent, resolved_path):
+                raise ValueError(f"Path traversal attempt detected: {asset_path}")
+
+            return resolved_path
+        except (FileNotFoundError, RuntimeError, OSError) as e:
+            raise ValueError(f"Invalid path: {asset_path} - {e}") from e
 
     def add_video_data(
         self, video_data: list[VideoRecipeBase], extra_data: dict = None
@@ -91,7 +126,19 @@ class SubVideoRecipe:
         recipe_type = data.get("recipe_type")
 
         if recipe_type == "WanVideoRecipeType":
-            return WanVideoRecipe.from_dict(data)
+            recipe = WanVideoRecipe.from_dict(data)
+            # Validate and resolve media paths
+            if recipe.media_path:
+                recipe.media_path = str(
+                    self.__validate_and_resolve_path(Path(recipe.media_path))
+                )
+            if recipe.color_match_media_path:
+                recipe.color_match_media_path = str(
+                    self.__validate_and_resolve_path(
+                        Path(recipe.color_match_media_path)
+                    )
+                )
+            return recipe
         else:
             logger.error(f"Unknown recipe_type: {recipe_type}")
             raise ValueError(f"Unknown recipe_type: {recipe_type}")
@@ -101,7 +148,7 @@ class SubVideoRecipe:
         self.video_data = []
 
     def to_dict(self) -> dict:
-        """Convert VideoRecipe to dictionary.
+        """Convert VideoRecipe to dictionary with relative paths.
 
         Returns:
             Dictionary representation of the VideoRecipe
@@ -109,10 +156,29 @@ class SubVideoRecipe:
         result = {"video_data": []}
 
         for i, item in enumerate(self.video_data, 1):
+            recipe_list = []
+            for recipe in item:
+                recipe_dict = recipe.to_dict()
+                media_path = recipe.media_path
+                if media_path:
+                    # Convert to relative path for storage
+                    relative_path = Path(media_path).relative_to(
+                        self.recipe_file_parent.resolve()
+                    )
+                    recipe_dict["media_path"] = str(relative_path)
+                color_match_media_path = recipe.color_match_media_path
+                if color_match_media_path:
+                    # Convert to relative path for storage
+                    relative_path = Path(color_match_media_path).relative_to(
+                        self.recipe_file_parent.resolve()
+                    )
+                    recipe_dict["color_match_media_path"] = str(relative_path)
+                recipe_list.append(recipe_dict)
+
             result_item = {
                 "index": i,
                 "extra_data": self.extra_data[i - 1],
-                "recipe_list": [recipe.to_dict() for recipe in item],
+                "recipe_list": recipe_list,
             }
             result["video_data"].append(result_item)
 

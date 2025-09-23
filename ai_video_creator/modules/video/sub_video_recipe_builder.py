@@ -62,8 +62,10 @@ class SubVideoRecipeBuilder:
         """Calculate the number of sub-videos to generate per prompt."""
 
         # Handle case where narrator assets don't exist
-        if (sub_video_index >= len(self.__narrator_and_image_assets.narrator_assets) or
-            self.__narrator_and_image_assets.narrator_assets[sub_video_index] is None):
+        if (
+            sub_video_index >= len(self.__narrator_and_image_assets.narrator_assets)
+            or self.__narrator_and_image_assets.narrator_assets[sub_video_index] is None
+        ):
             return self._min_sub_videos
 
         audio_duration = get_audio_duration(
@@ -120,13 +122,21 @@ class SubVideoRecipeBuilder:
         prompt: Prompt,
         color_match_image_asset: Path,
         image_asset: Path | None = None,
+        high_lora: list[str] | None = None,
+        high_lora_strength: list[float] | None = None,
+        low_lora: list[str] | None = None,
+        low_lora_strength: list[float] | None = None,
         seed: int | None = None,
     ) -> None:
         """Create video recipe from story folder and chapter prompt index."""
         return WanVideoRecipe(
             prompt=prompt.visual_description,
+            high_lora=high_lora if high_lora else None,
+            high_lora_strength=high_lora_strength if high_lora_strength else None,
+            low_lora=low_lora if low_lora else None,
+            low_lora_strength=low_lora_strength if low_lora_strength else None,
             media_path=str(image_asset) if image_asset else None,
-            color_match_media_path=str(color_match_image_asset),
+            color_match_media_path=str(color_match_image_asset) if color_match_image_asset else None,
             seed=seed,
         )
 

@@ -43,11 +43,18 @@ class TestVideoRecipeFile:
         recipe_path = tmp_path / "test_recipe.json"
         recipe = SubVideoRecipe(recipe_path)
 
+        # Create test files within the tmp_path to satisfy path validation
+        test_image = tmp_path / "image.jpg"
+        test_color_match = tmp_path / "color_match_image.jpg"
+        test_image.touch()
+        test_color_match.touch()
+
         # Add real video recipe data
         video_recipe = WanVideoRecipe(
             prompt="Test video prompt",
-            color_match_media_path="/path/to/color_match_image.jpg",
-            media_path="/path/to/image.jpg",
+            color_match_media_path=str(test_color_match),
+            media_path=str(test_image),
+            high_lora=[],  # Required parameter
             seed=12345,
         )
 
@@ -57,7 +64,7 @@ class TestVideoRecipeFile:
         assert len(recipe.video_data) == 1
         assert len(recipe.video_data[0]) == 1  # One recipe in the list
         assert recipe.video_data[0][0].prompt == "Test video prompt"
-        assert str(recipe.video_data[0][0].media_path) == "/path/to/image.jpg"
+        assert str(recipe.video_data[0][0].media_path) == str(test_image)
         assert recipe.video_data[0][0].seed == 12345
 
         # Verify file was created with correct structure
@@ -77,7 +84,9 @@ class TestVideoRecipeFile:
 
         recipe_data = video["recipe_list"][0]
         assert recipe_data["prompt"] == "Test video prompt"
-        assert recipe_data["media_path"] == "/path/to/image.jpg"
+        # Path should be stored as relative in JSON
+        assert recipe_data["media_path"] == "image.jpg"
+        assert recipe_data["color_match_media_path"] == "color_match_image.jpg"
         assert recipe_data["seed"] == 12345
         assert recipe_data["recipe_type"] == "WanVideoRecipeType"
 
@@ -85,7 +94,13 @@ class TestVideoRecipeFile:
         """Test loading recipe from existing file."""
         recipe_path = tmp_path / "existing_recipe.json"
 
-        # Create a test file
+        # Create test files within the tmp_path to satisfy path validation
+        test_image = tmp_path / "image.jpg"
+        test_color_match = tmp_path / "color_match.jpg"
+        test_image.touch()
+        test_color_match.touch()
+
+        # Create a test file with relative paths
         test_data = {
             "video_data": [
                 {
@@ -93,12 +108,14 @@ class TestVideoRecipeFile:
                     "recipe_list": [
                         {
                             "prompt": "Loaded video prompt",
-                            "media_path": "/loaded/image.jpg",
-                            "color_match_media_path": "/loaded/color_match.jpg",
+                            "media_path": "image.jpg",  # Relative path
+                            "color_match_media_path": "color_match.jpg",  # Relative path
+                            "high_lora": [],  # Required field
                             "seed": 99999,
                             "recipe_type": "WanVideoRecipeType",
                         }
                     ],
+                    "extra_data": {},
                 }
             ]
         }
@@ -114,7 +131,9 @@ class TestVideoRecipeFile:
         assert len(recipe.video_data[0]) == 1
         assert isinstance(recipe.video_data[0][0], WanVideoRecipe)
         assert recipe.video_data[0][0].prompt == "Loaded video prompt"
-        assert str(recipe.video_data[0][0].media_path) == "/loaded/image.jpg"
+        # Internal paths should be absolute after loading
+        assert str(recipe.video_data[0][0].media_path) == str(test_image)
+        assert str(recipe.video_data[0][0].color_match_media_path) == str(test_color_match)
         assert recipe.video_data[0][0].seed == 99999
 
     def test_recipe_loading_with_invalid_json(self, tmp_path):
@@ -150,16 +169,25 @@ class TestVideoRecipeFile:
         recipe_path = tmp_path / "multi_scene_recipe.json"
         recipe = SubVideoRecipe(recipe_path)
 
+        # Create test files for multiple scenes
+        scene_files = []
+        for scene in range(3):
+            color_match_file = tmp_path / f"scene_{scene}_color_match.jpg"
+            image_file = tmp_path / f"scene_{scene}_image.jpg"
+            color_match_file.touch()
+            image_file.touch()
+            scene_files.append((image_file, color_match_file))
+
         # Add multiple scenes with sub-videos
         for scene in range(3):
             video_recipes = []
+            image_file, color_match_file = scene_files[scene]
             for sub_video in range(2):
                 video_recipe = WanVideoRecipe(
                     prompt=f"Scene {scene} sub-video {sub_video}",
-                    color_match_media_path=f"/path/to/scene_{scene}_color_match.jpg",
-                    media_path=(
-                        f"/path/to/scene_{scene}_image.jpg" if sub_video == 0 else None
-                    ),
+                    color_match_media_path=str(color_match_file),
+                    media_path=str(image_file) if sub_video == 0 else None,
+                    high_lora=[],  # Required parameter
                     seed=scene * 100 + sub_video,
                 )
                 video_recipes.append(video_recipe)

@@ -93,6 +93,24 @@ class FluxAIImageGenerator(IImageGenerator):
 class FluxImageRecipe(ImageRecipeBase):
     """Image recipe for creating images from stories."""
 
+    COMPATIBLE_LORAS = [
+        "Adventure_Comic_Book.safetensors",
+        "oil_test3_flux.safetensors",
+        "Tsutomu_Nihei_Style_flux.safetensors",
+        "alienzkin_flux.safetensors",
+        "AnimeRetroFantasy.safetensors",
+        "Dystopian_Mythology_Fantasy.safetensors",
+        "FLUX_MidJourney_Anime.safetensors",
+        "Kairo.safetensors",
+        "Neon_Noir_FLUX.safetensors",
+        "RetroAnimeFluxV1.safetensors",
+        "Sin_City_Movie_Style_SDXL.safetensors",
+        "VHS_flux_v1_000001500.safetensors",
+        "dark_fantasy_flux.safetensors",
+        "dungeons-and-dreamscapes-flux_v21-000030.safetensors",
+        "obra_dinn_v1.safetensors",
+    ]
+
     GENERATOR = FluxAIImageGenerator
 
     recipe_type = "FluxImageRecipeType"
@@ -126,7 +144,12 @@ class FluxImageRecipe(ImageRecipeBase):
         """
         # TODO: Remove this when web UI is mature?
         requests = ComfyUIRequests()
-        available_loras = requests.comfyui_get_available_loras()
+        comfyui_available_loras = requests.comfyui_get_available_loras()
+
+        # Filter to only include LoRAs that are both in ComfyUI and in COMPATIBLE_LORAS
+        available_loras = [
+            lora for lora in self.COMPATIBLE_LORAS if lora in comfyui_available_loras
+        ]
 
         return {
             "prompt": self.prompt,

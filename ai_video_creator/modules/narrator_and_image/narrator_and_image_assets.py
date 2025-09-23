@@ -23,9 +23,10 @@ class NarratorAndImageAssets:
         Security method to prevent path traversal attacks.
         """
         try:
-            return base.resolve(strict=False) in target.resolve(
-                strict=False
-            ).parents or base.resolve(strict=False) == target.resolve(strict=False)
+            base_resolved = base.resolve(strict=False)
+            target_resolved = target.resolve(strict=False)
+            # Check if target is equal to base or if base is an ancestor of target
+            return target_resolved == base_resolved or base_resolved in target_resolved.parents
         except (FileNotFoundError, RuntimeError, OSError):
             return False
 

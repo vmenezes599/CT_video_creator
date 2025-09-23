@@ -51,7 +51,7 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
             raise ValueError(f"Base workflow file {base_workflow} does not exist.")
 
         with open(base_workflow, "r", encoding="utf-8") as file:
-            self.workflow = json.load(file)
+            self.workflow: dict = json.load(file)
 
         self.workflow_summary = "output"
 
@@ -87,6 +87,19 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
             for key, value in parameters.items():
                 self.workflow[index_str]["inputs"][key] = value
 
+    def _replace_node_reference(self, from_node_index: int, to_node_index: int) -> None:
+        """
+        Change all references from one node to another node in the workflow.
+        """
+        from_index_str = str(from_node_index)
+        to_index_str = str(to_node_index)
+
+        temp_workflow = json.dumps(self.workflow)
+        temp_workflow = temp_workflow.replace(
+            f'"{from_index_str}"', f'"{to_index_str}"'
+        )
+        self.workflow = json.loads(temp_workflow)
+
     def _rewire_node(
         self, node_index_to_rewire: int, from_index: int, to_index: int
     ) -> None:
@@ -101,10 +114,14 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
             )
 
         if "inputs" not in self.workflow[node_index_to_rewire_str]:
-            raise ValueError(f"Node '{node_index_to_rewire_str}' has no inputs to rewire.")
+            raise ValueError(
+                f"Node '{node_index_to_rewire_str}' has no inputs to rewire."
+            )
 
         if "model" not in self.workflow[node_index_to_rewire_str]["inputs"]:
-            raise ValueError(f"Node '{node_index_to_rewire_str}' has no model to rewire.")
+            raise ValueError(
+                f"Node '{node_index_to_rewire_str}' has no model to rewire."
+            )
 
         # Fix: Properly modify the model reference in the workflow
         model_input = self.workflow[node_index_to_rewire_str]["inputs"]["model"]
