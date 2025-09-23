@@ -17,9 +17,13 @@ class VideoCreatorPaths:
         """
         self.story_folder = story_folder
 
+        self.chapter_prompt_path = (
+            story_folder / "prompts" / f"chapter_{chapter_prompt_index+1:03}.json"
+        )
+
         # Initialize paths
         self.video_folder = self.story_folder / "video"
-        self.chapter_folder = self.video_folder / f"chapter_{chapter_prompt_index:03}"
+        self.chapter_folder = self.video_folder / f"chapter_{chapter_prompt_index+1:03}"
         self.asset_folder = self.chapter_folder / "assets"
 
         # Final paths
@@ -32,12 +36,12 @@ class VideoCreatorPaths:
 
         # Recipe file path
         self.narrator_and_image_recipe_file = (
-            self.video_folder / "narrator_and_image_recipe.json"
+            self.chapter_folder / "narrator_and_image_recipe.json"
         )
         self.narrator_and_image_asset_file = (
-            self.video_folder / "narrator_and_image_assets.json"
+            self.chapter_folder / "narrator_and_image_assets.json"
         )
-        self.video_recipe_file = self.video_folder / "sub_video_recipe.json"
-        self.video_asset_file = self.video_folder / "sub_video_assets.json"
-        self.video_effects_file = self.video_folder / "video_effects.json"
-        self.video_output_file = self.video_folder / "output.mp4"
+        self.video_recipe_file = self.chapter_folder / "sub_video_recipe.json"
+        self.video_asset_file = self.chapter_folder / "sub_video_assets.json"
+        self.video_effects_file = self.chapter_folder / "video_effects.json"
+        self.video_output_file = self.chapter_folder / "output.mp4"
