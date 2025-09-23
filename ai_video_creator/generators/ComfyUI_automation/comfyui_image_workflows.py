@@ -386,6 +386,8 @@ class UnetWorkflowBase(ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
         pp_list = positive_prompt.split(" ")
+        while len(pp_list) < 2:
+            pp_list.append("'Empty'")
         workflow_summary = f"PositivePrompt({pp_list[0]} {pp_list[1]}...)/{self.get_workflow_summary()}"
         self._set_workflow_summary(workflow_summary)
 
