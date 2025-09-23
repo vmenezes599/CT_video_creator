@@ -3,7 +3,6 @@ Unit tests for video_asset_manager module.
 """
 
 import json
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -64,7 +63,7 @@ class TestVideoAssetManager:
         # Create asset files referenced in the recipe
         narrator_image_assets_folder = chapter_folder / "assets" / "narrator_and_image"
         narrator_image_assets_folder.mkdir(parents=True, exist_ok=True)
-        
+
         # Create placeholder files
         (narrator_image_assets_folder / "image1.jpg").touch()
         (narrator_image_assets_folder / "image2.jpg").touch()
@@ -142,9 +141,15 @@ class TestVideoAssetManager:
             manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
             # Create assets folder and test files within the allowed directory
-            assets_folder = story_setup_with_recipe / "video" / "chapter_001" / "assets" / "sub_videos"
+            assets_folder = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "sub_videos"
+            )
             assets_folder.mkdir(parents=True, exist_ok=True)
-            
+
             test_video = assets_folder / "video_001.mp4"
             test_sub_video_1 = assets_folder / "sub_video_001_01.mp4"
             test_sub_video_2 = assets_folder / "sub_video_001_02.mp4"
@@ -165,7 +170,10 @@ class TestVideoAssetManager:
 
             assert "assets" in saved_data
             assert len(saved_data["assets"]) == 2
-            assert saved_data["assets"][0]["video_asset"] == "assets/sub_videos/video_001.mp4"
+            assert (
+                saved_data["assets"][0]["video_asset"]
+                == "assets/sub_videos/video_001.mp4"
+            )
             assert len(saved_data["assets"][0]["sub_video_assets"]) == 2
             assert (
                 saved_data["assets"][0]["sub_video_assets"][0]
@@ -188,13 +196,13 @@ class TestVideoAssetManager:
         # Create actual asset files within the allowed directory
         assets_folder = chapter_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
-        
+
         video1 = assets_folder / "video1.mp4"
         video2 = assets_folder / "video2.mp4"
         sub1 = assets_folder / "sub1.mp4"
         sub2 = assets_folder / "sub2.mp4"
         sub3 = assets_folder / "sub3.mp4"
-        
+
         for file in [video1, video2, sub1, sub2, sub3]:
             file.touch()
 
@@ -203,7 +211,10 @@ class TestVideoAssetManager:
                 {
                     "index": 1,
                     "video_asset": "assets/sub_videos/video1.mp4",
-                    "sub_video_assets": ["assets/sub_videos/sub1.mp4", "assets/sub_videos/sub2.mp4"],
+                    "sub_video_assets": [
+                        "assets/sub_videos/sub1.mp4",
+                        "assets/sub_videos/sub2.mp4",
+                    ],
                 },
                 {
                     "index": 2,
@@ -237,10 +248,10 @@ class TestVideoAssetManager:
         # Create actual asset files within the allowed directory
         assets_folder = chapter_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
-        
+
         video1 = assets_folder / "video1.mp4"
         sub1 = assets_folder / "sub1.mp4"
-        
+
         for file in [video1, sub1]:
             file.touch()
 
@@ -401,7 +412,7 @@ class TestVideoAssetManager:
         # Create actual asset files within the allowed directory
         assets_folder = chapter_folder / "assets" / "narrator_and_image"
         assets_folder.mkdir(parents=True, exist_ok=True)
-        
+
         temp_narrator1 = assets_folder / "temp_narrator1.mp3"
         temp_narrator2 = assets_folder / "temp_narrator2.mp3"
         temp_image1 = assets_folder / "temp_image1.jpg"
@@ -413,12 +424,12 @@ class TestVideoAssetManager:
         complete_narrator_image_data = {
             "assets": [
                 {
-                    "narrator": "assets/narrator_and_image/temp_narrator1.mp3", 
-                    "image": "assets/narrator_and_image/temp_image1.jpg"
+                    "narrator": "assets/narrator_and_image/temp_narrator1.mp3",
+                    "image": "assets/narrator_and_image/temp_image1.jpg",
                 },
                 {
-                    "narrator": "assets/narrator_and_image/temp_narrator2.mp3", 
-                    "image": "assets/narrator_and_image/temp_image2.jpg"
+                    "narrator": "assets/narrator_and_image/temp_narrator2.mp3",
+                    "image": "assets/narrator_and_image/temp_image2.jpg",
                 },
             ]
         }

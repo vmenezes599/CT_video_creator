@@ -44,10 +44,10 @@ def safe_move(src, dst):
     Move src to dst, avoiding overwrites by appending a numeric suffix.
     If dst is a directory, the source filename is preserved.
     If dst is a file path, it uses that as the target name.
-    Returns the final destination path.
+    Returns the final destination path resolved.
     """
-    src = Path(src)
-    dst = Path(dst)
+    src = Path(src).resolve()
+    dst = Path(dst).resolve()
 
     # If dst is a directory or doesn't exist but has no suffix, treat as directory
     if dst.is_dir() or (not dst.exists() and not dst.suffix):
@@ -81,10 +81,10 @@ def safe_copy(src, dst):
     If dst is a directory, the source filename is preserved.
     If dst is a file path, it uses that as the target name.
     Preserves metadata like shutil.copy2.
-    Returns the final destination path.
+    Returns the final destination path resolved.
     """
-    src = Path(src)
-    dst = Path(dst)
+    src = Path(src).resolve()
+    dst = Path(dst).resolve()
 
     # If dst is a directory or doesn't exist but has no suffix, treat as directory
     if dst.is_dir() or (not dst.exists() and not dst.suffix):

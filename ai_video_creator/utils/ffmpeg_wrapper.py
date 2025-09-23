@@ -810,7 +810,7 @@ def concatenate_videos_remove_last_frame_except_last(
             logger.info(
                 f"Video concatenation completed successfully: {output_path.name}"
             )
-            return output_path
+            return output_path.resolve()
 
         except (
             subprocess.CalledProcessError,

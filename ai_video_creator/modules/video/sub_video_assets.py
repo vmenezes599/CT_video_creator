@@ -18,35 +18,21 @@ class SubVideoAssets:
         self.sub_video_assets: list[list[Path]] = []
         self._load_assets_from_file()
 
-    def __is_within_directory(self, base: Path, target: Path) -> bool:
-        """
-        Check if a target path is within a base directory.
-        Security method to prevent path traversal attacks.
-        """
-        try:
-            base_resolved = base.resolve(strict=False)
-            target_resolved = target.resolve(strict=False)
-            # Check if target is equal to base or if base is an ancestor of target
-            return target_resolved == base_resolved or base_resolved in target_resolved.parents
-        except (FileNotFoundError, RuntimeError, OSError):
-            return False
-
     def __validate_asset_path(self, asset_path: Path) -> Path:
         """
-        Validate and resolve asset path, ensuring it's within the allowed directory.
-        Returns the validated path or raises ValueError for security violations.
+        Validate and resolve asset path, ensuring it's absolute.
+        Returns the validated path or raises ValueError for invalid paths.
         """
         try:
-            # Resolve the path relative to asset_file_parent if it's relative
+            # Require absolute paths only
             if not asset_path.is_absolute():
-                resolved_path = (self.asset_file_parent / asset_path).resolve(
-                    strict=False
-                )
-            else:
-                resolved_path = asset_path.resolve(strict=False)
+                raise ValueError(f"Path must be absolute: {asset_path}")
 
-            # Security check: ensure the path is within the allowed directory
-            if not self.__is_within_directory(self.asset_file_parent, resolved_path):
+            # Resolve the absolute path
+            resolved_path = asset_path.resolve(strict=False)
+
+            # Basic security check: prevent path traversal attempts
+            if ".." in str(asset_path):
                 raise ValueError(f"Path traversal attempt detected: {asset_path}")
 
             return resolved_path
@@ -76,26 +62,13 @@ class SubVideoAssets:
                     if video_value is not None and video_value != "":
                         try:
                             video_path = Path(video_value)
-                            # Handle both absolute and relative paths for backward compatibility
-                            if video_path.is_absolute():
-                                # Check if absolute path is within allowed directory
-                                if self.__is_within_directory(
-                                    self.asset_file_parent, video_path
-                                ):
-                                    validated_path = video_path.resolve(strict=False)
-                                    self.assembled_sub_video[index] = validated_path
-                                    logger.debug(
-                                        f"Migrated absolute video path at index {index}: {video_path}"
-                                    )
-                                else:
-                                    logger.warning(
-                                        f"Absolute video path outside allowed directory at index {index}: {video_path}"
-                                    )
-                                    self.assembled_sub_video[index] = None
-                            else:
-                                # Relative path - use existing validation
-                                validated_path = self.__validate_asset_path(video_path)
-                                self.assembled_sub_video[index] = validated_path
+                            # Convert relative paths from JSON to absolute paths for validation
+                            if not video_path.is_absolute():
+                                video_path = (self.asset_file_parent / video_path).resolve(strict=False)
+                            
+                            # Now validate as absolute path
+                            validated_path = self.__validate_asset_path(video_path)
+                            self.assembled_sub_video[index] = validated_path
                         except ValueError as e:
                             logger.warning(f"Invalid video path at index {index}: {e}")
                             self.assembled_sub_video[index] = None
@@ -107,32 +80,13 @@ class SubVideoAssets:
                         if sub_video is not None and sub_video != "":
                             try:
                                 sub_video_path = Path(sub_video)
-                                # Handle both absolute and relative paths for backward compatibility
-                                if sub_video_path.is_absolute():
-                                    # Check if absolute path is within allowed directory
-                                    if self.__is_within_directory(
-                                        self.asset_file_parent, sub_video_path
-                                    ):
-                                        validated_path = sub_video_path.resolve(
-                                            strict=False
-                                        )
-                                        self.sub_video_assets[index].append(
-                                            validated_path
-                                        )
-                                        logger.debug(
-                                            f"Migrated absolute sub-video path at index {index}: {sub_video_path}"
-                                        )
-                                    else:
-                                        logger.warning(
-                                            f"Absolute sub-video path outside allowed directory at index {index}: {sub_video_path}"
-                                        )
-                                        self.sub_video_assets[index].append(None)
-                                else:
-                                    # Relative path - use existing validation
-                                    validated_path = self.__validate_asset_path(
-                                        sub_video_path
-                                    )
-                                    self.sub_video_assets[index].append(validated_path)
+                                # Convert relative paths from JSON to absolute paths for validation
+                                if not sub_video_path.is_absolute():
+                                    sub_video_path = (self.asset_file_parent / sub_video_path).resolve(strict=False)
+                                
+                                # Now validate as absolute path
+                                validated_path = self.__validate_asset_path(sub_video_path)
+                                self.sub_video_assets[index].append(validated_path)
                             except ValueError as e:
                                 logger.warning(
                                     f"Invalid sub-video path at index {index}: {e}"
@@ -188,20 +142,28 @@ class SubVideoAssets:
                     # Convert paths to relative paths for storage
                     video_asset_relative = None
                     if video_asset is not None:
-                        video_asset_relative = str(
-                            video_asset.relative_to(self.asset_file_parent.resolve())
-                        )
+                        try:
+                            video_asset_relative = str(
+                                video_asset.relative_to(self.asset_file_parent.resolve())
+                            )
+                        except ValueError:
+                            # Path is outside the directory, store as absolute
+                            video_asset_relative = str(video_asset)
 
                     sub_video_assets_relative = []
                     for sub_video_asset in sub_video_assets:
                         if sub_video_asset is not None:
-                            sub_video_assets_relative.append(
-                                str(
-                                    sub_video_asset.relative_to(
-                                        self.asset_file_parent.resolve()
+                            try:
+                                sub_video_assets_relative.append(
+                                    str(
+                                        sub_video_asset.relative_to(
+                                            self.asset_file_parent.resolve()
+                                        )
                                     )
                                 )
-                            )
+                            except ValueError:
+                                # Path is outside the directory, store as absolute
+                                sub_video_assets_relative.append(str(sub_video_asset))
                         else:
                             sub_video_assets_relative.append(None)
 

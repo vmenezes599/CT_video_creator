@@ -229,9 +229,22 @@ class TestNarratorAndImageAssetsFile:
         assets.set_scene_narrator(0, valid_file)
         assert assets.narrator_assets[0] == valid_file.resolve()
 
-        # Path outside directory should be rejected
+        # Paths outside directory are now allowed since we trust absolute paths
         outside_file = tmp_path.parent / "outside.mp3"
         outside_file.write_text("audio")
 
+        # This should work since it's a valid absolute path
+        assets.set_scene_narrator(1, outside_file)
+        assert assets.narrator_assets[1] == outside_file.resolve()
+
+        # Only path traversal patterns with ".." should be rejected
+        traversal_file = Path("/tmp/../etc/passwd")
+
         with pytest.raises(ValueError, match="Path traversal attempt detected"):
-            assets.set_scene_narrator(1, outside_file)
+            assets.set_scene_narrator(2, traversal_file)
+
+        # Test relative paths are rejected
+        relative_file = Path("relative/path.mp3")
+
+        with pytest.raises(ValueError, match="Path must be absolute"):
+            assets.set_scene_narrator(3, relative_file)

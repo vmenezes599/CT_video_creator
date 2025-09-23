@@ -263,16 +263,10 @@ class TestNarratorAndImageAssetManager:
         with patch("logging_utils.logger"):
             manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            # Set up some assets to be kept - use relative paths from chapter folder
-            manager.video_assets.set_scene_narrator(
-                0, Path("assets/narrator_and_image/chapter_001_narrator_001.mp3")
-            )
-            manager.video_assets.set_scene_image(
-                0, Path("assets/narrator_and_image/chapter_001_image_001.png")
-            )
-            manager.video_assets.set_scene_narrator(
-                1, Path("assets/narrator_and_image/chapter_001_narrator_002.mp3")
-            )
+            # Set up some assets to be kept - use absolute paths as production would
+            manager.video_assets.set_scene_narrator(0, valid_narrator1)
+            manager.video_assets.set_scene_image(0, valid_image1)
+            manager.video_assets.set_scene_narrator(1, valid_narrator2)
             # Note: scene 1 has no image asset (None)
 
             # Run cleanup
@@ -308,10 +302,8 @@ class TestNarratorAndImageAssetManager:
         with patch("logging_utils.logger"):
             manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            # Set only one asset, leaving others as None - use relative path
-            manager.video_assets.set_scene_narrator(
-                0, Path("assets/narrator_and_image/valid_asset.mp3")
-            )
+            # Set only one asset, leaving others as None - use absolute path as production would
+            manager.video_assets.set_scene_narrator(0, valid_file)
             # manager.video_assets.narrator_assets[1] is None
             # manager.video_assets.image_assets[0] and [1] are None
 

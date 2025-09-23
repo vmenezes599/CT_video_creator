@@ -129,14 +129,12 @@ class SubVideoRecipe:
             recipe = WanVideoRecipe.from_dict(data)
             # Validate and resolve media paths
             if recipe.media_path:
-                recipe.media_path = str(
-                    self.__validate_and_resolve_path(Path(recipe.media_path))
+                recipe.media_path = self.__validate_and_resolve_path(
+                    Path(recipe.media_path)
                 )
             if recipe.color_match_media_path:
-                recipe.color_match_media_path = str(
-                    self.__validate_and_resolve_path(
-                        Path(recipe.color_match_media_path)
-                    )
+                recipe.color_match_media_path = self.__validate_and_resolve_path(
+                    Path(recipe.color_match_media_path)
                 )
             return recipe
         else:
@@ -162,17 +160,25 @@ class SubVideoRecipe:
                 media_path = recipe.media_path
                 if media_path:
                     # Convert to relative path for storage
-                    relative_path = Path(media_path).relative_to(
-                        self.recipe_file_parent.resolve()
-                    )
-                    recipe_dict["media_path"] = str(relative_path)
+                    try:
+                        relative_path = Path(media_path).relative_to(
+                            self.recipe_file_parent.resolve()
+                        )
+                        recipe_dict["media_path"] = str(relative_path)
+                    except ValueError:
+                        # Path is outside the directory, store as absolute
+                        recipe_dict["media_path"] = str(media_path)
                 color_match_media_path = recipe.color_match_media_path
                 if color_match_media_path:
                     # Convert to relative path for storage
-                    relative_path = Path(color_match_media_path).relative_to(
-                        self.recipe_file_parent.resolve()
-                    )
-                    recipe_dict["color_match_media_path"] = str(relative_path)
+                    try:
+                        relative_path = Path(color_match_media_path).relative_to(
+                            self.recipe_file_parent.resolve()
+                        )
+                        recipe_dict["color_match_media_path"] = str(relative_path)
+                    except ValueError:
+                        # Path is outside the directory, store as absolute
+                        recipe_dict["color_match_media_path"] = str(color_match_media_path)
                 recipe_list.append(recipe_dict)
 
             result_item = {

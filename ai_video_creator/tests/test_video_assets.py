@@ -277,14 +277,24 @@ class TestVideoAssetsFile:
         assert assets.assembled_sub_video[0] == valid_video.resolve()
         assert assets.sub_video_assets[0][0] == valid_sub.resolve()
 
-        # Paths outside directory should be rejected
+        # Paths outside directory are now allowed since we trust absolute paths
         outside_video = tmp_path.parent / "outside_video.mp4"
         outside_sub = tmp_path.parent / "outside_sub.mp4"
         outside_video.write_text("video")
         outside_sub.write_text("sub video")
 
-        with pytest.raises(ValueError, match="Path traversal attempt detected"):
-            assets.set_scene_video(1, outside_video)
+        # These should work since they're valid absolute paths
+        assets.set_scene_video(1, outside_video)
+        assets.set_scene_sub_video(1, 0, outside_sub)
+        assert assets.assembled_sub_video[1] == outside_video.resolve()
+        assert assets.sub_video_assets[1][0] == outside_sub.resolve()
+
+        # Only path traversal patterns with ".." should be rejected
+        traversal_video = Path("/tmp/../etc/passwd")
+        traversal_sub = Path("/home/../etc/passwd")
 
         with pytest.raises(ValueError, match="Path traversal attempt detected"):
-            assets.set_scene_sub_video(1, 0, outside_sub)
+            assets.set_scene_video(2, traversal_video)
+
+        with pytest.raises(ValueError, match="Path traversal attempt detected"):
+            assets.set_scene_sub_video(2, 0, traversal_sub)
