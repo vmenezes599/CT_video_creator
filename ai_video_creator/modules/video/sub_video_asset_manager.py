@@ -158,7 +158,7 @@ class SubVideoAssetManager:
         with begin_file_logging(
             name="create_sub_videos_from_sub_video_recipes",
             log_level="TRACE",
-            base_folder=self.__paths.video_folder,
+            base_folder=self.__paths.chapter_folder,
         ):
             logger.info("Starting video asset generation process")
 

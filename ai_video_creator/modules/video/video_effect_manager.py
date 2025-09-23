@@ -184,37 +184,30 @@ class MediaEffectsManager:
         """Initialize MediaEffectsManager with story folder and chapter index."""
         self.__paths = VideoCreatorPaths(story_folder, chapter_index)
 
-        with begin_file_logging(
-            name="MediaEffectsManager",
-            log_level="TRACE",
-            base_folder=self.__paths.video_folder,
-        ):
-            logger.info(
-                f"Initializing MediaEffectsManager for story: {story_folder.name}, chapter: {chapter_index}"
+        logger.info(
+            f"Initializing MediaEffectsManager for story: {story_folder.name}, chapter: {chapter_index}"
+        )
+
+        self.assets = NarratorAndImageAssets(self.__paths.narrator_and_image_asset_file)
+        if not self.assets.is_complete():
+            raise ValueError(
+                "Video assets are incomplete. Please ensure all required assets are present."
             )
 
-            self.assets = NarratorAndImageAssets(
-                self.__paths.narrator_and_image_asset_file
-            )
-            if not self.assets.is_complete():
-                raise ValueError(
-                    "Video assets are incomplete. Please ensure all required assets are present."
-                )
+        self.video_effects = MediaEffects(self.__paths.video_effects_file)
 
-            self.video_effects = MediaEffects(self.__paths.video_effects_file)
+        # Ensure video_effects lists have the same size as assets
+        self._synchronize_effects_with_assets()
 
-            # Ensure video_effects lists have the same size as assets
-            self._synchronize_effects_with_assets()
+        # Only add default values if no effects were loaded
+        if not self.video_effects.has_any_effects():
+            self._add_default_values()
 
-            # Only add default values if no effects were loaded
-            if not self.video_effects.has_any_effects():
-                self._add_default_values()
+        self.video_effects.save_effects_to_file()
 
-            self.video_effects.save_effects_to_file()
-
-            logger.debug(
-                f"MediaEffectsManager initialized with {len(self.video_effects.narrator_effects)} effect groups"
-            )
+        logger.debug(
+            f"MediaEffectsManager initialized with {len(self.video_effects.narrator_effects)} effect groups"
+        )
 
     def _synchronize_effects_with_assets(self):
         """Ensure video_effects lists have the same size as assets."""
@@ -245,7 +238,7 @@ class MediaEffectsManager:
         with begin_file_logging(
             name="MediaEffectsManager",
             log_level="TRACE",
-            base_folder=self.__paths.video_folder,
+            base_folder=self.__paths.chapter_folder,
         ):
             logger.info("Adding default effect values")
 

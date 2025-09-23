@@ -45,29 +45,22 @@ class VideoAssembler:
         """
         self.__paths = VideoCreatorPaths(story_folder, chapter_index)
 
-        with begin_file_logging(
-            name="VideoAssembler",
-            log_level="TRACE",
-            base_folder=self.__paths.video_folder,
-        ):
-            self.__subtitle_generator = SubtitleGenerator()
+        self.__subtitle_generator = SubtitleGenerator()
 
-            self.narrator_and_image_assets = NarratorAndImageAssets(
-                self.__paths.narrator_and_image_asset_file
+        self.narrator_and_image_assets = NarratorAndImageAssets(
+            self.__paths.narrator_and_image_asset_file
+        )
+
+        self.video_assets = SubVideoAssets(self.__paths.video_asset_file)
+        if not self.video_assets.is_complete():
+            raise ValueError(
+                "Video assets are incomplete. Please ensure all required assets are present."
             )
 
-            self.video_assets = SubVideoAssets(self.__paths.video_asset_file)
-            if not self.video_assets.is_complete():
-                raise ValueError(
-                    "Video assets are incomplete. Please ensure all required assets are present."
-                )
+        self.effects = MediaEffects(effects_file_path=self.__paths.video_effects_file)
 
-            self.effects = MediaEffects(
-                effects_file_path=self.__paths.video_effects_file
-            )
-
-            self.output_path = self.__paths.video_output_file
-            self._temp_files = []
+        self.output_path = self.__paths.video_output_file
+        self._temp_files = []
 
     def __del__(self):
         """
@@ -343,7 +336,7 @@ class VideoAssembler:
         with begin_file_logging(
             log_level="TRACE",
             name="assemble_final_video",
-            base_folder=self.__paths.video_folder,
+            base_folder=self.__paths.chapter_folder,
         ):
             logger.info("Starting video assembly process")
 

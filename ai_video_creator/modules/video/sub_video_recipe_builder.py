@@ -136,7 +136,7 @@ class SubVideoRecipeBuilder:
         with begin_file_logging(
             name="create_sub_video_recipes_from_images",
             log_level="TRACE",
-            base_folder=self.__paths.video_folder,
+            base_folder=self.__paths.chapter_folder,
         ):
             logger.info("Starting video recipe creation process")
 
