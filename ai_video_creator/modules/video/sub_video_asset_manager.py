@@ -200,6 +200,8 @@ class SubVideoAssetManager:
             if file.is_file():
                 if file in assets_to_keep:
                     continue
+                if "upscaled" in file.stem:
+                    continue
                 file.unlink()
                 logger.info(f"Deleted asset file: {file}")
 
