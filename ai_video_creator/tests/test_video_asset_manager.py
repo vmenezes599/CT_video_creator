@@ -51,24 +51,34 @@ class TestVideoAssetManager:
 
         # Create narrator and image assets file (dependency)
         narrator_image_asset_file = chapter_folder / "narrator_and_image_assets.json"
-        narrator_image_data = {
-            "assets": [
-                {"narrator": "/path/to/narrator1.mp3", "image": "/path/to/image1.jpg"},
-                {"narrator": "/path/to/narrator2.mp3", "image": "/path/to/image2.jpg"},
-            ]
-        }
-        with open(narrator_image_asset_file, "w", encoding="utf-8") as f:
-            json.dump(narrator_image_data, f)
 
-        # Create asset files referenced in the recipe
+        # Create asset files referenced in the recipe FIRST
         narrator_image_assets_folder = chapter_folder / "assets" / "narrator_and_image"
         narrator_image_assets_folder.mkdir(parents=True, exist_ok=True)
 
         # Create placeholder files
+        (narrator_image_assets_folder / "narrator1.mp3").touch()
+        (narrator_image_assets_folder / "narrator2.mp3").touch()
         (narrator_image_assets_folder / "image1.jpg").touch()
         (narrator_image_assets_folder / "image2.jpg").touch()
         (narrator_image_assets_folder / "color_match1.jpg").touch()
         (narrator_image_assets_folder / "color_match2.jpg").touch()
+
+        # Use relative paths that point to the actual files we created
+        narrator_image_data = {
+            "assets": [
+                {
+                    "narrator": "assets/narrator_and_image/narrator1.mp3",
+                    "image": "assets/narrator_and_image/image1.jpg",
+                },
+                {
+                    "narrator": "assets/narrator_and_image/narrator2.mp3",
+                    "image": "assets/narrator_and_image/image2.jpg",
+                },
+            ]
+        }
+        with open(narrator_image_asset_file, "w", encoding="utf-8") as f:
+            json.dump(narrator_image_data, f)
 
         # Create a test video recipe file
         recipe_file = chapter_folder / "sub_video_recipe.json"
@@ -454,8 +464,19 @@ class TestVideoAssetManager:
         with patch("logging_utils.logger"):
             manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
-            # The default setup has incomplete narrator and image assets
-            # Should skip video generation
+            # Delete one of the image asset files to make assets incomplete
+            narrator_image_assets_folder = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "narrator_and_image"
+            )
+            image_file = narrator_image_assets_folder / "image1.jpg"
+            if image_file.exists():
+                image_file.unlink()  # Delete the file to make assets incomplete
+
+            # Should skip video generation due to incomplete assets
             with patch.object(manager, "_generate_video_asset") as mock_generate:
                 manager.generate_video_assets()
 

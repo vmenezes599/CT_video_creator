@@ -262,11 +262,11 @@ class TestVideoAssetsFile:
         assert new_assets.sub_video_assets[0][1] == sub_video2_file.resolve()
 
     def test_path_validation_for_normal_usage(self, tmp_path):
-        """Test basic path validation for normal use cases."""
+        """Test basic path validation - only absolute paths within the asset directory are allowed."""
         asset_file = tmp_path / "assets.json"
         assets = SubVideoAssets(asset_file)
 
-        # Valid paths within directory should work
+        # Valid absolute paths within the asset directory should work
         valid_video = tmp_path / "valid_video.mp4"
         valid_sub = tmp_path / "valid_sub.mp4"
         valid_video.write_text("video")
@@ -277,24 +277,47 @@ class TestVideoAssetsFile:
         assert assets.assembled_sub_video[0] == valid_video.resolve()
         assert assets.sub_video_assets[0][0] == valid_sub.resolve()
 
-        # Paths outside directory are now allowed since we trust absolute paths
+        # Valid absolute paths within subdirectories should work
+        subdir = tmp_path / "videos"
+        subdir.mkdir()
+        subdir_video = subdir / "subdir_video.mp4"
+        subdir_sub = subdir / "subdir_sub.mp4"
+        subdir_video.write_text("video")
+        subdir_sub.write_text("sub video")
+
+        assets.set_scene_video(1, subdir_video)
+        assets.set_scene_sub_video(1, 0, subdir_sub)
+        assert assets.assembled_sub_video[1] == subdir_video.resolve()
+        assert assets.sub_video_assets[1][0] == subdir_sub.resolve()
+
+        # Absolute paths outside the asset directory should raise ValueError
         outside_video = tmp_path.parent / "outside_video.mp4"
         outside_sub = tmp_path.parent / "outside_sub.mp4"
         outside_video.write_text("video")
         outside_sub.write_text("sub video")
 
-        # These should work since they're valid absolute paths
-        assets.set_scene_video(1, outside_video)
-        assets.set_scene_sub_video(1, 0, outside_sub)
-        assert assets.assembled_sub_video[1] == outside_video.resolve()
-        assert assets.sub_video_assets[1][0] == outside_sub.resolve()
+        with pytest.raises(ValueError, match="is not in the subpath of"):
+            assets.set_scene_video(2, outside_video)
 
-        # Only path traversal patterns with ".." should be rejected
+        with pytest.raises(ValueError, match="is not in the subpath of"):
+            assets.set_scene_sub_video(2, 0, outside_sub)
+
+        # Relative paths should raise ValueError
+        relative_video = Path("relative_video.mp4")
+        relative_sub = Path("relative_sub.mp4")
+
+        with pytest.raises(ValueError, match="Path must be absolute"):
+            assets.set_scene_video(3, relative_video)
+
+        with pytest.raises(ValueError, match="Path must be absolute"):
+            assets.set_scene_sub_video(3, 0, relative_sub)
+
+        # Path traversal patterns with ".." should be rejected
         traversal_video = Path("/tmp/../etc/passwd")
         traversal_sub = Path("/home/../etc/passwd")
 
         with pytest.raises(ValueError, match="Path traversal attempt detected"):
-            assets.set_scene_video(2, traversal_video)
+            assets.set_scene_video(4, traversal_video)
 
         with pytest.raises(ValueError, match="Path traversal attempt detected"):
-            assets.set_scene_sub_video(2, 0, traversal_sub)
+            assets.set_scene_sub_video(4, 0, traversal_sub)
