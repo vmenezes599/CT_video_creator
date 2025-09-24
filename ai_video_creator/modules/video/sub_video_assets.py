@@ -12,7 +12,7 @@ class SubVideoAssets:
 
     def __init__(self, asset_file_path: Path):
         """Initialize VideoAssets with file path and expected scene count."""
-        self.asset_file_parent = asset_file_path.parent
+        self.asset_file_parent = asset_file_path.parent.resolve()
         self.asset_file_path = asset_file_path
         self.assembled_sub_video: list[Path] = []
         self.sub_video_assets: list[list[Path]] = []

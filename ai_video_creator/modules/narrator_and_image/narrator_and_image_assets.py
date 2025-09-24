@@ -11,7 +11,7 @@ class NarratorAndImageAssets:
 
     def __init__(self, asset_file_path: Path):
         """Initialize NarratorAndImageAssets with file path and expected scene count."""
-        self.asset_file_parent = asset_file_path.parent
+        self.asset_file_parent = asset_file_path.parent.resolve()
         self.asset_file_path = asset_file_path
         self.narrator_assets: list[Path] = []
         self.image_assets: list[Path] = []

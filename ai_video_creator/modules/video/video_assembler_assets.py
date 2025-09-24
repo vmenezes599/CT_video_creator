@@ -99,7 +99,7 @@ class VideoAssemblerAssets:
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 assets = []
                 # Ensure both lists have the same length
-                max_length = max(len(self.final_sub_videos), len(self.sub_video_assets))
+                max_length = len(self.final_sub_videos)
 
                 for i in range(max_length):
                     video_asset = (
@@ -145,7 +145,6 @@ class VideoAssemblerAssets:
             validated_path = self.__validate_asset_path(video_file_path)
 
             ensure_collection_index_exists(self.final_sub_videos, scene_index)
-            ensure_collection_index_exists(self.sub_video_assets, scene_index, [])
             self.final_sub_videos[scene_index] = validated_path
             logger.debug(
                 f"Set video for scene {scene_index + 1}: {validated_path.name}"

@@ -68,9 +68,9 @@ class VideoAssembler:
         self.output_path = self.__paths.video_output_file
         self._temp_files = []
 
-    def __del__(self):
+    def _cleanup(self):
         """
-        Destructor to clean up temporary files.
+        Clean up temporary files.
         """
         logger.info(f"Cleaning up {len(self._temp_files)} temporary files")
         for f in self._temp_files:
@@ -249,6 +249,15 @@ class VideoAssembler:
 
         processed_videos_paths: list[Path] = []
         for index, video_path in enumerate(sub_video_file_paths):
+            if self.video_assembler_assets.has_video(index):
+                logger.info(
+                    f"Video already set for scene {index+1}, skipping upscale and frame interpolation."
+                )
+                processed_videos_paths.append(
+                    self.video_assembler_assets.final_sub_videos[index]
+                )
+                continue
+
             comfyui_video_path = copy_media_to_comfyui_input_folder(video_path)
 
             output_file_name = f"{comfyui_video_path.stem}_upscaled"
@@ -358,5 +367,7 @@ class VideoAssembler:
             # video_segments = self._create_video_segments_from_images()
             video_segments = self._create_video_segments_from_sub_videos()
             self._compose(video_segments)
+
+            self._cleanup()
 
             logger.info(f"Video assembly completed successfully: {self.output_path}")

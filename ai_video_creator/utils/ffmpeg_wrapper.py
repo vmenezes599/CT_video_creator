@@ -234,7 +234,11 @@ def extend_audio_to_duration(
 
 
 def create_video_segment_from_image_and_audio(
-    image_path: str | Path, audio_path: str | Path, output_path: str | Path
+    image_path: str | Path,
+    audio_path: str | Path,
+    output_path: str | Path,
+    width: int = 1920,
+    height: int = 1080,
 ) -> Path:
     """
     Generate a video segment from an image and audio file.
@@ -243,6 +247,8 @@ def create_video_segment_from_image_and_audio(
         image_path: Path to the image file
         audio_path: Path to the audio file
         output_path: Path where the video segment should be saved
+        width: Target video width in pixels (default: 1920)
+        height: Target video height in pixels (default: 1080)
 
     Returns:
         Path to the created video segment
@@ -250,6 +256,7 @@ def create_video_segment_from_image_and_audio(
     image_path = Path(image_path)
     audio_path = Path(audio_path)
     output_path = Path(output_path)
+    target_resolution = f"{width}:{height}"
 
     if not output_path.exists():
         duration = get_audio_duration(str(audio_path))
@@ -266,7 +273,7 @@ def create_video_segment_from_image_and_audio(
                 audio_input,
                 str(output_path),
                 r=24,  # Frame rate
-                vf="scale=1280:720",  # Ensure 720p resolution
+                vf=f"scale={target_resolution}",  # Ensure target resolution
                 format="mp4",  # Use MP4 format for concatenation
                 shortest=None,
                 **{
@@ -290,7 +297,11 @@ def create_video_segment_from_image_and_audio(
 
 
 def create_video_segment_from_sub_video_and_audio_reverse_video(
-    sub_video_path: str | Path, audio_path: str | Path, output_path: str | Path
+    sub_video_path: str | Path,
+    audio_path: str | Path,
+    output_path: str | Path,
+    width: int = 1920,
+    height: int = 1080,
 ) -> Path:
     """
     Generate a video segment from a sub-video and audio file.
@@ -302,6 +313,7 @@ def create_video_segment_from_sub_video_and_audio_reverse_video(
     sub_video_path = Path(sub_video_path)
     audio_path = Path(audio_path)
     output_path = Path(output_path)
+    target_resolution = f"{width}:{height}"
 
     # Input validation
     if not sub_video_path.exists():
@@ -342,17 +354,17 @@ def create_video_segment_from_sub_video_and_audio_reverse_video(
 
             # Create forward+reverse pattern that repeats enough times to fill audio duration
             # Scale first, then split into forward and reverse, concat them, repeat the cycle, and trim
-            video_filter = f"scale=1280:720[scaled];[scaled]split=2[fwd][rev_src];[rev_src]reverse[rev];[fwd][rev]concat=n=2:v=1:a=0[cycle];[cycle]loop=loop={needed_cycles-1}:size={cycle_frames}:start=0[looped];[looped]trim=duration={audio_duration}"
+            video_filter = f"scale={target_resolution}[scaled];[scaled]split=2[fwd][rev_src];[rev_src]reverse[rev];[fwd][rev]concat=n=2:v=1:a=0[cycle];[cycle]loop=loop={needed_cycles-1}:size={cycle_frames}:start=0[looped];[looped]trim=duration={audio_duration}"
 
         elif video_duration > audio_duration:
             # Video is longer - cut it short to match audio duration
             logger.debug(
                 f"Video is longer than audio, will be cut from {video_duration:.2f}s to {audio_duration:.2f}s"
             )
-            video_filter = "scale=1280:720"
+            video_filter = f"scale={target_resolution}"
         else:
             # Same duration - just scale
-            video_filter = "scale=1280:720"
+            video_filter = f"scale={target_resolution}"
 
         cmd = (
             ffmpeg.output(
@@ -384,7 +396,11 @@ def create_video_segment_from_sub_video_and_audio_reverse_video(
 
 
 def create_video_segment_from_sub_video_and_audio_freeze_last_frame(
-    sub_video_path: str | Path, audio_path: str | Path, output_path: str | Path
+    sub_video_path: str | Path,
+    audio_path: str | Path,
+    output_path: str | Path,
+    width: int = 1920,
+    height: int = 1080,
 ) -> Path:
     """
     Generate a video segment from a sub-video and audio file.
@@ -396,6 +412,7 @@ def create_video_segment_from_sub_video_and_audio_freeze_last_frame(
     sub_video_path = Path(sub_video_path)
     audio_path = Path(audio_path)
     output_path = Path(output_path)
+    target_resolution = f"{width}:{height}"
 
     # Input validation
     if not sub_video_path.exists():
@@ -426,18 +443,16 @@ def create_video_segment_from_sub_video_and_audio_freeze_last_frame(
             )
 
             # Use tpad filter to freeze the last frame for the extra duration needed
-            video_filter = (
-                f"scale=1280:720,tpad=stop_mode=clone:stop_duration={extra_duration}"
-            )
+            video_filter = f"scale={target_resolution},tpad=stop_mode=clone:stop_duration={extra_duration}"
         elif video_duration > audio_duration:
             # Video is longer - cut it short to match audio duration
             logger.debug(
                 f"Video is longer than audio, will be cut from {video_duration:.2f}s to {audio_duration:.2f}s"
             )
-            video_filter = "scale=1280:720"
+            video_filter = f"scale={target_resolution}"
         else:
             # Same duration - just scale
-            video_filter = "scale=1280:720"
+            video_filter = f"scale={target_resolution}"
 
         cmd = (
             ffmpeg.output(
@@ -591,14 +606,21 @@ def concatenate_videos_with_reencoding(
             ffmpeg.input(str(concat_list_path), format="concat", safe=0)
             .output(
                 str(output_path),
-                vf=f"scale={width}:{height}",
+                vf=(
+                    f"zscale=w={width}:h={height}:"
+                    "f=spline36:"
+                    "primaries=bt709:transfer=bt709:matrix=bt709,"
+                    "format=yuv420p"
+                ),
                 **{
-                    "c:v": "h264_nvenc",  # Re-encode video to H.264
-                    "preset": "p5",  # Encoding speed/quality tradeoff
-                    "crf": "23",  # Video quality (lower is better, 18–28 range)
-                    "c:a": "aac",  # Audio codec
+                    "c:v": "h264_nvenc",
+                    "rc": "vbr_hq",
+                    "cq": "19",  # ~CRF 19-ish; tweak 18–23
+                    "b:v": "0",  # enable cq-based quality targeting
+                    "preset": "p5",  # fine
                     "pix_fmt": "yuv420p",
-                    "movflags": "+faststart",  # Optimize for web streaming
+                    "movflags": "+faststart",
+                    "c:a": "aac",
                 },
             )
             .overwrite_output()
