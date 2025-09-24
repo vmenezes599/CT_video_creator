@@ -38,6 +38,19 @@ class NarratorAndImageAssets:
         except (FileNotFoundError, RuntimeError, OSError) as e:
             raise ValueError(f"Invalid path: {asset_path} - {e}") from e
 
+    def _convert_from_relative_to_absolute(self, path: Path) -> Path:
+        """Convert a possibly relative path to an absolute path based on the asset file parent directory."""
+        if not path.is_absolute():
+            path = (self.asset_file_parent / path).resolve(strict=False)
+
+        # Now validate as absolute path
+        validated_path = self.__validate_asset_path(path)
+        return validated_path
+
+    def _convert_from_absolute_to_relative(self, path: Path) -> Path:
+        """Convert an absolute path to a relative path based on the asset file parent directory."""
+        return path.relative_to(self.asset_file_parent)
+
     def _load_assets_from_file(self):
         """Load assets from JSON file with security validation."""
         try:
@@ -52,37 +65,19 @@ class NarratorAndImageAssets:
                 for index, asset in enumerate(assets):
                     # Load narrator asset with security validation
                     narrator_value = asset.get("narrator")
-                    if narrator_value is not None and narrator_value != "":
-                        try:
-                            narrator_path = Path(narrator_value)
-                            # Convert relative paths from JSON to absolute paths for validation
-                            if not narrator_path.is_absolute():
-                                narrator_path = (self.asset_file_parent / narrator_path).resolve(strict=False)
-                            
-                            # Now validate as absolute path
-                            validated_path = self.__validate_asset_path(narrator_path)
-                            self.narrator_assets[index] = validated_path
-                        except ValueError as e:
-                            logger.warning(
-                                f"Invalid narrator path at index {index}: {e}"
-                            )
-                            self.narrator_assets[index] = None
+                    narrator_value_path = (
+                        Path(narrator_value) if narrator_value else None
+                    )
+                    self.narrator_assets[index] = (
+                        self._convert_from_relative_to_absolute(narrator_value_path)
+                    )
 
                     # Load image asset with security validation
                     image_value = asset.get("image")
-                    if image_value is not None and image_value != "":
-                        try:
-                            image_path = Path(image_value)
-                            # Convert relative paths from JSON to absolute paths for validation
-                            if not image_path.is_absolute():
-                                image_path = (self.asset_file_parent / image_path).resolve(strict=False)
-                            
-                            # Now validate as absolute path
-                            validated_path = self.__validate_asset_path(image_path)
-                            self.image_assets[index] = validated_path
-                        except ValueError as e:
-                            logger.warning(f"Invalid image path at index {index}: {e}")
-                            self.image_assets[index] = None
+                    image_value_path = Path(image_value) if image_value else None
+                    self.image_assets[index] = self._convert_from_relative_to_absolute(
+                        image_value_path
+                    )
 
                 self.save_assets_to_file()
 
@@ -117,29 +112,15 @@ class NarratorAndImageAssets:
                     i < len(self.narrator_assets)
                     and self.narrator_assets[i] is not None
                 ):
-                    # Try to make path relative, fallback to absolute if not possible
-                    try:
-                        narrator = str(
-                            self.narrator_assets[i].relative_to(
-                                self.asset_file_parent.resolve()
-                            )
-                        )
-                    except ValueError:
-                        # Path is outside the directory, store as absolute
-                        narrator = str(self.narrator_assets[i])
+                    narrator = str(
+                        self._convert_from_absolute_to_relative(self.narrator_assets[i])
+                    )
 
                 image = ""
                 if i < len(self.image_assets) and self.image_assets[i] is not None:
-                    # Try to make path relative, fallback to absolute if not possible
-                    try:
-                        image = str(
-                            self.image_assets[i].relative_to(
-                                self.asset_file_parent.resolve()
-                            )
-                        )
-                    except ValueError:
-                        # Path is outside the directory, store as absolute
-                        image = str(self.image_assets[i])
+                    image = str(
+                        self._convert_from_absolute_to_relative(self.image_assets[i])
+                    )
 
                 assets.append({"index": i + 1, "narrator": narrator, "image": image})
 

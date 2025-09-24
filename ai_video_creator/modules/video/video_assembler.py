@@ -26,11 +26,13 @@ from ai_video_creator.utils import (
     create_video_segment_from_image_and_audio,
     concatenate_videos_with_reencoding,
     concatenate_videos_no_reencoding,
+    safe_move,
     VideoCreatorPaths,
 )
 
 from .sub_video_assets import SubVideoAssets
 from .video_effect_manager import MediaEffects
+from .video_assembler_assets import VideoAssemblerAssets
 
 
 class VideoAssembler:
@@ -56,6 +58,10 @@ class VideoAssembler:
             raise ValueError(
                 "Video assets are incomplete. Please ensure all required assets are present."
             )
+
+        self.video_assembler_assets = VideoAssemblerAssets(
+            self.__paths.video_assembler_asset_file
+        )
 
         self.effects = MediaEffects(effects_file_path=self.__paths.video_effects_file)
 
@@ -216,6 +222,20 @@ class VideoAssembler:
 
         return video_segments
 
+    def _move_asset_to_output_path(self, target_path: Path, asset_path: Path) -> Path:
+        """Move asset to the database folder and return the new path."""
+        if not asset_path.exists():
+            logger.warning(
+                f"Asset file does not exist while trying to move it: {asset_path}"
+            )
+            logger.warning("Sometimes ComfyUI return temporary files. Ignoring...")
+            return Path("")
+
+        complete_target_path = target_path / asset_path.name
+        complete_target_path = safe_move(asset_path, complete_target_path)
+        logger.trace(f"Asset moved successfully to: {complete_target_path}")
+        return complete_target_path
+
     def _upscale_and_frame_interp_video_list(
         self, sub_video_file_paths: list[Path]
     ) -> list[Path]:
@@ -227,33 +247,28 @@ class VideoAssembler:
         )
         requests = ComfyUIRequests()
 
-        workflows: list[VideoUpscaleFrameInterpWorkflow] = []
-        copied_files: list[Path] = []
-
-        for video_path in sub_video_file_paths:
+        processed_videos_paths: list[Path] = []
+        for index, video_path in enumerate(sub_video_file_paths):
             comfyui_video_path = copy_media_to_comfyui_input_folder(video_path)
-            copied_files.append(comfyui_video_path)
 
             output_file_name = f"{comfyui_video_path.stem}_upscaled"
 
             workflow = VideoUpscaleFrameInterpWorkflow()
             workflow.set_video_path(comfyui_video_path.name)
             workflow.set_output_filename(output_file_name)
-            workflows.append(workflow)
 
-        processed_videos = requests.comfyui_ensure_send_all_prompts(workflows)
+            processed_videos = requests.comfyui_ensure_send_all_prompts([workflow])
+            processed_video_path = Path(processed_videos[0])
+            moved_path = self._move_asset_to_output_path(
+                self.__paths.videos_asset_folder, processed_video_path
+            )
+            self.video_assembler_assets.set_final_sub_video_video(index, moved_path)
+            processed_videos_paths.append(moved_path)
 
-        # Clean up copied files after processing
-        for copied_file in copied_files:
-            delete_media_from_comfyui_input_folder(copied_file)
-
-        processed_videos_paths = [Path(video) for video in processed_videos]
-
-        for video in processed_videos_paths:
-            self._temp_files.append(video)
+            delete_media_from_comfyui_input_folder(comfyui_video_path)
 
         logger.info(
-            f"Finished upscaling and frame interpolating videos: {len(processed_videos_paths)}"
+            f"Finished upscaling and frame interpolating videos: {len(sub_video_file_paths)}"
         )
 
         return processed_videos_paths

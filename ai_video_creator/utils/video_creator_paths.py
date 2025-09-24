@@ -43,5 +43,8 @@ class VideoCreatorPaths:
         )
         self.video_recipe_file = self.chapter_folder / "sub_video_recipe.json"
         self.video_asset_file = self.chapter_folder / "sub_video_assets.json"
+        self.video_assembler_asset_file = (
+            self.chapter_folder / "video_assembler_assets.json"
+        )
         self.video_effects_file = self.chapter_folder / "video_effects.json"
         self.video_output_file = self.chapter_folder / "output.mp4"

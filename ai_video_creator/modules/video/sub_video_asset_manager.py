@@ -84,7 +84,6 @@ class SubVideoAssetManager:
     def _generate_sub_videos_assets(self, scene_index: int) -> None:
         """Generate sub-videos assets for a specific scene."""
         try:
-            logger.info(f"Generating video asset for scene {scene_index}")
             video_recipe_list = self.recipe.video_data[scene_index]
 
             for recipe_index, recipe in enumerate(video_recipe_list):
@@ -93,6 +92,10 @@ class SubVideoAssetManager:
                         f"Sub-video {recipe_index + 1} already exists, skipping generation."
                     )
                     continue
+
+                logger.info(
+                    f"Generating sub video asset for scene {scene_index + 1}({recipe_index+1}/{len(video_recipe_list)})"
+                )
 
                 video_generator: IVideoGenerator = recipe.GENERATOR()
                 sub_video_file_path = self._generate_sub_video_file_path(
@@ -114,7 +117,6 @@ class SubVideoAssetManager:
                 self.video_assets.set_scene_sub_video(
                     scene_index, recipe_index, output_sub_video
                 )
-                self.video_assets.save_assets_to_file()
 
                 logger.info(
                     f"Successfully generated sub video for scene {scene_index + 1}({recipe_index+1}/{len(video_recipe_list)}): {output_sub_video.name}"
@@ -145,7 +147,6 @@ class SubVideoAssetManager:
             )
 
             self.video_assets.set_scene_video(scene_index, output_video)
-            self.video_assets.save_assets_to_file()
             logger.info(
                 f"Successfully generated video for scene {scene_index + 1}: {output_video.name}"
             )

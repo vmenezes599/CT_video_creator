@@ -246,7 +246,8 @@ class ComfyUIRequests:
 
         output_image_paths: list[str] = []
 
-        for workflow in req_list:
+        for index, workflow in enumerate(req_list, 1):
+            logger.info(f"Processing request {index}/{len(req_list)}")
             output_paths = self._process_single_workflow(workflow)
             output_image_paths.extend(output_paths)
 
