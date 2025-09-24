@@ -70,13 +70,17 @@ class NarratorAndImageAssets:
                     )
                     self.narrator_assets[index] = (
                         self._convert_from_relative_to_absolute(narrator_value_path)
+                        if narrator_value_path
+                        else None
                     )
 
                     # Load image asset with security validation
                     image_value = asset.get("image")
                     image_value_path = Path(image_value) if image_value else None
-                    self.image_assets[index] = self._convert_from_relative_to_absolute(
-                        image_value_path
+                    self.image_assets[index] = (
+                        self._convert_from_relative_to_absolute(image_value_path)
+                        if image_value_path
+                        else None
                     )
 
                 self.save_assets_to_file()
