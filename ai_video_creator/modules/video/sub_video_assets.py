@@ -72,8 +72,11 @@ class SubVideoAssets:
 
                     # Load video asset with security validation
                     video_value = asset.get("video_asset")
+                    assembled_video_path = Path(video_value) if video_value else None
                     self.assembled_sub_video[index] = (
-                        self._convert_from_relative_to_absolute(Path(video_value))
+                        self._convert_from_relative_to_absolute(assembled_video_path)
+                        if assembled_video_path
+                        else None
                     )
 
                     sub_video_assets = asset.get("sub_video_assets", [])
@@ -82,6 +85,8 @@ class SubVideoAssets:
                             sub_video_path = Path(sub_video)
                             self.sub_video_assets[index].append(
                                 self._convert_from_relative_to_absolute(sub_video_path)
+                                if sub_video_path
+                                else None
                             )
 
                 self.save_assets_to_file()
