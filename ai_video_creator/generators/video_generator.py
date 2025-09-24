@@ -189,6 +189,9 @@ class WanVideoRecipe(VideoRecipeBase):
     COMPATIBLE_LORAS = [
         "NSFW-22-H-e8.safetensors",
         "NSFW-22-L-e8.safetensors",
+        "Wan2.2-Fun-A14B-InP-high-noise-HPS2.1.safetensors",
+        "Wan2.2-Fun-A14B-InP-high-noise-MPS.safetensors",
+        "Wan2.2-Fun-A14B-InP-low-noise-HPS2.1.safetensors",
     ]
 
     GENERATOR = WanGenerator
