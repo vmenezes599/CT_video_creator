@@ -136,7 +136,9 @@ class SubVideoRecipeBuilder:
             low_lora=low_lora if low_lora else None,
             low_lora_strength=low_lora_strength if low_lora_strength else None,
             media_path=str(image_asset) if image_asset else None,
-            color_match_media_path=str(color_match_image_asset) if color_match_image_asset else None,
+            color_match_media_path=(
+                str(color_match_image_asset) if color_match_image_asset else None
+            ),
             seed=seed,
         )
 
@@ -150,7 +152,7 @@ class SubVideoRecipeBuilder:
         ):
             logger.info("Starting video recipe creation process")
 
-            self._recipe = SubVideoRecipe(self.__paths.video_recipe_file)
+            self._recipe = SubVideoRecipe(self.__paths.sub_video_recipe_file)
 
             if not self._verify_recipe_against_prompt():
                 self._recipe.clean()

@@ -236,7 +236,7 @@ class MediaEffectsManager:
         """Add default values for video effects."""
 
         with begin_file_logging(
-            name="MediaEffectsManager",
+            name="media_effects_manager",
             log_level="TRACE",
             base_folder=self.__paths.chapter_folder,
         ):

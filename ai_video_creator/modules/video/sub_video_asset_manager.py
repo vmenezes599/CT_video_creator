@@ -31,8 +31,8 @@ class SubVideoAssetManager:
         self.__narrator_and_image_assets = NarratorAndImageAssets(
             self.__paths.narrator_and_image_asset_file
         )
-        self.recipe = SubVideoRecipe(self.__paths.video_recipe_file)
-        self.video_assets = SubVideoAssets(self.__paths.video_asset_file)
+        self.recipe = SubVideoRecipe(self.__paths.sub_video_recipe_file)
+        self.video_assets = SubVideoAssets(self.__paths.sub_video_asset_file)
 
         # Ensure video_assets lists have the same size as recipe
         self._synchronize_assets_with_image_assets()
@@ -77,7 +77,7 @@ class SubVideoAssetManager:
     ) -> Path:
         """Generate a unique sub-video file path for a specific scene and recipe index."""
         return (
-            self.__paths.videos_asset_folder
+            self.__paths.sub_videos_asset_folder
             / f"{self.output_file_prefix}_sub_video_{scene_index+1:03}_{recipe_index+1:02}.mp4"
         )
 
@@ -130,7 +130,7 @@ class SubVideoAssetManager:
     def _generate_video_file_path(self, scene_index: int) -> Path:
         """Generate a unique video file path for a specific scene."""
         return (
-            self.__paths.videos_asset_folder
+            self.__paths.sub_videos_asset_folder
             / f"{self.output_file_prefix}_video_{scene_index+1:03}.mp4"
         )
 
@@ -196,7 +196,7 @@ class SubVideoAssetManager:
         ]
         assets_to_keep = set(valid_video_assets + valid_sub_video_assets)
 
-        for file in self.__paths.videos_asset_folder.glob("*"):
+        for file in self.__paths.sub_videos_asset_folder.glob("*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue

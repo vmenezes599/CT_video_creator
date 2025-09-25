@@ -28,11 +28,13 @@ class VideoCreatorPaths:
 
         # Final paths
         self.narrator_and_image_asset_folder = self.asset_folder / "narrator_and_image"
-        self.videos_asset_folder = self.asset_folder / "sub_videos"
+        self.sub_videos_asset_folder = self.asset_folder / "sub_videos"
+        self.video_assembler_asset_folder = self.asset_folder / "video_assembler"
 
         # Create directories if they don't exist
         self.narrator_and_image_asset_folder.mkdir(parents=True, exist_ok=True)
-        self.videos_asset_folder.mkdir(parents=True, exist_ok=True)
+        self.sub_videos_asset_folder.mkdir(parents=True, exist_ok=True)
+        self.video_assembler_asset_folder.mkdir(parents=True, exist_ok=True)
 
         # Recipe file path
         self.narrator_and_image_recipe_file = (
@@ -41,8 +43,8 @@ class VideoCreatorPaths:
         self.narrator_and_image_asset_file = (
             self.chapter_folder / "narrator_and_image_assets.json"
         )
-        self.video_recipe_file = self.chapter_folder / "sub_video_recipe.json"
-        self.video_asset_file = self.chapter_folder / "sub_video_assets.json"
+        self.sub_video_recipe_file = self.chapter_folder / "sub_video_recipe.json"
+        self.sub_video_asset_file = self.chapter_folder / "sub_video_assets.json"
         self.video_assembler_asset_file = (
             self.chapter_folder / "video_assembler_assets.json"
         )

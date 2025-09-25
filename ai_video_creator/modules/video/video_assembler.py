@@ -53,7 +53,7 @@ class VideoAssembler:
             self.__paths.narrator_and_image_asset_file
         )
 
-        self.video_assets = SubVideoAssets(self.__paths.video_asset_file)
+        self.video_assets = SubVideoAssets(self.__paths.sub_video_asset_file)
         if not self.video_assets.is_complete():
             raise ValueError(
                 "Video assets are incomplete. Please ensure all required assets are present."
@@ -86,7 +86,7 @@ class VideoAssembler:
         """
         image_path_obj = Path(image_path)
         temp_file = (
-            self.__paths.narrator_and_image_asset_folder
+            self.__paths.video_assembler_asset_folder
             / f"temp_{image_path_obj.stem}.mp4"
         )
 
@@ -103,7 +103,7 @@ class VideoAssembler:
         """
         video_path_obj = Path(video_path)
         temp_file = (
-            self.__paths.narrator_and_image_asset_folder
+            self.__paths.video_assembler_asset_folder
             / f"temp_{video_path_obj.stem}.mp4"
         )
 
@@ -269,7 +269,7 @@ class VideoAssembler:
             processed_videos = requests.comfyui_ensure_send_all_prompts([workflow])
             processed_video_path = Path(processed_videos[0])
             moved_path = self._move_asset_to_output_path(
-                self.__paths.videos_asset_folder, processed_video_path
+                self.__paths.video_assembler_asset_folder, processed_video_path
             )
             self.video_assembler_assets.set_final_sub_video_video(index, moved_path)
             processed_videos_paths.append(moved_path)
