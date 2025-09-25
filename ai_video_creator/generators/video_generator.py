@@ -224,13 +224,17 @@ class WanVideoRecipe(VideoRecipeBase):
     low_lora_strength: list[float]
     recipe_type = "WanVideoRecipeType"
 
+    # Lists are dangerous default values because they are shared between instances
+    # Thats why I use this _DEFAULT to fix this
+    _DEFAULT = object()
+
     def __init__(
         self,
         prompt: str,
         color_match_media_path: str | None,
-        high_lora: list[str] | None = None,
+        high_lora: list[str] | None = _DEFAULT,
         high_lora_strength: list[float] | None = None,
-        low_lora: list[str] | None = None,
+        low_lora: list[str] | None = _DEFAULT,
         low_lora_strength: list[float] | None = None,
         media_path: str | None = None,
         seed: int | None = None,
@@ -256,7 +260,11 @@ class WanVideoRecipe(VideoRecipeBase):
             seed=random.randint(0, 2**64 - 1) if seed is None else seed,
             recipe_type=self.recipe_type,
         )
-        self.high_lora = high_lora if high_lora else []
+        if high_lora == self._DEFAULT:
+            self.high_lora = ["Wan2.2-Fun-A14B-InP-high-noise-MPS.safetensors"]
+        else:
+            self.high_lora = high_lora if high_lora else []
+
         self.high_lora_strength = high_lora_strength if high_lora_strength else []
 
         # Ensure high_lora and high_lora_strength have the same length
@@ -270,7 +278,11 @@ class WanVideoRecipe(VideoRecipeBase):
             # Clip if longer
             self.high_lora_strength = self.high_lora_strength[: len(self.high_lora)]
 
-        self.low_lora = low_lora if low_lora else []
+        if low_lora == self._DEFAULT:
+            self.low_lora = ["Wan2.2-Fun-A14B-InP-low-noise-HPS2.1.safetensors"]
+        else:
+            self.low_lora = low_lora if low_lora else []
+
         self.low_lora_strength = low_lora_strength if low_lora_strength else []
 
         # Ensure low_lora and low_lora_strength have the same length
