@@ -87,18 +87,35 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
             for key, value in parameters.items():
                 self.workflow[index_str]["inputs"][key] = value
 
-    def _replace_node_reference(self, from_node_index: int, to_node_index: int) -> None:
+    def _replace_model_node_reference(
+        self, from_node_index: int, to_node_index: int
+    ) -> None:
         """
         Change all references from one node to another node in the workflow.
+        This replaces node references in array values but keeps dictionary keys unchanged.
         """
         from_index_str = str(from_node_index)
         to_index_str = str(to_node_index)
 
-        temp_workflow = json.dumps(self.workflow)
-        temp_workflow = temp_workflow.replace(
-            f'"{from_index_str}"', f'"{to_index_str}"'
-        )
-        self.workflow = json.loads(temp_workflow)
+        def __replace_references(obj):
+            if isinstance(obj, dict):
+                # For dictionaries, recurse into values but keep keys unchanged
+                result = {}
+
+                for key, value in obj.items():
+                    if key == "model":
+                        new_values = [
+                            to_index_str if v == from_index_str else v for v in value
+                        ]
+                        result[key] = new_values
+                    else:
+                        result[key] = __replace_references(value)
+
+                return result
+            else:
+                return obj
+
+        self.workflow = __replace_references(self.workflow)
 
     def _rewire_node(
         self, node_index_to_rewire: int, from_index: int, to_index: int

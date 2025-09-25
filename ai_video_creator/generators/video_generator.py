@@ -79,6 +79,27 @@ class WanGenerator(IVideoGenerator):
         """
         self.requests = ComfyUIRequests()  # Initialize ComfyUI requests
 
+    def _clean_and_move_generated_files(
+        self, output_file_path: Path, output_file_names: list[str]
+    ) -> list[Path]:
+        moved_files = []
+        for file in output_file_names:
+            file_path = Path(file)
+            if file_path.suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]:
+                moved_file = self._move_asset_to_output_path(
+                    output_file_path.parent, file_path
+                )
+                if moved_file:
+                    moved_files.append(moved_file)
+            else:
+                logger.debug(f"Removing extra generated file: {file_path}")
+                try:
+                    file_path.unlink()
+                except OSError as e:
+                    logger.warning(f"Failed to delete file {file_path}: {e}")
+
+        return moved_files
+
     @override
     def media_to_video(self, recipe: "WanVideoRecipe", output_file_path: Path) -> Path:
         """
@@ -131,15 +152,18 @@ class WanGenerator(IVideoGenerator):
         workflow.set_output_filename(output_file_path.stem)
         workflow.set_image_path(str(recipe.media_path))
 
-        workflow.set_seed(recipe.seed)
+        for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
+            workflow.add_high_lora(lora, strength)
 
+        for lora, strength in zip(recipe.low_lora, recipe.low_lora_strength):
+            workflow.add_low_lora(lora, strength)
+
+        workflow.set_seed(recipe.seed)
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
 
-        moved_files = [
-            self._move_asset_to_output_path(output_file_path.parent, Path(file))
-            for file in output_file_names
-            if Path(file).suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]
-        ]
+        moved_files = self._clean_and_move_generated_files(
+            output_file_path, output_file_names
+        )
 
         return moved_files[0]
 
@@ -174,13 +198,11 @@ class WanGenerator(IVideoGenerator):
 
         delete_media_from_comfyui_input_folder(new_color_match_media_path)
 
-        moved_files = [
-            self._move_asset_to_output_path(output_file_path.parent, Path(file))
-            for file in output_file_names
-            if Path(file).suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]
-        ]
+        moved_files = self._clean_and_move_generated_files(
+            output_file_path, output_file_names
+        )
 
-        return moved_files[0] if moved_files else Path("")
+        return moved_files[0]
 
 
 class WanVideoRecipe(VideoRecipeBase):

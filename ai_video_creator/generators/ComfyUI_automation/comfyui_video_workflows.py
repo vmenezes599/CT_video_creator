@@ -2,6 +2,7 @@
 This module contains the video workflows for ComfyUI.
 """
 
+from collections import deque
 import os
 from ai_video_creator.ComfyUI_automation.comfyui_workflow import ComfyUIWorkflowBase
 
@@ -94,13 +95,14 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
             "inputs": {
                 "lora_name": lora_name,
                 "strength_model": strength,
-                "model": [previous_link, 0],
+                "model": [str(previous_link), 0],
             },
             "class_type": "LoraLoaderModelOnly",
             "_meta": {"title": "LoraLoaderModelOnly"},
         }
 
-        last_key = self.workflow.keys()[-1]
+        workflow_keys = self.workflow.keys()
+        last_key = deque(workflow_keys)[-1]
         new_last_key = str(int(last_key) + 1)
 
         return {new_last_key: lora_dict}
@@ -111,8 +113,8 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
             high_lora_name, strength, self.last_high_lora_node_index
         )
 
-        new_entry_key = int(new_entry.keys()[-1])
-        self._replace_node_reference(self.last_high_lora_node_index, new_entry_key)
+        new_entry_key = int(deque(new_entry.keys())[-1])
+        self._replace_model_node_reference(self.last_high_lora_node_index, new_entry_key)
 
         self.workflow.update(new_entry)
         self.last_high_lora_node_index = new_entry_key
@@ -123,8 +125,8 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
             low_lora_name, strength, self.last_low_lora_node_index
         )
 
-        new_entry_key = int(new_entry.keys()[-1])
-        self._replace_node_reference(self.last_low_lora_node_index, new_entry_key)
+        new_entry_key = int(deque(new_entry.keys())[-1])
+        self._replace_model_node_reference(self.last_low_lora_node_index, new_entry_key)
 
         self.workflow.update(new_entry)
         self.last_low_lora_node_index = new_entry_key
