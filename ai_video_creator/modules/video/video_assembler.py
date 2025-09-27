@@ -371,3 +371,23 @@ class VideoAssembler:
             self._cleanup()
 
             logger.info(f"Video assembly completed successfully: {self.output_path}")
+
+    def clean_unused_assets(self):
+        """Clean up video assets for a specific story folder."""
+
+        logger.info("Starting video asset cleanup process")
+
+        assets_to_keep = [
+            asset
+            for asset in self.video_assembler_assets.final_sub_videos
+            if asset is not None
+        ]
+
+        for file in self.__paths.video_assembler_asset_folder.glob("*"):
+            if file.is_file():
+                if file in assets_to_keep:
+                    continue
+                file.unlink()
+                logger.info(f"Deleted asset file: {file}")
+
+        logger.info("Video asset cleanup process completed successfully")

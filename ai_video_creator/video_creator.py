@@ -131,3 +131,9 @@ def clean_unused_assets(story_path: Path, chapter_index: int) -> None:
         story_folder=story_path, chapter_index=chapter_index
     )
     video_asset_manager.clean_unused_assets()
+
+    video_assembler = VideoAssembler(
+        story_folder=story_path,
+        chapter_index=chapter_index,
+    )
+    video_assembler.clean_unused_assets()
