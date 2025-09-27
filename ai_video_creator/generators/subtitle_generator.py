@@ -78,20 +78,15 @@ class SubtitleGenerator:
         """
         logger.info(f"Generating SRT file for video: {video_path.name}")
         output_srt_path = video_path.with_suffix(".srt")
-        if not output_srt_path.exists():
-            logger.info(
-                f"SRT file doesn't exist, transcribing audio from: {video_path.name}"
-            )
-            model = self._load_model()
+        logger.info(
+            f"SRT file doesn't exist, transcribing audio from: {video_path.name}"
+        )
+        model = self._load_model()
 
-            logger.info("Starting audio transcription with Whisper")
-            result = model.transcribe(str(video_path), word_timestamps=True)
-            logger.info(
-                f"Transcription completed with {len(result['segments'])} segments"
-            )
+        logger.info("Starting audio transcription with Whisper")
+        result = model.transcribe(str(video_path), word_timestamps=True)
+        logger.info(f"Transcription completed with {len(result['segments'])} segments")
 
-            self.write_srt(segments=result["segments"], output_path=output_srt_path)
-        else:
-            logger.info(f"SRT file already exists: {output_srt_path.name}")
+        self.write_srt(segments=result["segments"], output_path=output_srt_path)
 
         return output_srt_path

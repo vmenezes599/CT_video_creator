@@ -552,17 +552,14 @@ def concatenate_videos_no_reencoding(
         for segment in video_segments:
             f.write(f"file '{segment.resolve()}'\n")
 
-    if not output_path.exists():
-        cmd = (
-            ffmpeg.input(str(concat_list_path), format="concat", safe=0)
-            .output(str(output_path), c="copy", **{"bsf:a": "aac_adtstoasc"})
-            .overwrite_output()
-            .compile()
-        )
-        _run_ffmpeg_trace(cmd)
-        logger.info("Video concatenation completed successfully")
-    else:
-        logger.info(f"Final video already exists: {output_path.name}")
+    cmd = (
+        ffmpeg.input(str(concat_list_path), format="concat", safe=0)
+        .output(str(output_path), c="copy", **{"bsf:a": "aac_adtstoasc"})
+        .overwrite_output()
+        .compile()
+    )
+    _run_ffmpeg_trace(cmd)
+    logger.info("Video concatenation completed successfully")
 
     # Clean up concat list file
     if concat_list_path.exists():
@@ -601,35 +598,32 @@ def concatenate_videos_with_reencoding(
         for segment in video_segments:
             f.write(f"file '{segment.resolve()}'\n")
 
-    if not output_path.exists():
-        cmd = (
-            ffmpeg.input(str(concat_list_path), format="concat", safe=0)
-            .output(
-                str(output_path),
-                vf=(
-                    f"zscale=w={width}:h={height}:"
-                    "f=spline36:"
-                    "primaries=bt709:transfer=bt709:matrix=bt709,"
-                    "format=yuv420p"
-                ),
-                **{
-                    "c:v": "h264_nvenc",
-                    "rc": "vbr_hq",
-                    "cq": "19",  # ~CRF 19-ish; tweak 18–23
-                    "b:v": "0",  # enable cq-based quality targeting
-                    "preset": "p5",  # fine
-                    "pix_fmt": "yuv420p",
-                    "movflags": "+faststart",
-                    "c:a": "aac",
-                },
-            )
-            .overwrite_output()
-            .compile()
+    cmd = (
+        ffmpeg.input(str(concat_list_path), format="concat", safe=0)
+        .output(
+            str(output_path),
+            vf=(
+                f"zscale=w={width}:h={height}:"
+                "f=spline36:"
+                "primaries=bt709:transfer=bt709:matrix=bt709,"
+                "format=yuv420p"
+            ),
+            **{
+                "c:v": "h264_nvenc",
+                "rc": "vbr_hq",
+                "cq": "19",  # ~CRF 19-ish; tweak 18–23
+                "b:v": "0",  # enable cq-based quality targeting
+                "preset": "p5",  # fine
+                "pix_fmt": "yuv420p",
+                "movflags": "+faststart",
+                "c:a": "aac",
+            },
         )
-        _run_ffmpeg_trace(cmd)
-        logger.info("Video concatenation completed successfully")
-    else:
-        logger.info(f"Final video already exists: {output_path.name}")
+        .overwrite_output()
+        .compile()
+    )
+    _run_ffmpeg_trace(cmd)
+    logger.info("Video concatenation completed successfully")
 
     # Clean up concat list file
     if concat_list_path.exists():
