@@ -26,23 +26,24 @@ class VideoCreatorPaths:
         self.chapter_folder = self.video_folder / f"chapter_{chapter_prompt_index+1:03}"
         self.asset_folder = self.chapter_folder / "assets"
 
-        # Final paths
-        self.narrator_and_image_asset_folder = self.asset_folder / "narrator_and_image"
+        # Final modules paths
+        self.narrator_asset_folder = self.asset_folder / "narrator"
+        self.image_asset_folder = self.asset_folder / "image"
         self.sub_videos_asset_folder = self.asset_folder / "sub_videos"
         self.video_assembler_asset_folder = self.asset_folder / "video_assembler"
 
         # Create directories if they don't exist
-        self.narrator_and_image_asset_folder.mkdir(parents=True, exist_ok=True)
+        self.narrator_asset_folder.mkdir(parents=True, exist_ok=True)
+        self.image_asset_folder.mkdir(parents=True, exist_ok=True)
         self.sub_videos_asset_folder.mkdir(parents=True, exist_ok=True)
         self.video_assembler_asset_folder.mkdir(parents=True, exist_ok=True)
 
-        # Recipe file path
-        self.narrator_and_image_recipe_file = (
-            self.chapter_folder / "narrator_and_image_recipe.json"
-        )
-        self.narrator_and_image_asset_file = (
-            self.chapter_folder / "narrator_and_image_assets.json"
-        )
+        # Recipe file paths
+        self.narrator_recipe_file = self.chapter_folder / "narrator_recipe.json"
+        self.narrator_asset_file = self.chapter_folder / "narrator_assets.json"
+        self.image_recipe_file = self.chapter_folder / "image_recipe.json"
+        self.image_asset_file = self.chapter_folder / "image_assets.json"
+
         self.sub_video_recipe_file = self.chapter_folder / "sub_video_recipe.json"
         self.sub_video_asset_file = self.chapter_folder / "sub_video_assets.json"
         self.video_assembler_asset_file = (

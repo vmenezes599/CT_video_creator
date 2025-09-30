@@ -464,23 +464,49 @@ class TestVideoAssetManager:
         with patch("logging_utils.logger"):
             manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
-            # Delete one of the image asset files to make assets incomplete
-            narrator_image_assets_folder = (
+            # Set up complete narrator assets but incomplete image assets
+            # The current new architecture uses separate folders
+            narrator_folder = (
                 story_setup_with_recipe
                 / "video"
                 / "chapter_001"
                 / "assets"
-                / "narrator_and_image"
+                / "narrator"
             )
-            image_file = narrator_image_assets_folder / "image1.jpg"
-            if image_file.exists():
-                image_file.unlink()  # Delete the file to make assets incomplete
+            image_folder = (
+                story_setup_with_recipe
+                / "video"
+                / "chapter_001"
+                / "assets"
+                / "image"
+            )
+            
+            # Create complete narrator assets
+            narrator_folder.mkdir(parents=True, exist_ok=True)
+            narrator_file1 = narrator_folder / "narrator1.mp3"
+            narrator_file2 = narrator_folder / "narrator2.mp3"
+            narrator_file1.write_text("narrator content 1")
+            narrator_file2.write_text("narrator content 2")
+            
+            # Set narrator assets as complete
+            manager._SubVideoAssetManager__narrator_assets.set_scene_narrator(0, narrator_file1)
+            manager._SubVideoAssetManager__narrator_assets.set_scene_narrator(1, narrator_file2)
+            
+            # Deliberately leave image assets incomplete (don't create any image files)
+            # Force image assets to be incomplete by ensuring they have None values but the system expects files
+            image_assets = manager._SubVideoAssetManager__image_assets
+            # Ensure we have the right number of slots but they're all None (incomplete)
+            while len(image_assets.image_assets) < 2:
+                image_assets.image_assets.append(None)
+            # Make sure both slots are None
+            image_assets.image_assets[0] = None
+            image_assets.image_assets[1] = None
 
-            # Should skip video generation due to incomplete assets
+            # Should skip video generation due to incomplete image assets
             with patch.object(manager, "_generate_video_asset") as mock_generate:
                 manager.generate_video_assets()
 
-                # Should not attempt to generate any videos
+                # Should not attempt to generate any videos because image assets are incomplete
                 mock_generate.assert_not_called()
 
     def test_sub_video_file_path_generation(self, story_setup_with_recipe):

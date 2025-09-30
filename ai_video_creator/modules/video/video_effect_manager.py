@@ -14,7 +14,8 @@ from ai_video_creator.media_effects.effects_map import (
     AudioExtender,
 )
 
-from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
+from ai_video_creator.modules.narrator import NarratorAssets
+from ai_video_creator.modules.image import ImageAssets
 
 
 class MediaEffects:
@@ -188,8 +189,11 @@ class MediaEffectsManager:
             f"Initializing MediaEffectsManager for story: {story_folder.name}, chapter: {chapter_index}"
         )
 
-        self.assets = NarratorAndImageAssets(self.__paths.narrator_and_image_asset_file)
-        if not self.assets.is_complete():
+        # Load separate narrator and image assets
+        self.narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
+        self.image_assets = ImageAssets(self.__paths.image_asset_file)
+        
+        if not self.narrator_assets.is_complete() or not self.image_assets.is_complete():
             raise ValueError(
                 "Video assets are incomplete. Please ensure all required assets are present."
             )
@@ -211,7 +215,7 @@ class MediaEffectsManager:
 
     def _synchronize_effects_with_assets(self):
         """Ensure video_effects lists have the same size as assets."""
-        assets_size = len(self.assets.narrator_assets)
+        assets_size = len(self.narrator_assets.narrator_assets)
         logger.debug(f"Synchronizing effects with assets - target size: {assets_size}")
 
         # Extend or truncate narrator_effects to match assets size

@@ -8,7 +8,8 @@ from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.utils import ensure_collection_index_exists
 from ai_video_creator.utils import concatenate_videos_remove_last_frame_except_last
 
-from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
+from ai_video_creator.modules.narrator import NarratorAssets
+from ai_video_creator.modules.image import ImageAssets
 from .sub_video_recipe import SubVideoRecipe
 from .sub_video_assets import SubVideoAssets
 
@@ -28,9 +29,10 @@ class SubVideoAssetManager:
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
         self.__paths = VideoCreatorPaths(story_folder, chapter_index)
-        self.__narrator_and_image_assets = NarratorAndImageAssets(
-            self.__paths.narrator_and_image_asset_file
-        )
+        
+        # Load separate narrator and image assets
+        self.__narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
+        self.__image_assets = ImageAssets(self.__paths.image_asset_file)
         self.recipe = SubVideoRecipe(self.__paths.sub_video_recipe_file)
         self.video_assets = SubVideoAssets(self.__paths.sub_video_asset_file)
 
@@ -163,8 +165,8 @@ class SubVideoAssetManager:
         ):
             logger.info("Starting video asset generation process")
 
-            if not self.__narrator_and_image_assets.is_complete():
-                logger.error("Cannot generate videos - Scenes are missing image assets")
+            if not self.__narrator_assets.is_complete() or not self.__image_assets.is_complete():
+                logger.error("Cannot generate videos - Some scenes are missing narrator or image assets")
                 return
 
             missing_videos = self.video_assets.get_missing_videos()

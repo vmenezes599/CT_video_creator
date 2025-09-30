@@ -6,7 +6,6 @@ from pathlib import Path
 
 from logging_utils import setup_console_logging, cleanup_logging
 
-from .modules.narrator_and_image import NarratorAndImageRecipeBuilder
 from .modules.narrator_and_image import NarratorAndImageAssetManager
 from .modules.video import SubVideoRecipeBuilder
 from .modules.video import SubVideoAssetManager
@@ -30,10 +29,10 @@ def create_narrator_and_image_recipe_from_prompt(
         "create_narrator_and_image_recipes_from_prompt", log_level="TRACE"
     )
 
-    video_recipe_builder = NarratorAndImageRecipeBuilder(
-        story_folder=story_path, chapter_prompt_index=chapter_index
+    asset_manager = NarratorAndImageAssetManager(
+        story_folder=story_path, chapter_index=chapter_index
     )
-    video_recipe_builder.create_narrator_and_image_recipes()
+    asset_manager.create_narrator_and_image_recipes()
 
     cleanup_logging(log_id)
 

@@ -1,18 +1,10 @@
 """AI Video Creator - Narrator and Image Module"""
 
-from .narrator_and_image_recipe_builder import NarratorAndImageRecipeBuilder
+# Updated asset manager that uses separate components
 from .narrator_and_image_asset_manager import NarratorAndImageAssetManager
-from .narrator_and_image_assets import NarratorAndImageAssets
-from .narrator_and_image_recipe import (
-    NarratorAndImageRecipe,
-    NarratorAndImageRecipeDefaultSettings,
-)
 
 
 __all__ = [
-    "NarratorAndImageRecipeDefaultSettings",
-    "NarratorAndImageRecipeBuilder",
-    "NarratorAndImageAssetManager",
-    "NarratorAndImageAssets",
-    "NarratorAndImageRecipe",
+    # Main asset manager (now using separate components)
+    "NarratorAndImageAssetManager"
 ]

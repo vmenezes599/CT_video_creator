@@ -14,7 +14,8 @@ from ai_video_creator.ComfyUI_automation import (
     copy_media_to_comfyui_input_folder,
     delete_media_from_comfyui_input_folder,
 )
-from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
+from ai_video_creator.modules.narrator import NarratorAssets
+from ai_video_creator.modules.image import ImageAssets
 from ai_video_creator.generators.ComfyUI_automation import (
     VideoUpscaleFrameInterpWorkflow,
 )
@@ -49,9 +50,9 @@ class VideoAssembler:
 
         self.__subtitle_generator = SubtitleGenerator()
 
-        self.narrator_and_image_assets = NarratorAndImageAssets(
-            self.__paths.narrator_and_image_asset_file
-        )
+        # Load separate narrator and image assets
+        self.narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
+        self.image_assets = ImageAssets(self.__paths.image_asset_file)
 
         self.video_assets = SubVideoAssets(self.__paths.sub_video_asset_file)
         if not self.video_assets.is_complete():
@@ -197,8 +198,8 @@ class VideoAssembler:
         """
 
         # Extract data from video recipe
-        narrator_file_paths = self.narrator_and_image_assets.narrator_assets
-        image_file_paths = self.narrator_and_image_assets.image_assets
+        narrator_file_paths = self.narrator_assets.narrator_assets
+        image_file_paths = self.image_assets.image_assets
 
         logger.info(
             f"Processing {len(narrator_file_paths)} audio files and {len(image_file_paths)} image files"
@@ -318,7 +319,7 @@ class VideoAssembler:
         """
 
         # Extract data from video recipe
-        narrator_file_paths = self.narrator_and_image_assets.narrator_assets
+        narrator_file_paths = self.narrator_assets.narrator_assets
         sub_video_file_paths = self.video_assets.sub_video_assets
         video_file_paths = self.video_assets.assembled_sub_video
 

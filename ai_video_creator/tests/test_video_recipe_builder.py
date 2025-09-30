@@ -66,7 +66,7 @@ class TestVideoRecipeBuilder:
                     builder.create_video_recipe()
 
                     # Verify recipe file was created
-                    recipe_file = builder._SubVideoRecipeBuilder__paths.video_recipe_file
+                    recipe_file = builder._SubVideoRecipeBuilder__paths.sub_video_recipe_file
                     assert recipe_file.exists()
 
                     # Load and verify the file structure
@@ -105,7 +105,7 @@ class TestVideoRecipeBuilder:
                     builder1 = SubVideoRecipeBuilder(story_setup, 0)
                     builder1.create_video_recipe()
 
-                    recipe_file = builder1._SubVideoRecipeBuilder__paths.video_recipe_file
+                    recipe_file = builder1._SubVideoRecipeBuilder__paths.sub_video_recipe_file
 
                     # Load the original content
                     with open(recipe_file, "r", encoding="utf-8") as f:
@@ -187,7 +187,7 @@ class TestVideoRecipeBuilder:
                     builder = SubVideoRecipeBuilder(story_folder, 0)
                     builder.create_video_recipe()
 
-                    recipe_file = builder._SubVideoRecipeBuilder__paths.video_recipe_file
+                    recipe_file = builder._SubVideoRecipeBuilder__paths.sub_video_recipe_file
                     with open(recipe_file, "r", encoding="utf-8") as f:
                         saved_recipe = json.load(f)
 
@@ -232,7 +232,7 @@ class TestVideoRecipeBuilder:
                     # Should not crash, should handle missing assets gracefully
                     builder.create_video_recipe()
 
-                    recipe_file = builder._SubVideoRecipeBuilder__paths.video_recipe_file
+                    recipe_file = builder._SubVideoRecipeBuilder__paths.sub_video_recipe_file
                     assert recipe_file.exists()
 
                     with open(recipe_file, "r", encoding="utf-8") as f:

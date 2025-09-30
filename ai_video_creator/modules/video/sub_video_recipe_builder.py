@@ -7,7 +7,8 @@ from math import ceil
 
 from logging_utils import begin_file_logging, logger
 
-from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssets
+from ai_video_creator.modules.narrator import NarratorAssets
+from ai_video_creator.modules.image import ImageAssets
 from ai_video_creator.generators import WanVideoRecipe
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.prompt import Prompt
@@ -36,9 +37,10 @@ class SubVideoRecipeBuilder:
 
         # Load video prompt
         self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
-        self.__narrator_and_image_assets = NarratorAndImageAssets(
-            self.__paths.narrator_and_image_asset_file
-        )
+        
+        # Load separate narrator and image assets
+        self.__narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
+        self.__image_assets = ImageAssets(self.__paths.image_asset_file)
         self._recipe = None
 
         self._min_sub_videos = 3
@@ -51,7 +53,7 @@ class SubVideoRecipeBuilder:
         if (
             not self._recipe.video_data
             or len(self._recipe.video_data) != len(self.__video_prompt)
-            or len(self.__narrator_and_image_assets.image_assets)
+            or len(self.__image_assets.image_assets)
             != len(self.__video_prompt)
         ):
             return False
@@ -63,13 +65,13 @@ class SubVideoRecipeBuilder:
 
         # Handle case where narrator assets don't exist
         if (
-            sub_video_index >= len(self.__narrator_and_image_assets.narrator_assets)
-            or self.__narrator_and_image_assets.narrator_assets[sub_video_index] is None
+            sub_video_index >= len(self.__narrator_assets.narrator_assets)
+            or self.__narrator_assets.narrator_assets[sub_video_index] is None
         ):
             return self._min_sub_videos
 
         audio_duration = get_audio_duration(
-            str(self.__narrator_and_image_assets.narrator_assets[sub_video_index])
+            str(self.__narrator_assets.narrator_assets[sub_video_index])
         )
 
         sub_video_count = ceil(
@@ -88,8 +90,8 @@ class SubVideoRecipeBuilder:
             # Get corresponding image asset if available, otherwise None
             sub_video_count = self._calculate_sub_videos_count(i)
             image_asset = (
-                self.__narrator_and_image_assets.image_assets[i]
-                if i < len(self.__narrator_and_image_assets.image_assets)
+                self.__image_assets.image_assets[i]
+                if i < len(self.__image_assets.image_assets)
                 else None
             )
 
