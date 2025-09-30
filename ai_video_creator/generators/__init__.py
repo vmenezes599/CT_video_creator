@@ -1,6 +1,11 @@
 """This module initializes the image generator for Flux AI."""
 
-from .image_generator import FluxAIImageGenerator, FluxImageRecipe, IImageGenerator
+from .image_generator import (
+    FluxAIImageGenerator,
+    FluxImageRecipe,
+    IImageGenerator,
+    ImageRecipeBase,
+)
 from .video_generator import (
     IVideoGenerator,
     VideoRecipeBase,
@@ -11,6 +16,7 @@ from .audio_generator import (
     ZonosTTSAudioGenerator,
     ZonosTTSRecipe,
     IAudioGenerator,
+    AudioRecipeBase,
 )
 from .subtitle_generator import SubtitleGenerator
 
@@ -22,6 +28,8 @@ __all__ = [
     "IImageGenerator",
     "IVideoGenerator",
     "VideoRecipeBase",
+    "ImageRecipeBase",
+    "AudioRecipeBase",
     "WanVideoRecipe",
     "WanGenerator",
 ]

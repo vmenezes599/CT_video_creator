@@ -28,8 +28,13 @@ class Prompt:
     @classmethod
     def load_from_json(cls, file_path: str) -> list["Prompt"]:
         """Load multiple prompts from a JSON file."""
-        with open(file_path, "r", encoding="utf-8") as file:
-            data = json.load(file)
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                data = json.load(file)
+        except (json.JSONDecodeError, FileNotFoundError, OSError):
+            # Handle corrupted JSON, missing files, or other I/O errors gracefully
+            # Return empty list so the system can continue with default behavior
+            return []
 
         prompts = []
         if "prompts" in data and isinstance(data["prompts"], list):

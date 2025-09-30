@@ -542,7 +542,9 @@ class TestComfyUIRequests:
             assert result == ["/output/result.png"]
             assert mock_submit.call_count == 2  # Should retry once
             assert mock_check_success.call_count == 2
-            assert mock_sleep.call_count == 2  # Sleep between retries + sleep after success
+            assert (
+                mock_sleep.call_count == 2
+            )  # Sleep between retries + sleep after success
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     def test_process_single_workflow_request_exception_retry(
@@ -583,7 +585,9 @@ class TestComfyUIRequests:
             # Assert
             assert result == ["/output/retry_result.png"]
             assert mock_submit.call_count == 2
-            assert mock_sleep.call_count == 2  # Sleep between retries + sleep after success
+            assert (
+                mock_sleep.call_count == 2
+            )  # Sleep between retries + sleep after success
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     def test_process_single_workflow_max_retries_exceeded(

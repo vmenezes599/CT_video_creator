@@ -133,7 +133,9 @@ class TestVideoRecipeFile:
         assert recipe.video_data[0][0].prompt == "Loaded video prompt"
         # Internal paths should be absolute after loading
         assert str(recipe.video_data[0][0].media_path) == str(test_image)
-        assert str(recipe.video_data[0][0].color_match_media_path) == str(test_color_match)
+        assert str(recipe.video_data[0][0].color_match_media_path) == str(
+            test_color_match
+        )
         assert recipe.video_data[0][0].seed == 99999
 
     def test_recipe_loading_with_invalid_json(self, tmp_path):

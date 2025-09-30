@@ -95,79 +95,71 @@ class TestNarratorAndImageAssetManager:
 
     def test_asset_manager_initialization(self, story_setup_with_recipe):
         """Test VideoAssetManager initialization with recipe synchronization."""
-        with patch("logging_utils.logger"):
-            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
+        manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            assert len(manager.narrator_builder.recipe.narrator_data) == 2
-            assert len(manager.image_builder.recipe.image_data) == 2
+        assert len(manager.narrator_builder.recipe.narrator_data) == 2
+        assert len(manager.image_builder.recipe.image_data) == 2
 
-            assert len(manager.narrator_builder.narrator_assets.narrator_assets) == 2
-            assert len(manager.image_builder.image_assets.image_assets) == 2
+        assert len(manager.narrator_builder.narrator_assets.narrator_assets) == 2
+        assert len(manager.image_builder.image_assets.image_assets) == 2
 
-            assert not (manager.narrator_builder.narrator_assets.is_complete() and manager.image_builder.image_assets.is_complete())
-            missing_narrator = manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
-            missing_image = manager.image_builder.image_assets.get_missing_image_assets()
-            assert missing_narrator == [0, 1]
-            assert missing_image == [0, 1]
+        assert not (
+            manager.narrator_builder.narrator_assets.is_complete()
+            and manager.image_builder.image_assets.is_complete()
+        )
+        missing_narrator = (
+            manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
+        )
+        missing_image = manager.image_builder.image_assets.get_missing_image_assets()
+        assert missing_narrator == [0, 1]
+        assert missing_image == [0, 1]
 
     def test_asset_manager_creates_asset_file(self, story_setup_with_recipe):
         """Test that VideoAssetManager creates and manages asset files properly."""
-        with patch("logging_utils.logger"):
-            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
+        manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            # Create separate asset folders for narrator and image
-            narrator_assets_folder = (
-                story_setup_with_recipe
-                / "video"
-                / "chapter_001"
-                / "assets"
-                / "narrator"
-            )
-            image_assets_folder = (
-                story_setup_with_recipe
-                / "video"
-                / "chapter_001"
-                / "assets"
-                / "image"
-            )
-            narrator_assets_folder.mkdir(parents=True, exist_ok=True)
-            image_assets_folder.mkdir(parents=True, exist_ok=True)
+        # Create separate asset folders for narrator and image
+        narrator_assets_folder = (
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrator"
+        )
+        image_assets_folder = (
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "image"
+        )
+        narrator_assets_folder.mkdir(parents=True, exist_ok=True)
+        image_assets_folder.mkdir(parents=True, exist_ok=True)
 
-            test_narrator = narrator_assets_folder / "narrator_001.mp3"
-            test_image = image_assets_folder / "image_001.jpg"
-            test_narrator.touch()
-            test_image.touch()
+        test_narrator = narrator_assets_folder / "narrator_001.mp3"
+        test_image = image_assets_folder / "image_001.jpg"
+        test_narrator.touch()
+        test_image.touch()
 
-            manager.narrator_builder.narrator_assets.set_scene_narrator(0, test_narrator)
-            manager.image_builder.image_assets.set_scene_image(0, test_image)
-            manager.narrator_builder.narrator_assets.save_assets_to_file()
-            manager.image_builder.image_assets.save_assets_to_file()
+        manager.narrator_builder.narrator_assets.set_scene_narrator(0, test_narrator)
+        manager.image_builder.image_assets.set_scene_image(0, test_image)
+        manager.narrator_builder.narrator_assets.save_assets_to_file()
+        manager.image_builder.image_assets.save_assets_to_file()
 
-            narrator_asset_file = manager.narrator_builder.narrator_assets.asset_file_path
-            image_asset_file = manager.image_builder.image_assets.asset_file_path
-            assert narrator_asset_file.exists()
-            assert image_asset_file.exists()
+        narrator_asset_file = manager.narrator_builder.narrator_assets.asset_file_path
+        image_asset_file = manager.image_builder.image_assets.asset_file_path
+        assert narrator_asset_file.exists()
+        assert image_asset_file.exists()
 
-            with open(narrator_asset_file, "r", encoding="utf-8") as f:
-                narrator_saved_data = json.load(f)
+        with open(narrator_asset_file, "r", encoding="utf-8") as f:
+            narrator_saved_data = json.load(f)
 
-            with open(image_asset_file, "r", encoding="utf-8") as f:
-                image_saved_data = json.load(f)
+        with open(image_asset_file, "r", encoding="utf-8") as f:
+            image_saved_data = json.load(f)
 
-            assert "narrator_assets" in narrator_saved_data
-            assert "image_assets" in image_saved_data
-            assert len(narrator_saved_data["narrator_assets"]) == 2
-            assert len(image_saved_data["image_assets"]) == 2
-            assert (
-                narrator_saved_data["narrator_assets"][0]
-                == "assets/narrator/narrator_001.mp3"
-            )
-            assert (
-                image_saved_data["image_assets"][0]
-                == "assets/image/image_001.jpg"
-            )
-            assert narrator_saved_data["narrator_assets"][1] is None
-            assert image_saved_data["image_assets"][1] is None
+        assert "narrator_assets" in narrator_saved_data
+        assert "image_assets" in image_saved_data
+        assert len(narrator_saved_data["narrator_assets"]) == 2
+        assert len(image_saved_data["image_assets"]) == 2
+        assert (
+            narrator_saved_data["narrator_assets"][0]
+            == "assets/narrator/narrator_001.mp3"
+        )
+        assert image_saved_data["image_assets"][0] == "assets/image/image_001.jpg"
+        assert narrator_saved_data["narrator_assets"][1] is None
+        assert image_saved_data["image_assets"][1] is None
 
     def test_asset_manager_with_existing_assets(self, story_setup_with_recipe):
         """Test VideoAssetManager loading existing asset files."""
@@ -213,24 +205,24 @@ class TestNarratorAndImageAssetManager:
         with open(image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_existing_data, f)
 
-        with patch("logging_utils.logger"):
-            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
+        manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            assert manager.narrator_builder.narrator_assets.narrator_assets[0] == narrator1
-            assert manager.image_builder.image_assets.image_assets[0] == image1
-            assert manager.narrator_builder.narrator_assets.narrator_assets[1] == narrator2
-            assert manager.image_builder.image_assets.image_assets[1] == image2
+        assert manager.narrator_builder.narrator_assets.narrator_assets[0] == narrator1
+        assert manager.image_builder.image_assets.image_assets[0] == image1
+        assert manager.narrator_builder.narrator_assets.narrator_assets[1] == narrator2
+        assert manager.image_builder.image_assets.image_assets[1] == image2
 
-            assert (manager.narrator_builder.narrator_assets.is_complete() and manager.image_builder.image_assets.is_complete())
+        assert (
+            manager.narrator_builder.narrator_assets.is_complete()
+            and manager.image_builder.image_assets.is_complete()
+        )
 
     def test_asset_synchronization_different_sizes(self, story_setup_with_recipe):
         """Test asset synchronization when asset file has different size than recipe."""
-        from pathlib import Path
-        
         video_folder = Path(story_setup_with_recipe) / "video"
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
-        
+
         # Create separate asset files for the new architecture (only one asset each)
         narrator_asset_file = chapter_folder / "narrator_assets.json"
         image_asset_file = chapter_folder / "image_assets.json"
@@ -266,32 +258,33 @@ class TestNarratorAndImageAssetManager:
         with open(image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_existing_data, f)
 
-        with patch("logging_utils.logger"):
-            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
+        manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            # Should synchronize to recipe size (2 assets each)
-            assert len(manager.narrator_builder.narrator_assets.narrator_assets) == 2
-            assert len(manager.image_builder.image_assets.image_assets) == 2
+        # Should synchronize to recipe size (2 assets each)
+        assert len(manager.narrator_builder.narrator_assets.narrator_assets) == 2
+        assert len(manager.image_builder.image_assets.image_assets) == 2
 
-            # First assets should be loaded from files
-            assert manager.narrator_builder.narrator_assets.narrator_assets[0] == narrator1
-            assert manager.image_builder.image_assets.image_assets[0] == image1
+        # First assets should be loaded from files
+        assert manager.narrator_builder.narrator_assets.narrator_assets[0] == narrator1
+        assert manager.image_builder.image_assets.image_assets[0] == image1
 
-            # Second assets should be None (not in asset file)
-            assert manager.narrator_builder.narrator_assets.narrator_assets[1] is None
-            assert manager.image_builder.image_assets.image_assets[1] is None
+        # Second assets should be None (not in asset file)
+        assert manager.narrator_builder.narrator_assets.narrator_assets[1] is None
+        assert manager.image_builder.image_assets.image_assets[1] is None
 
-            # Manager should not be complete
-            assert not (manager.narrator_builder.narrator_assets.is_complete() and manager.image_builder.image_assets.is_complete())
+        # Manager should not be complete
+        assert not (
+            manager.narrator_builder.narrator_assets.is_complete()
+            and manager.image_builder.image_assets.is_complete()
+        )
 
     def test_cleanup_assets_removes_unused_files(self, story_setup_with_recipe):
         """Test that cleanup_assets removes files not referenced in assets."""
-        from pathlib import Path
-        
+
         video_folder = Path(story_setup_with_recipe) / "video"
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
-        
+
         # Create separate asset folders for new architecture
         narrator_assets_folder = chapter_folder / "assets" / "narrator"
         image_assets_folder = chapter_folder / "assets" / "image"
@@ -319,37 +312,34 @@ class TestNarratorAndImageAssetManager:
         ]:
             file_path.touch()
 
-        with patch("logging_utils.logger"):
-            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
+        manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            # Set up some assets to be kept - use absolute paths as production would
-            manager.narrator_builder.narrator_assets.set_scene_narrator(0, valid_narrator1)
-            manager.image_builder.image_assets.set_scene_image(0, valid_image1)
-            manager.narrator_builder.narrator_assets.set_scene_narrator(1, valid_narrator2)
-            # Note: scene 1 has no image asset (None)
+        # Set up some assets to be kept - use absolute paths as production would
+        manager.narrator_builder.narrator_assets.set_scene_narrator(0, valid_narrator1)
+        manager.image_builder.image_assets.set_scene_image(0, valid_image1)
+        manager.narrator_builder.narrator_assets.set_scene_narrator(1, valid_narrator2)
+        # Note: scene 1 has no image asset (None)
 
-            # Run cleanup
-            manager.clean_unused_assets()
+        # Run cleanup
+        manager.clean_unused_assets()
 
-            # Verify that valid assets are kept
-            assert valid_narrator1.exists()
-            assert valid_image1.exists()
-            assert valid_narrator2.exists()
+        # Verify that valid assets are kept
+        assert valid_narrator1.exists()
+        assert valid_image1.exists()
+        assert valid_narrator2.exists()
 
-            # Verify that unused files matching asset patterns are deleted
-            assert not old_narrator.exists()
-            assert not old_image.exists()
+        # Verify that unused files matching asset patterns are deleted
+        assert not old_narrator.exists()
+        assert not old_image.exists()
 
     def test_cleanup_assets_handles_none_values_in_assets(
         self, story_setup_with_recipe
     ):
         """Test that cleanup_assets properly handles None values in asset lists."""
-        from pathlib import Path
-        
         video_folder = Path(story_setup_with_recipe) / "video"
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
-        
+
         # Create separate asset folders for new architecture
         narrator_assets_folder = chapter_folder / "assets" / "narrator"
         image_assets_folder = chapter_folder / "assets" / "image"
@@ -385,12 +375,10 @@ class TestNarratorAndImageAssetManager:
 
     def test_cleanup_assets_preserves_directories(self, story_setup_with_recipe):
         """Test that cleanup_assets only removes files, not directories."""
-        from pathlib import Path
-        
         video_folder = Path(story_setup_with_recipe) / "video"
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
-        
+
         # Create separate asset folders for new architecture
         narrator_assets_folder = chapter_folder / "assets" / "narrator"
         image_assets_folder = chapter_folder / "assets" / "image"
@@ -415,49 +403,42 @@ class TestNarratorAndImageAssetManager:
         main_narrator_file.touch()
         main_image_file.touch()
 
-        with patch("logging_utils.logger"):
-            manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
+        manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-            # Run cleanup with no assets set (all should be deleted except directories)
-            manager.clean_unused_assets()
+        # Run cleanup with no assets set (all should be deleted except directories)
+        manager.clean_unused_assets()
 
-            # Verify that the subdirectories still exist
-            assert narrator_sub_dir.exists()
-            assert narrator_sub_dir.is_dir()
-            assert image_sub_dir.exists()
-            assert image_sub_dir.is_dir()
+        # Verify that the subdirectories still exist
+        assert narrator_sub_dir.exists()
+        assert narrator_sub_dir.is_dir()
+        assert image_sub_dir.exists()
+        assert image_sub_dir.is_dir()
 
-            # Verify that files are deleted
-            assert not main_narrator_file.exists()
-            assert not main_image_file.exists()
-            # Note: files in subdirectories should still exist because cleanup only processes
-            # files directly in assets_folder, not in subdirectories
-
-    @patch(
-        "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.begin_file_logging"
-    )
-    def test_generate_narrator_and_image_assets_success(
-        self, mock_logging, story_setup_with_recipe
-    ):
-        """Test successful asset generation process."""
+    def test_generate_narrator_and_image_assets_success(self, story_setup_with_recipe):
+        """Test successful asset generation process with mocked generators."""
         # Create asset manager
         video_asset_manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-        # Mock only the external generators, not the business logic
+        # Create mock generators that return file paths without actually creating files
         mock_audio_gen = Mock()
         mock_image_gen = Mock()
 
-        # The generators should return the output file path that was passed to them
         def mock_audio_generation(recipe, output_file_path):
+            # Mock creates the file without real content generation
+            output_file_path.parent.mkdir(parents=True, exist_ok=True)
+            output_file_path.write_text(f"Mock audio for: {recipe.prompt}")
             return output_file_path
 
         def mock_image_generation(recipe, output_file_path):
+            # Mock creates the file without real content generation
+            output_file_path.parent.mkdir(parents=True, exist_ok=True)
+            output_file_path.write_text(f"Mock image for: {recipe.prompt}")
             return [output_file_path]
 
         mock_audio_gen.clone_text_to_speech.side_effect = mock_audio_generation
         mock_image_gen.text_to_image.side_effect = mock_image_generation
 
-        # Mock the generator creation from recipe data
+        # Replace the GENERATOR classes with our mock generators
         with patch.object(
             video_asset_manager.narrator_builder.recipe.narrator_data[0],
             "GENERATOR",
@@ -483,7 +464,7 @@ class TestNarratorAndImageAssetManager:
             assert mock_audio_gen.clone_text_to_speech.call_count == 2  # 2 scenes
             assert mock_image_gen.text_to_image.call_count == 2  # 2 scenes
 
-            # The actual files are generated in separate asset folders with specific names
+            # The actual files should be generated in separate asset folders with specific names
             expected_narrator_path_1 = (
                 story_setup_with_recipe
                 / "video"
@@ -517,7 +498,20 @@ class TestNarratorAndImageAssetManager:
                 / "chapter_001_image_002.png"
             )
 
-            # Verify assets were set in the separate asset objects
+            # Verify files were actually created
+            assert expected_narrator_path_1.exists()
+            assert expected_narrator_path_2.exists()
+            assert expected_image_path_1.exists()
+            assert expected_image_path_2.exists()
+
+            # Verify content was written with recipe information
+            narrator_1_content = expected_narrator_path_1.read_text(encoding="utf-8")
+            assert "Test narrator 1" in narrator_1_content
+
+            image_1_content = expected_image_path_1.read_text(encoding="utf-8")
+            assert "Test prompt 1" in image_1_content
+
+            # Verify assets were set in the asset manager
             assert (
                 video_asset_manager.narrator_builder.narrator_assets.narrator_assets[0]
                 == expected_narrator_path_1
@@ -535,11 +529,8 @@ class TestNarratorAndImageAssetManager:
                 == expected_image_path_2
             )
 
-    @patch(
-        "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.begin_file_logging"
-    )
     def test_generate_assets_with_existing_assets_skips_generation(
-        self, mock_logging, story_setup_with_recipe
+        self, story_setup_with_recipe
     ):
         """Test that existing assets are not regenerated."""
         # Create asset manager
@@ -547,18 +538,10 @@ class TestNarratorAndImageAssetManager:
 
         # Create actual asset files in separate folders so has_* methods return True naturally
         narrator_folder = (
-            story_setup_with_recipe
-            / "video"
-            / "chapter_001"
-            / "assets"
-            / "narrator"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrator"
         )
         image_folder = (
-            story_setup_with_recipe
-            / "video"
-            / "chapter_001"
-            / "assets"
-            / "image"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "image"
         )
         narrator_folder.mkdir(parents=True, exist_ok=True)
         image_folder.mkdir(parents=True, exist_ok=True)
@@ -575,12 +558,20 @@ class TestNarratorAndImageAssetManager:
         existing_image_2.write_text("existing image 2")
 
         # Set existing assets using actual business logic with the new separate API
-        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(0, existing_audio_1)
-        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(1, existing_audio_2)
-        video_asset_manager.image_builder.image_assets.set_scene_image(0, existing_image_1)
-        video_asset_manager.image_builder.image_assets.set_scene_image(1, existing_image_2)
+        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(
+            0, existing_audio_1
+        )
+        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(
+            1, existing_audio_2
+        )
+        video_asset_manager.image_builder.image_assets.set_scene_image(
+            0, existing_image_1
+        )
+        video_asset_manager.image_builder.image_assets.set_scene_image(
+            1, existing_image_2
+        )
 
-        # Mock generators to verify they're not called
+        # Use mock generators to verify they're not called
         mock_audio_gen = Mock()
         mock_image_gen = Mock()
 
@@ -606,54 +597,52 @@ class TestNarratorAndImageAssetManager:
             video_asset_manager.generate_narrator_and_image_assets()
 
             # Verify no generators were called since all assets already exist
-            mock_audio_gen.clone_text_to_speech.assert_not_called()
-            mock_image_gen.text_to_image.assert_not_called()
+            assert mock_audio_gen.clone_text_to_speech.call_count == 0
+            assert mock_image_gen.text_to_image.call_count == 0
 
-    @patch(
-        "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.begin_file_logging"
-    )
-    def test_generate_assets_handles_partial_completion(
-        self, mock_logging, story_setup_with_recipe
-    ):
+    def test_generate_assets_handles_partial_completion(self, story_setup_with_recipe):
         """Test generation when only some assets exist."""
         # Create asset manager
         video_asset_manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
         # Create asset folders and set up existing narrator for scene 0 only
         narrator_folder = (
-            story_setup_with_recipe
-            / "video"
-            / "chapter_001"
-            / "assets"
-            / "narrator"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrator"
         )
         image_folder = (
-            story_setup_with_recipe
-            / "video"
-            / "chapter_001"
-            / "assets"
-            / "image"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "image"
         )
         narrator_folder.mkdir(parents=True, exist_ok=True)
         image_folder.mkdir(parents=True, exist_ok=True)
         existing_audio = narrator_folder / "existing_narrator.mp3"
         existing_audio.write_text("existing audio content")
-        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(0, existing_audio)
+        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(
+            0, existing_audio
+        )
         # Scene 1 narrator and both scene images are missing
 
-        # Mock generators
+        # Use mock generators with side effects to create test files
         mock_audio_gen = Mock()
         mock_image_gen = Mock()
 
-        # The generators should return the output file path that was passed to them
-        def mock_audio_generation(recipe, output_file_path):
-            return output_file_path
+        def audio_side_effect(*args, **kwargs):
+            # Create a simple test file using the output_file_path
+            output_path = kwargs.get("output_file_path")
+            if output_path:
+                Path(output_path).write_text("Test audio content", encoding="utf-8")
+                return output_path
+            return None
 
-        def mock_image_generation(recipe, output_file_path):
-            return [output_file_path]
+        def image_side_effect(*args, **kwargs):
+            # Create a simple test file using the output_file_path
+            output_path = kwargs.get("output_file_path")
+            if output_path:
+                Path(output_path).write_text("Test image content", encoding="utf-8")
+                return [output_path]  # Return list as expected by image generators
+            return []
 
-        mock_audio_gen.clone_text_to_speech.side_effect = mock_audio_generation
-        mock_image_gen.text_to_image.side_effect = mock_image_generation
+        mock_audio_gen.clone_text_to_speech.side_effect = audio_side_effect
+        mock_image_gen.text_to_image.side_effect = image_side_effect
 
         with patch.object(
             video_asset_manager.narrator_builder.recipe.narrator_data[0],
@@ -684,7 +673,8 @@ class TestNarratorAndImageAssetManager:
 
             # Verify the business logic correctly kept existing asset and added new ones
             assert (
-                video_asset_manager.narrator_builder.narrator_assets.narrator_assets[0] == existing_audio
+                video_asset_manager.narrator_builder.narrator_assets.narrator_assets[0]
+                == existing_audio
             )  # Kept existing
 
             # Generated assets should be in the expected locations with proper names in separate folders
@@ -713,6 +703,11 @@ class TestNarratorAndImageAssetManager:
                 / "chapter_001_image_002.png"
             )
 
+            # Verify files were actually created
+            assert expected_narrator_path.exists()
+            assert expected_image_path_1.exists()
+            assert expected_image_path_2.exists()
+
             assert (
                 video_asset_manager.narrator_builder.narrator_assets.narrator_assets[1]
                 == expected_narrator_path
@@ -726,37 +721,82 @@ class TestNarratorAndImageAssetManager:
                 == expected_image_path_2
             )  # Generated new
 
+    def test_generate_assets_handles_generation_failures(self, story_setup_with_recipe):
+        """Test that generation failures are handled gracefully."""
+        # Create asset manager
+        video_asset_manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
+
+        # Create failing mock generators
+        failing_audio_gen = Mock()
+        failing_image_gen = Mock()
+
+        # Set up failures through side effects - using RuntimeError which is caught by the actual code
+        failing_audio_gen.clone_text_to_speech.side_effect = RuntimeError(
+            "Audio generation failed"
+        )
+        failing_image_gen.text_to_image.side_effect = RuntimeError(
+            "Image generation failed"
+        )
+
+        with patch.object(
+            video_asset_manager.narrator_builder.recipe.narrator_data[0],
+            "GENERATOR",
+            return_value=failing_audio_gen,
+        ), patch.object(
+            video_asset_manager.narrator_builder.recipe.narrator_data[1],
+            "GENERATOR",
+            return_value=failing_audio_gen,
+        ), patch.object(
+            video_asset_manager.image_builder.recipe.image_data[0],
+            "GENERATOR",
+            return_value=failing_image_gen,
+        ), patch.object(
+            video_asset_manager.image_builder.recipe.image_data[1],
+            "GENERATOR",
+            return_value=failing_image_gen,
+        ):
+
+            # Generation should continue despite failures (exceptions are caught and logged)
+            video_asset_manager.generate_narrator_and_image_assets()
+
+            # Verify generators were called despite failures
+            assert failing_audio_gen.clone_text_to_speech.call_count >= 1
+            assert failing_image_gen.text_to_image.call_count >= 1
+
+            # Verify no assets were set due to failures
+            assert (
+                video_asset_manager.narrator_builder.narrator_assets.narrator_assets[0]
+                is None
+            )
+            assert (
+                video_asset_manager.image_builder.image_assets.image_assets[0] is None
+            )
+
     def test_get_missing_narrator_and_image_assets_detection(
         self, story_setup_with_recipe
     ):
         """Test proper detection of missing assets."""
-        from pathlib import Path
-        
         # Create asset manager
         video_asset_manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
         # Create asset folders for the new architecture
         narrator_folder = (
-            story_setup_with_recipe
-            / "video"
-            / "chapter_001"
-            / "assets"
-            / "narrator"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrator"
         )
         image_folder = (
-            story_setup_with_recipe
-            / "video"
-            / "chapter_001"
-            / "assets"
-            / "image"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "image"
         )
         narrator_folder.mkdir(parents=True, exist_ok=True)
         image_folder.mkdir(parents=True, exist_ok=True)
 
         # Initially all assets should be missing (we have 2 scenes from the recipe)
-        missing_narrator = video_asset_manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
-        missing_image = video_asset_manager.image_builder.image_assets.get_missing_image_assets()
-        
+        missing_narrator = (
+            video_asset_manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
+        )
+        missing_image = (
+            video_asset_manager.image_builder.image_assets.get_missing_image_assets()
+        )
+
         assert 0 in missing_narrator
         assert 1 in missing_narrator  # Second scene
         assert 0 in missing_image
@@ -765,12 +805,18 @@ class TestNarratorAndImageAssetManager:
         # Add narrator asset for scene 0
         narrator_file = narrator_folder / "narrator_001.mp3"
         narrator_file.write_text("audio content")
-        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(0, narrator_file)
+        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(
+            0, narrator_file
+        )
 
         # Now only image for scene 0 and all assets for scene 1 should be missing
-        missing_narrator = video_asset_manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
-        missing_image = video_asset_manager.image_builder.image_assets.get_missing_image_assets()
-        
+        missing_narrator = (
+            video_asset_manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
+        )
+        missing_image = (
+            video_asset_manager.image_builder.image_assets.get_missing_image_assets()
+        )
+
         assert 0 not in missing_narrator
         assert 1 in missing_narrator
         assert 0 in missing_image
@@ -782,9 +828,13 @@ class TestNarratorAndImageAssetManager:
         video_asset_manager.image_builder.image_assets.set_scene_image(0, image_file)
 
         # Now only scene 1 assets should be missing
-        missing_narrator = video_asset_manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
-        missing_image = video_asset_manager.image_builder.image_assets.get_missing_image_assets()
-        
+        missing_narrator = (
+            video_asset_manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
+        )
+        missing_image = (
+            video_asset_manager.image_builder.image_assets.get_missing_image_assets()
+        )
+
         assert 0 not in missing_narrator
         assert 1 in missing_narrator
         assert 0 not in missing_image
@@ -795,13 +845,19 @@ class TestNarratorAndImageAssetManager:
         image_file_2 = image_folder / "image_002.png"
         narrator_file_2.write_text("audio content 2")
         image_file_2.write_text("image content 2")
-        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(1, narrator_file_2)
+        video_asset_manager.narrator_builder.narrator_assets.set_scene_narrator(
+            1, narrator_file_2
+        )
         video_asset_manager.image_builder.image_assets.set_scene_image(1, image_file_2)
 
         # Now nothing should be missing and both should be complete
-        missing_narrator = video_asset_manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
-        missing_image = video_asset_manager.image_builder.image_assets.get_missing_image_assets()
-        
+        missing_narrator = (
+            video_asset_manager.narrator_builder.narrator_assets.get_missing_narrator_assets()
+        )
+        missing_image = (
+            video_asset_manager.image_builder.image_assets.get_missing_image_assets()
+        )
+
         assert 0 not in missing_narrator
         assert 1 not in missing_narrator
         assert 0 not in missing_image
@@ -830,9 +886,12 @@ class TestNarratorAndImageAssetManager:
         ):
             # The method should handle the error gracefully and not crash
             video_asset_manager.narrator_builder.generate_narrator_asset(0)
-            
+
             # Verify that the asset was not set due to the error
-            assert video_asset_manager.narrator_builder.narrator_assets.narrator_assets[0] is None
+            assert (
+                video_asset_manager.narrator_builder.narrator_assets.narrator_assets[0]
+                is None
+            )
 
     @patch(
         "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.begin_file_logging"
@@ -855,6 +914,8 @@ class TestNarratorAndImageAssetManager:
         ):
             # The method should handle the error gracefully and not crash
             video_asset_manager.image_builder.generate_image_asset(0)
-            
+
             # Verify that the asset was not set due to the error
-            assert video_asset_manager.image_builder.image_assets.image_assets[0] is None
+            assert (
+                video_asset_manager.image_builder.image_assets.image_assets[0] is None
+            )
