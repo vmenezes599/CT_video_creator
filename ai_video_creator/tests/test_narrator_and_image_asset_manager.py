@@ -415,119 +415,104 @@ class TestNarratorAndImageAssetManager:
         assert image_sub_dir.is_dir()
 
     def test_generate_narrator_and_image_assets_success(self, story_setup_with_recipe):
-        """Test successful asset generation process with mocked generators."""
+        """Test successful asset generation process with fake generators."""
         # Create asset manager
         video_asset_manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-        # Create mock generators that return file paths without actually creating files
-        mock_audio_gen = Mock()
-        mock_image_gen = Mock()
+        # Create fake generators that create real files for testing
+        class FakeAudioGenerator:
+            def clone_text_to_speech(self, recipe, output_file_path):
+                # Create actual file to test file operations
+                output_file_path.parent.mkdir(parents=True, exist_ok=True)
+                output_file_path.write_text(f"Fake audio for: {recipe.prompt}")
+                return output_file_path
 
-        def mock_audio_generation(recipe, output_file_path):
-            # Mock creates the file without real content generation
-            output_file_path.parent.mkdir(parents=True, exist_ok=True)
-            output_file_path.write_text(f"Mock audio for: {recipe.prompt}")
-            return output_file_path
+        class FakeImageGenerator:
+            def text_to_image(self, recipe, output_file_path):
+                # Create actual file to test file operations
+                output_file_path.parent.mkdir(parents=True, exist_ok=True)
+                output_file_path.write_text(f"Fake image for: {recipe.prompt}")
+                return [output_file_path]
 
-        def mock_image_generation(recipe, output_file_path):
-            # Mock creates the file without real content generation
-            output_file_path.parent.mkdir(parents=True, exist_ok=True)
-            output_file_path.write_text(f"Mock image for: {recipe.prompt}")
-            return [output_file_path]
+        # Replace only the generator classes, not the core business logic
+        for recipe in video_asset_manager.narrator_builder.recipe.narrator_data:
+            recipe.GENERATOR = lambda: FakeAudioGenerator()
 
-        mock_audio_gen.clone_text_to_speech.side_effect = mock_audio_generation
-        mock_image_gen.text_to_image.side_effect = mock_image_generation
+        for recipe in video_asset_manager.image_builder.recipe.image_data:
+            recipe.GENERATOR = lambda: FakeImageGenerator()
 
-        # Replace the GENERATOR classes with our mock generators
-        with patch.object(
-            video_asset_manager.narrator_builder.recipe.narrator_data[0],
-            "GENERATOR",
-            return_value=mock_audio_gen,
-        ), patch.object(
-            video_asset_manager.narrator_builder.recipe.narrator_data[1],
-            "GENERATOR",
-            return_value=mock_audio_gen,
-        ), patch.object(
-            video_asset_manager.image_builder.recipe.image_data[0],
-            "GENERATOR",
-            return_value=mock_image_gen,
-        ), patch.object(
-            video_asset_manager.image_builder.recipe.image_data[1],
-            "GENERATOR",
-            return_value=mock_image_gen,
-        ):
+        # Test the actual generation logic without mocking core methods
+        video_asset_manager.generate_narrator_and_image_assets()
 
-            # Run the actual generation logic
-            video_asset_manager.generate_narrator_and_image_assets()
+        # Verify business logic executed correctly by checking actual results
+        # The actual files should be generated in separate asset folders with specific names
+        expected_narrator_path_1 = (
+            story_setup_with_recipe
+            / "video"
+            / "chapter_001"
+            / "assets"
+            / "narrator"
+            / "chapter_001_narrator_001.mp3"
+        )
+        expected_narrator_path_2 = (
+            story_setup_with_recipe
+            / "video"
+            / "chapter_001"
+            / "assets"
+            / "narrator"
+            / "chapter_001_narrator_002.mp3"
+        )
+        expected_image_path_1 = (
+            story_setup_with_recipe
+            / "video"
+            / "chapter_001"
+            / "assets"
+            / "image"
+            / "chapter_001_image_001.png"
+        )
+        expected_image_path_2 = (
+            story_setup_with_recipe
+            / "video"
+            / "chapter_001"
+            / "assets"
+            / "image"
+            / "chapter_001_image_002.png"
+        )
 
-            # Verify generators were called for each scene
-            assert mock_audio_gen.clone_text_to_speech.call_count == 2  # 2 scenes
-            assert mock_image_gen.text_to_image.call_count == 2  # 2 scenes
+        # Verify files were actually created through the business logic
+        assert expected_narrator_path_1.exists()
+        assert expected_narrator_path_2.exists()
+        assert expected_image_path_1.exists()
+        assert expected_image_path_2.exists()
 
-            # The actual files should be generated in separate asset folders with specific names
-            expected_narrator_path_1 = (
-                story_setup_with_recipe
-                / "video"
-                / "chapter_001"
-                / "assets"
-                / "narrator"
-                / "chapter_001_narrator_001.mp3"
-            )
-            expected_narrator_path_2 = (
-                story_setup_with_recipe
-                / "video"
-                / "chapter_001"
-                / "assets"
-                / "narrator"
-                / "chapter_001_narrator_002.mp3"
-            )
-            expected_image_path_1 = (
-                story_setup_with_recipe
-                / "video"
-                / "chapter_001"
-                / "assets"
-                / "image"
-                / "chapter_001_image_001.png"
-            )
-            expected_image_path_2 = (
-                story_setup_with_recipe
-                / "video"
-                / "chapter_001"
-                / "assets"
-                / "image"
-                / "chapter_001_image_002.png"
-            )
+        # Verify content was written with recipe information
+        narrator_1_content = expected_narrator_path_1.read_text(encoding="utf-8")
+        assert "Test narrator 1" in narrator_1_content
 
-            # Verify files were actually created
-            assert expected_narrator_path_1.exists()
-            assert expected_narrator_path_2.exists()
-            assert expected_image_path_1.exists()
-            assert expected_image_path_2.exists()
+        image_1_content = expected_image_path_1.read_text(encoding="utf-8")
+        assert "Test prompt 1" in image_1_content
 
-            # Verify content was written with recipe information
-            narrator_1_content = expected_narrator_path_1.read_text(encoding="utf-8")
-            assert "Test narrator 1" in narrator_1_content
+        # Verify assets were set in the asset manager through actual business logic
+        assert (
+            video_asset_manager.narrator_builder.narrator_assets.narrator_assets[0]
+            == expected_narrator_path_1
+        )
+        assert (
+            video_asset_manager.narrator_builder.narrator_assets.narrator_assets[1]
+            == expected_narrator_path_2
+        )
+        assert (
+            video_asset_manager.image_builder.image_assets.image_assets[0]
+            == expected_image_path_1
+        )
+        assert (
+            video_asset_manager.image_builder.image_assets.image_assets[1]
+            == expected_image_path_2
+        )
 
-            image_1_content = expected_image_path_1.read_text(encoding="utf-8")
-            assert "Test prompt 1" in image_1_content
-
-            # Verify assets were set in the asset manager
-            assert (
-                video_asset_manager.narrator_builder.narrator_assets.narrator_assets[0]
-                == expected_narrator_path_1
-            )
-            assert (
-                video_asset_manager.narrator_builder.narrator_assets.narrator_assets[1]
-                == expected_narrator_path_2
-            )
-            assert (
-                video_asset_manager.image_builder.image_assets.image_assets[0]
-                == expected_image_path_1
-            )
-            assert (
-                video_asset_manager.image_builder.image_assets.image_assets[1]
-                == expected_image_path_2
-            )
+        # Verify business logic completion state
+        assert video_asset_manager.narrator_builder.narrator_assets.is_complete()
+        assert video_asset_manager.image_builder.image_assets.is_complete()
 
     def test_generate_assets_with_existing_assets_skips_generation(
         self, story_setup_with_recipe
@@ -571,34 +556,29 @@ class TestNarratorAndImageAssetManager:
             1, existing_image_2
         )
 
-        # Use mock generators to verify they're not called
-        mock_audio_gen = Mock()
-        mock_image_gen = Mock()
+        # Track generation calls to verify skipping logic
+        generation_calls = []
 
-        with patch.object(
-            video_asset_manager.narrator_builder.recipe.narrator_data[0],
-            "GENERATOR",
-            return_value=mock_audio_gen,
-        ), patch.object(
-            video_asset_manager.narrator_builder.recipe.narrator_data[1],
-            "GENERATOR",
-            return_value=mock_audio_gen,
-        ), patch.object(
-            video_asset_manager.image_builder.recipe.image_data[0],
-            "GENERATOR",
-            return_value=mock_image_gen,
-        ), patch.object(
-            video_asset_manager.image_builder.recipe.image_data[1],
-            "GENERATOR",
-            return_value=mock_image_gen,
-        ):
+        class TrackingFakeGenerator:
+            def clone_text_to_speech(self, recipe, output_path):
+                generation_calls.append(f"audio: {recipe.prompt}")
+                return output_path
 
-            # Run the actual generation logic
-            video_asset_manager.generate_narrator_and_image_assets()
+            def text_to_image(self, recipe, output_path):
+                generation_calls.append(f"image: {recipe.prompt}")
+                return [output_path]
 
-            # Verify no generators were called since all assets already exist
-            assert mock_audio_gen.clone_text_to_speech.call_count == 0
-            assert mock_image_gen.text_to_image.call_count == 0
+        # Replace generators with tracking versions
+        for recipe in video_asset_manager.narrator_builder.recipe.narrator_data:
+            recipe.GENERATOR = lambda: TrackingFakeGenerator()
+        for recipe in video_asset_manager.image_builder.recipe.image_data:
+            recipe.GENERATOR = lambda: TrackingFakeGenerator()
+
+        # Run the actual generation logic
+        video_asset_manager.generate_narrator_and_image_assets()
+
+        # Verify no generators were called since all assets already exist
+        assert len(generation_calls) == 0
 
     def test_generate_assets_handles_partial_completion(self, story_setup_with_recipe):
         """Test generation when only some assets exist."""

@@ -36,7 +36,7 @@ class TestVideoRecipeFile:
         recipe = SubVideoRecipe(recipe_path)
 
         assert recipe.recipe_path == recipe_path
-        assert recipe.video_data == []
+        assert not recipe.video_data
 
     def test_recipe_with_data(self, tmp_path):
         """Test recipe with actual data - core functionality."""
@@ -152,7 +152,7 @@ class TestVideoRecipeFile:
         recipe = SubVideoRecipe(recipe_path)
 
         # Should start with empty data
-        assert recipe.video_data == []
+        assert not recipe.video_data
 
         # The original corrupted file should be renamed to .old
         assert old_recipe_path.exists()

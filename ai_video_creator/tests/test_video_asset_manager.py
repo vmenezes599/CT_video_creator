@@ -400,96 +400,143 @@ class TestVideoAssetManager:
         # files directly in assets_folder, not in subdirectories
 
     def test_generate_video_assets_workflow(self, story_setup_with_recipe):
-        """Test the video asset generation workflow."""
+        """Test the video asset generation workflow with minimal mocking."""
         # Create valid narrator and image assets first
         video_folder = story_setup_with_recipe / "video"
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
-        narrator_image_asset_file = chapter_folder / "narrator_and_image_assets.json"
+
+        # Create separate narrator and image asset files for new architecture
+        narrator_asset_file = chapter_folder / "narrator_assets.json"
+        image_asset_file = chapter_folder / "image_assets.json"
 
         # Create actual asset files within the allowed directory
-        assets_folder = chapter_folder / "assets" / "narrator_and_image"
-        assets_folder.mkdir(parents=True, exist_ok=True)
+        narrator_folder = chapter_folder / "assets" / "narrator"
+        image_folder = chapter_folder / "assets" / "image"
+        narrator_folder.mkdir(parents=True, exist_ok=True)
+        image_folder.mkdir(parents=True, exist_ok=True)
 
-        temp_narrator1 = assets_folder / "temp_narrator1.mp3"
-        temp_narrator2 = assets_folder / "temp_narrator2.mp3"
-        temp_image1 = assets_folder / "temp_image1.jpg"
-        temp_image2 = assets_folder / "temp_image2.jpg"
+        narrator1 = narrator_folder / "narrator1.mp3"
+        narrator2 = narrator_folder / "narrator2.mp3"
+        image1 = image_folder / "image1.jpg"
+        image2 = image_folder / "image2.jpg"
 
-        for temp_file in [temp_narrator1, temp_narrator2, temp_image1, temp_image2]:
+        for temp_file in [narrator1, narrator2, image1, image2]:
             temp_file.write_text("fake content")
 
-        complete_narrator_image_data = {
-            "assets": [
-                {
-                    "narrator": "assets/narrator_and_image/temp_narrator1.mp3",
-                    "image": "assets/narrator_and_image/temp_image1.jpg",
-                },
-                {
-                    "narrator": "assets/narrator_and_image/temp_narrator2.mp3",
-                    "image": "assets/narrator_and_image/temp_image2.jpg",
-                },
+        # Create separate asset files
+        narrator_data = {
+            "narrator_assets": [
+                "assets/narrator/narrator1.mp3",
+                "assets/narrator/narrator2.mp3",
             ]
         }
-        with open(narrator_image_asset_file, "w", encoding="utf-8") as f:
-            json.dump(complete_narrator_image_data, f)
+        image_data = {
+            "image_assets": ["assets/image/image1.jpg", "assets/image/image2.jpg"]
+        }
+
+        with open(narrator_asset_file, "w", encoding="utf-8") as f:
+            json.dump(narrator_data, f)
+        with open(image_asset_file, "w", encoding="utf-8") as f:
+            json.dump(image_data, f)
 
         manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
-        # Mock the video generation process
-        with patch.object(manager, "_generate_video_asset") as mock_generate:
+        # Create a fake video generator that creates real files
+        class FakeVideoGenerator:
+            def media_to_video(self, recipe, output_path):
+                # Create actual file to test file operations
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text(f"fake video for: {recipe.prompt}")
+                return output_path
+
+        # Mock only the generator creation, not the core business logic
+        for scene_data in manager.recipe.video_data:
+            for recipe in scene_data:
+                recipe.GENERATOR = lambda: FakeVideoGenerator()
+
+        # Also mock the concatenation function since it requires real video files
+        with patch(
+            "ai_video_creator.modules.video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
+        ) as mock_concat:
+
+            def fake_concat(input_videos, output_path):
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text("concatenated video")
+                return output_path
+
+            mock_concat.side_effect = fake_concat
+
+            # Test the actual workflow
             manager.generate_video_assets()
 
-            # Should attempt to generate videos for missing scenes
+            # Verify business logic executed correctly
             missing_videos = manager.video_assets.get_missing_videos()
-            assert mock_generate.call_count == len(missing_videos)
+            assert len(missing_videos) == 0  # All videos should be generated
 
-    def test_generate_video_assets_skips_when_image_assets_missing(
+            # Verify files were actually created through the business logic
+            assert len(manager.video_assets.assembled_sub_video) == 2
+            assert len(manager.video_assets.sub_video_assets) == 2
+            assert len(manager.video_assets.sub_video_assets[0]) > 0
+            assert len(manager.video_assets.sub_video_assets[1]) > 0
+
+    def test_generate_video_assets_skips_when_assets_missing(
         self, story_setup_with_recipe
     ):
-        """Test that video generation is skipped when image assets are missing."""
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        """Test that video generation is skipped when narrator or image assets are missing."""
+        video_folder = story_setup_with_recipe / "video"
+        chapter_folder = video_folder / "chapter_001"
+        chapter_folder.mkdir(parents=True, exist_ok=True)
 
-        # Set up complete narrator assets but incomplete image assets
-        # The current new architecture uses separate folders
-        narrator_folder = (
-            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrator"
-        )
-        image_folder = (
-            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "image"
-        )
+        # Create separate asset files with incomplete data
+        narrator_asset_file = chapter_folder / "narrator_assets.json"
+        image_asset_file = chapter_folder / "image_assets.json"
 
-        # Create complete narrator assets
+        # Create narrator assets folder and one file (incomplete)
+        narrator_folder = chapter_folder / "assets" / "narrator"
         narrator_folder.mkdir(parents=True, exist_ok=True)
         narrator_file1 = narrator_folder / "narrator1.mp3"
-        narrator_file2 = narrator_folder / "narrator2.mp3"
         narrator_file1.write_text("narrator content 1")
-        narrator_file2.write_text("narrator content 2")
 
-        # Set narrator assets as complete
-        manager._SubVideoAssetManager__narrator_assets.set_scene_narrator(
-            0, narrator_file1
-        )
-        manager._SubVideoAssetManager__narrator_assets.set_scene_narrator(
-            1, narrator_file2
-        )
+        # Create only partial assets (missing second narrator and all images)
+        narrator_data = {"narrator_assets": ["assets/narrator/narrator1.mp3", None]}
+        image_data = {"image_assets": [None, None]}
 
-        # Deliberately leave image assets incomplete (don't create any image files)
-        # Force image assets to be incomplete by ensuring they have None values but the system expects files
-        image_assets = manager._SubVideoAssetManager__image_assets
-        # Ensure we have the right number of slots but they're all None (incomplete)
-        while len(image_assets.image_assets) < 2:
-            image_assets.image_assets.append(None)
-        # Make sure both slots are None
-        image_assets.image_assets[0] = None
-        image_assets.image_assets[1] = None
+        with open(narrator_asset_file, "w", encoding="utf-8") as f:
+            json.dump(narrator_data, f)
+        with open(image_asset_file, "w", encoding="utf-8") as f:
+            json.dump(image_data, f)
 
-        # Should skip video generation due to incomplete image assets
-        with patch.object(manager, "_generate_video_asset") as mock_generate:
-            manager.generate_video_assets()
+        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
 
-            # Should not attempt to generate any videos because image assets are incomplete
-            mock_generate.assert_not_called()
+        # Track if any video generation attempts were made
+        generation_attempts = []
+
+        class TrackingFakeGenerator:
+            def media_to_video(self, recipe, output_path):
+                generation_attempts.append(f"Generated: {output_path.name}")
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                output_path.write_text("fake video")
+                return output_path
+
+        # Set up generator tracking without mocking core business logic
+        for scene_data in manager.recipe.video_data:
+            for recipe in scene_data:
+                recipe.GENERATOR = lambda: TrackingFakeGenerator()
+
+        # Test the actual business logic - should skip due to incomplete assets
+        manager.generate_video_assets()
+
+        # Verify no video generation occurred due to missing assets
+        assert len(generation_attempts) == 0
+
+        # Verify business logic correctly identified missing assets
+        assert not manager._SubVideoAssetManager__narrator_assets.is_complete()
+        assert not manager._SubVideoAssetManager__image_assets.is_complete()
+
+        # Verify no video assets were created
+        missing_videos = manager.video_assets.get_missing_videos()
+        assert len(missing_videos) == 2  # Both scenes should still be missing
 
     def test_sub_video_file_path_generation(self, story_setup_with_recipe):
         """Test sub-video file path generation."""
