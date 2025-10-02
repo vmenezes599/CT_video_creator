@@ -60,12 +60,16 @@ class ImageAssets:
                 data = json.load(file)
 
             self.image_assets = []
-            for asset_data in data.get("image_assets", []):
+            for asset_data in data.get("assets", []):
                 if asset_data is None:
                     self.image_assets.append(None)
                 else:
-                    asset_path = Path(asset_data)
-                    absolute_path = self.convert_from_relative_to_absolute(asset_path)
+                    asset_path = Path(asset_data.get("image", None))
+                    absolute_path = (
+                        self.convert_from_relative_to_absolute(asset_path)
+                        if asset_data
+                        else None
+                    )
                     self.image_assets.append(absolute_path)
 
             logger.debug(f"Successfully loaded {len(self.image_assets)} image assets")

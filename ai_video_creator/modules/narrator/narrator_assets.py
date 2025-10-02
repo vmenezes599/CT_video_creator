@@ -60,12 +60,16 @@ class NarratorAssets:
                 data = json.load(file)
 
             self.narrator_assets = []
-            for asset_data in data.get("narrator_assets", []):
+            for asset_data in data.get("assets", []):
                 if asset_data is None:
                     self.narrator_assets.append(None)
                 else:
-                    asset_path = Path(asset_data)
-                    absolute_path = self.convert_from_relative_to_absolute(asset_path)
+                    asset_path = Path(asset_data.get("narrator", None))
+                    absolute_path = (
+                        self.convert_from_relative_to_absolute(asset_path)
+                        if asset_data
+                        else None
+                    )
                     self.narrator_assets.append(absolute_path)
 
             logger.debug(
