@@ -27,8 +27,8 @@ class VideoCreatorPaths:
         self.asset_folder = self.chapter_folder / "assets"
 
         # Final modules paths
-        self.narrator_asset_folder = self.asset_folder / "narrator"
-        self.image_asset_folder = self.asset_folder / "image"
+        self.narrator_asset_folder = self.asset_folder / "narrators"
+        self.image_asset_folder = self.asset_folder / "images"
         self.sub_videos_asset_folder = self.asset_folder / "sub_videos"
         self.video_assembler_asset_folder = self.asset_folder / "video_assembler"
 
