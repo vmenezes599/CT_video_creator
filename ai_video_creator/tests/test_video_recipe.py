@@ -5,7 +5,7 @@ Unit tests for video_recipe module.
 import json
 
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
-from ai_video_creator.generators import WanVideoRecipe
+from ai_video_creator.generators import WanRecipeBase
 from ai_video_creator.modules.video import (
     SubVideoRecipe,
     SubVideoRecipeDefaultSettings,
@@ -50,7 +50,7 @@ class TestVideoRecipeFile:
         test_color_match.touch()
 
         # Add real video recipe data
-        video_recipe = WanVideoRecipe(
+        video_recipe = WanRecipeBase(
             prompt="Test video prompt",
             color_match_media_path=str(test_color_match),
             media_path=str(test_image),
@@ -129,7 +129,7 @@ class TestVideoRecipeFile:
         # Verify data was loaded correctly
         assert len(recipe.video_data) == 1
         assert len(recipe.video_data[0]) == 1
-        assert isinstance(recipe.video_data[0][0], WanVideoRecipe)
+        assert isinstance(recipe.video_data[0][0], WanRecipeBase)
         assert recipe.video_data[0][0].prompt == "Loaded video prompt"
         # Internal paths should be absolute after loading
         assert str(recipe.video_data[0][0].media_path) == str(test_image)
@@ -185,7 +185,7 @@ class TestVideoRecipeFile:
             video_recipes = []
             image_file, color_match_file = scene_files[scene]
             for sub_video in range(2):
-                video_recipe = WanVideoRecipe(
+                video_recipe = WanRecipeBase(
                     prompt=f"Scene {scene} sub-video {sub_video}",
                     color_match_media_path=str(color_match_file),
                     media_path=str(image_file) if sub_video == 0 else None,

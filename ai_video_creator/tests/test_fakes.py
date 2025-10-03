@@ -89,7 +89,7 @@ class FakeVideoGenerator(IVideoGenerator):
         self.track_calls = track_calls
         self.calls = []
 
-    def media_to_video(self, recipe: VideoRecipeBase, output_file_path: Path) -> Path:
+    def generate_video(self, recipe: VideoRecipeBase, output_file_path: Path) -> Path:
         """Create a fake video file with recipe content."""
         if self.track_calls:
             self.calls.append(f"video: {recipe.prompt}")

@@ -19,7 +19,7 @@
     },
     "3": {
         "inputs": {
-            "lora_name": "Wan2.2-Lightning_I2V-A14B-4steps-lora_HIGH_fp16.safetensors",
+            "lora_name": "Wan2.2-Lightning/WAN2.2-I2V-Lighting-HIGH-4step.safetensors",
             "strength_model": 1,
             "model": [
                 "1",
@@ -33,7 +33,7 @@
     },
     "4": {
         "inputs": {
-            "lora_name": "Wan2.2-Lightning_I2V-A14B-4steps-lora_LOW_fp16.safetensors",
+            "lora_name": "Wan2.2-Lightning/WAN2.2-I2V-Lighting-LOW-4step.safetensors",
             "strength_model": 1,
             "model": [
                 "2",

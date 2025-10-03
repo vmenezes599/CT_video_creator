@@ -9,7 +9,7 @@ from logging_utils import begin_file_logging, logger
 
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
-from ai_video_creator.generators import WanVideoRecipe
+from ai_video_creator.generators import WanRecipeBase
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.prompt import Prompt
 from ai_video_creator.utils import get_audio_duration
@@ -131,7 +131,7 @@ class SubVideoRecipeBuilder:
         seed: int | None = None,
     ) -> None:
         """Create video recipe from story folder and chapter prompt index."""
-        return WanVideoRecipe(
+        return WanRecipeBase(
             prompt=prompt.visual_description,
             high_lora=high_lora if high_lora else None,
             high_lora_strength=high_lora_strength if high_lora_strength else None,

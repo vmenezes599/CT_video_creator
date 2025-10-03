@@ -108,7 +108,7 @@ class SubVideoAssetManager:
                     f"Using video generator: {type(video_generator).__name__} for file: {sub_video_file_path.name}"
                 )
 
-                output_sub_video = video_generator.media_to_video(
+                output_sub_video = video_generator.generate_video(
                     recipe, sub_video_file_path
                 )
 

@@ -7,7 +7,10 @@ from pathlib import Path
 
 from logging_utils import logger
 
-from ai_video_creator.generators import VideoRecipeBase, WanVideoRecipe
+from ai_video_creator.generators import (
+    VideoRecipeBase,
+    WanRecipeBase,
+)
 
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 
@@ -126,7 +129,7 @@ class SubVideoRecipe:
         recipe_type = data.get("recipe_type")
 
         if recipe_type == "WanVideoRecipeType":
-            recipe = WanVideoRecipe.from_dict(data)
+            recipe = WanRecipeBase.from_dict(data)
             # Validate and resolve media paths
             if recipe.media_path:
                 recipe.media_path = self.__validate_and_resolve_path(
@@ -178,7 +181,9 @@ class SubVideoRecipe:
                         recipe_dict["color_match_media_path"] = str(relative_path)
                     except ValueError:
                         # Path is outside the directory, store as absolute
-                        recipe_dict["color_match_media_path"] = str(color_match_media_path)
+                        recipe_dict["color_match_media_path"] = str(
+                            color_match_media_path
+                        )
                 recipe_list.append(recipe_dict)
 
             result_item = {

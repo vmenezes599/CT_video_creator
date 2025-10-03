@@ -9,7 +9,10 @@ from .image_generator import (
 from .video_generator import (
     IVideoGenerator,
     VideoRecipeBase,
-    WanVideoRecipe,
+    WanRecipeBase,
+    WanI2VRecipe,
+    WanV2VRecipe,
+    WanT2VRecipe,
     WanGenerator,
 )
 from .audio_generator import (
@@ -30,6 +33,6 @@ __all__ = [
     "VideoRecipeBase",
     "ImageRecipeBase",
     "AudioRecipeBase",
-    "WanVideoRecipe",
+    "WanRecipeBase",
     "WanGenerator",
 ]

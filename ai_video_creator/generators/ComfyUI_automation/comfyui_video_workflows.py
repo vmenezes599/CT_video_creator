@@ -114,7 +114,9 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
         )
 
         new_entry_key = int(deque(new_entry.keys())[-1])
-        self._replace_model_node_reference(self.last_high_lora_node_index, new_entry_key)
+        self._replace_model_node_reference(
+            self.last_high_lora_node_index, new_entry_key
+        )
 
         self.workflow.update(new_entry)
         self.last_high_lora_node_index = new_entry_key
@@ -254,6 +256,62 @@ class WanV2VWorkflow(WanWorkflowBase):
             }
         }
         super()._set_fields(parameters)
+
+    def set_seed(self, seed: int) -> None:
+        """
+        Set the seed for the workflow.
+        """
+        self._set_seed(self.SEED_NODE_INDEX, seed)
+
+    def set_positive_prompt(self, positive_prompt: str) -> None:
+        """
+        Set the positive prompt for the workflow.
+        """
+        self._set_positive_prompt(self.POSITIVE_PROMPT_NODE_INDEX, positive_prompt)
+
+    def set_resolution(self, width: int, height: int) -> None:
+        """
+        Set the resolution for the workflow.
+        """
+        self._set_resolution(self.RESOLUTION_NODE_INDEX, width, height)
+
+    def set_output_filename(self, filename: str) -> None:
+        """
+        Set the output filename for the generated image.
+        """
+        self._set_output_filename(self.OUTPUT_FILENAME_NODE_INDEX, filename)
+
+
+class WanT2VWorkflow(WanWorkflowBase):
+    """
+    Class to handle the workflow for Stable Diffusion in ComfyUI.
+    """
+
+    WAN_LORA_WORKFLOW_PATH = f"{WORKFLOW_DIR}/WAN2.2-T2V_API.json"
+
+    SEED_NODE_INDEX = 7
+    POSITIVE_PROMPT_NODE_INDEX = 10
+    OUTPUT_FILENAME_NODE_INDEX = 17
+    RESOLUTION_NODE_INDEX = 30
+    FIRST_HIGH_LORA_NODE_INDEX = 2
+    FIRST_LOW_LORA_NODE_INDEX = 4
+
+    def __init__(self, load_best_config: bool = True) -> None:
+        """
+        Initialize the StableDiffusionWorkflow class.
+        """
+        super().__init__(
+            self.WAN_LORA_WORKFLOW_PATH,
+            self.FIRST_HIGH_LORA_NODE_INDEX,
+            self.FIRST_LOW_LORA_NODE_INDEX,
+        )
+
+        # Loading best configurations for the workflow
+        if load_best_config:
+            self._load_best_configurations()
+
+    def _load_best_configurations(self) -> None:
+        pass
 
     def set_seed(self, seed: int) -> None:
         """

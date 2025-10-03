@@ -233,7 +233,7 @@
     },
     "73": {
         "inputs": {
-            "lora_name": "dungeons-and-dreamscapes-flux_v21-000030.safetensors",
+            "lora_name": "Flux/dungeons-and-dreamscapes-flux_v21-000030.safetensors",
             "strength_model": 1,
             "strength_clip": 1,
             "model": [
