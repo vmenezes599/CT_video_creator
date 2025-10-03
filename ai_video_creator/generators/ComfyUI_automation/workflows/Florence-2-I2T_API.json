@@ -1,0 +1,63 @@
+{
+    "1": {
+        "inputs": {
+            "text_input": "",
+            "task": "more_detailed_caption",
+            "fill_mask": false,
+            "keep_model_loaded": false,
+            "max_new_tokens": 1024,
+            "num_beams": 3,
+            "do_sample": true,
+            "output_mask_select": "",
+            "seed": 12346,
+            "image": [
+                "4",
+                0
+            ],
+            "florence2_model": [
+                "2",
+                0
+            ]
+        },
+        "class_type": "Florence2Run",
+        "_meta": {
+            "title": "Florence2Run"
+        }
+    },
+    "2": {
+        "inputs": {
+            "model": "Florence-2-large-PromptGen-v2.0",
+            "precision": "fp16",
+            "attention": "sdpa",
+            "convert_to_safetensors": false
+        },
+        "class_type": "Florence2ModelLoader",
+        "_meta": {
+            "title": "Florence2ModelLoader"
+        }
+    },
+    "3": {
+        "inputs": {
+            "filename_prefix": "text",
+            "output_folder": "output",
+            "file_extension": ".txt",
+            "string": [
+                "1",
+                2
+            ]
+        },
+        "class_type": "SaveStringKJ",
+        "_meta": {
+            "title": "Save String KJ"
+        }
+    },
+    "4": {
+        "inputs": {
+            "image": "20250711_201948.jpg"
+        },
+        "class_type": "LoadImage",
+        "_meta": {
+            "title": "Load Image"
+        }
+    }
+}

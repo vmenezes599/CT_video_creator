@@ -139,7 +139,7 @@ class WanI2VWorkflow(WanWorkflowBase):
     Class to handle the workflow for Stable Diffusion in ComfyUI.
     """
 
-    WAN_LORA_WORKFLOW_PATH = f"{WORKFLOW_DIR}/WAN2.2-I2V_API.json"
+    WAN_I2V_WORKFLOW_PATH = f"{WORKFLOW_DIR}/WAN2.2-I2V_API.json"
 
     SEED_NODE_INDEX = 7
     POSITIVE_PROMPT_NODE_INDEX = 12
@@ -154,7 +154,7 @@ class WanI2VWorkflow(WanWorkflowBase):
         Initialize the StableDiffusionWorkflow class.
         """
         super().__init__(
-            self.WAN_LORA_WORKFLOW_PATH,
+            self.WAN_I2V_WORKFLOW_PATH,
             self.FIRST_HIGH_LORA_NODE_INDEX,
             self.FIRST_LOW_LORA_NODE_INDEX,
         )
@@ -207,7 +207,7 @@ class WanV2VWorkflow(WanWorkflowBase):
     Class to handle the workflow for Stable Diffusion in ComfyUI.
     """
 
-    WAN_LORA_WORKFLOW_PATH = f"{WORKFLOW_DIR}/WAN2.2-V2V_API.json"
+    WAN_V2V_WORKFLOW_PATH = f"{WORKFLOW_DIR}/WAN2.2-V2V_API.json"
 
     SEED_NODE_INDEX = 12
     POSITIVE_PROMPT_NODE_INDEX = 10
@@ -223,7 +223,7 @@ class WanV2VWorkflow(WanWorkflowBase):
         Initialize the StableDiffusionWorkflow class.
         """
         super().__init__(
-            self.WAN_LORA_WORKFLOW_PATH,
+            self.WAN_V2V_WORKFLOW_PATH,
             self.FIRST_HIGH_LORA_NODE_INDEX,
             self.FIRST_LOW_LORA_NODE_INDEX,
         )
@@ -287,7 +287,7 @@ class WanT2VWorkflow(WanWorkflowBase):
     Class to handle the workflow for Stable Diffusion in ComfyUI.
     """
 
-    WAN_LORA_WORKFLOW_PATH = f"{WORKFLOW_DIR}/WAN2.2-T2V_API.json"
+    WAN_T2V_WORKFLOW_PATH = f"{WORKFLOW_DIR}/WAN2.2-T2V_API.json"
 
     SEED_NODE_INDEX = 13
     POSITIVE_PROMPT_NODE_INDEX = 10
@@ -301,7 +301,7 @@ class WanT2VWorkflow(WanWorkflowBase):
         Initialize the StableDiffusionWorkflow class.
         """
         super().__init__(
-            self.WAN_LORA_WORKFLOW_PATH,
+            self.WAN_T2V_WORKFLOW_PATH,
             self.FIRST_HIGH_LORA_NODE_INDEX,
             self.FIRST_LOW_LORA_NODE_INDEX,
         )

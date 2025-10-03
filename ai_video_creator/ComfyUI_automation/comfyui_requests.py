@@ -22,7 +22,7 @@ class ComfyUIRequests:
     """
 
     def __init__(
-        self, max_retries_per_request: int = 5, delay_seconds: int = 10
+        self, max_retries_per_request: int = 5, delay_seconds: int = 1
     ) -> None:
         """
         Initializes the ComfyuiRequest with a configurable retry mechanism.
@@ -98,7 +98,7 @@ class ComfyUIRequests:
         response = self.comfyui_send_prompt(json=json_req, timeout=10)
         return response
 
-    def _wait_for_completion(self, prompt_id: str, check_interval: int = 5) -> int:
+    def _wait_for_completion(self, prompt_id: str, check_interval: int = 1) -> int:
         """
         Wait for ComfyUI to complete processing the current request.
 
@@ -232,7 +232,7 @@ class ComfyUIRequests:
             display_summary,
         )
         return []
-    
+
     def comfyui_ensure_send_all_prompts(
         self, req_list: list[IComfyUIWorkflow]
     ) -> list[str]:

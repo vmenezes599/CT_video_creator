@@ -46,3 +46,16 @@ def delete_media_from_comfyui_input_folder(media_path: Path) -> None:
         logger.debug(f"Media deleted successfully from: {media_path}")
     except OSError as e:
         logger.error(f"Error deleting media file {media_path}: {e}")
+
+
+def delete_media_from_comfyui_output_folder(media_path: Path) -> None:
+    """Delete asset from the ComfyUI output folder."""
+    if not media_path.exists():
+        logger.error(f"Media file does not exist, cannot delete: {media_path}")
+        return
+
+    try:
+        media_path.unlink()
+        logger.debug(f"Media deleted successfully from: {media_path}")
+    except OSError as e:
+        logger.error(f"Error deleting media file {media_path}: {e}")

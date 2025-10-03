@@ -7,9 +7,10 @@ from math import ceil
 
 from logging_utils import begin_file_logging, logger
 
+from ai_video_creator.generators import WanI2VRecipe, WanV2VRecipe
+from ai_video_creator.generators import FlorenceGenerator
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
-from ai_video_creator.generators import WanI2VRecipe, WanV2VRecipe
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.prompt import Prompt
 from ai_video_creator.utils import get_audio_duration
@@ -94,9 +95,13 @@ class SubVideoRecipeBuilder:
                 else None
             )
 
+            image_description = FlorenceGenerator().generate_description(
+                asset=image_asset
+            )
+
             recipe_list = []
             recipe = self._create_wan_i2v_recipe(
-                prompt=prompt,
+                prompt=image_description,
                 color_match_image_asset=image_asset,
                 image_asset=image_asset,
                 seed=seed,
@@ -104,7 +109,7 @@ class SubVideoRecipeBuilder:
             recipe_list.append(recipe)
             for _ in range(sub_video_count - 1):
                 recipe = self._create_wan_v2v_recipe(
-                    prompt=prompt,
+                    prompt=image_description,
                     color_match_image_asset=image_asset,
                     seed=seed,
                 )
@@ -120,7 +125,7 @@ class SubVideoRecipeBuilder:
 
     def _create_wan_i2v_recipe(
         self,
-        prompt: Prompt,
+        prompt: str,
         color_match_image_asset: Path,
         image_asset: Path | None = None,
         high_lora: list[str] | None = None,
@@ -131,7 +136,7 @@ class SubVideoRecipeBuilder:
     ) -> None:
         """Create video recipe from story folder and chapter prompt index."""
         return WanI2VRecipe(
-            prompt=prompt.visual_description,
+            prompt=prompt,
             high_lora=high_lora if high_lora else None,
             high_lora_strength=high_lora_strength if high_lora_strength else None,
             low_lora=low_lora if low_lora else None,
@@ -145,7 +150,7 @@ class SubVideoRecipeBuilder:
 
     def _create_wan_v2v_recipe(
         self,
-        prompt: Prompt,
+        prompt: str,
         color_match_image_asset: Path,
         image_asset: Path | None = None,
         high_lora: list[str] | None = None,
@@ -156,7 +161,7 @@ class SubVideoRecipeBuilder:
     ) -> None:
         """Create video recipe from story folder and chapter prompt index."""
         return WanV2VRecipe(
-            prompt=prompt.visual_description,
+            prompt=prompt,
             high_lora=high_lora if high_lora else None,
             high_lora_strength=high_lora_strength if high_lora_strength else None,
             low_lora=low_lora if low_lora else None,

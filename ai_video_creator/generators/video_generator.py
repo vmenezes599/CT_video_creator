@@ -2,7 +2,6 @@
 AI Video Generation Module
 """
 
-import copy
 import random
 
 from abc import ABC, abstractmethod

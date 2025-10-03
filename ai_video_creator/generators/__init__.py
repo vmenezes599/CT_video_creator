@@ -21,11 +21,13 @@ from .audio_generator import (
     IAudioGenerator,
     AudioRecipeBase,
 )
+from .description_generator import FlorenceGenerator
 from .subtitle_generator import SubtitleGenerator
 
 __all__ = [
     "FluxAIImageGenerator",
     "SubtitleGenerator",
+    "FlorenceGenerator",
     "FluxImageRecipe",
     "IAudioGenerator",
     "IImageGenerator",
