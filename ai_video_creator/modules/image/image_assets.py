@@ -96,14 +96,16 @@ class ImageAssets:
         """Save the current state of the image assets to a file with relative paths."""
         try:
             image_assets_data = []
-            for image_asset in self.image_assets:
+            for index, image_asset in enumerate(self.image_assets, 1):
                 if image_asset is None:
-                    image_assets_data.append(None)
+                    image_assets_data.append({"index": index, "image": None})
                 else:
                     relative_path = self._convert_from_absolute_to_relative(image_asset)
-                    image_assets_data.append(str(relative_path))
+                    image_assets_data.append(
+                        {"index": index, "image": str(relative_path)}
+                    )
 
-            data = {"image_assets": image_assets_data}
+            data = {"assets": image_assets_data}
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
             logger.trace(f"Image assets saved with {len(image_assets_data)} items")

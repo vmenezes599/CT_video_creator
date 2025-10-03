@@ -232,7 +232,7 @@ class ComfyUIRequests:
             display_summary,
         )
         return []
-
+    
     def comfyui_ensure_send_all_prompts(
         self, req_list: list[IComfyUIWorkflow]
     ) -> list[str]:

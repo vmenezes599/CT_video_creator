@@ -98,16 +98,18 @@ class NarratorAssets:
         """Save the current state of the narrator assets to a file with relative paths."""
         try:
             narrator_assets_data = []
-            for narrator_asset in self.narrator_assets:
+            for index, narrator_asset in enumerate(self.narrator_assets, 1):
                 if narrator_asset is None:
-                    narrator_assets_data.append(None)
+                    narrator_assets_data.append({"index": index, "narrator": None})
                 else:
                     relative_path = self._convert_from_absolute_to_relative(
                         narrator_asset
                     )
-                    narrator_assets_data.append(str(relative_path))
+                    narrator_assets_data.append(
+                        {"index": index, "narrator": str(relative_path)}
+                    )
 
-            data = {"narrator_assets": narrator_assets_data}
+            data = {"assets": narrator_assets_data}
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
             logger.trace(

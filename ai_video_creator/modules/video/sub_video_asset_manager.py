@@ -29,7 +29,7 @@ class SubVideoAssetManager:
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
         self.__paths = VideoCreatorPaths(story_folder, chapter_index)
-        
+
         # Load separate narrator and image assets
         self.__narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
         self.__image_assets = ImageAssets(self.__paths.image_asset_file)
@@ -165,8 +165,13 @@ class SubVideoAssetManager:
         ):
             logger.info("Starting video asset generation process")
 
-            if not self.__narrator_assets.is_complete() or not self.__image_assets.is_complete():
-                logger.error("Cannot generate videos - Some scenes are missing narrator or image assets")
+            if (
+                not self.__narrator_assets.is_complete()
+                or not self.__image_assets.is_complete()
+            ):
+                logger.error(
+                    "Cannot generate videos - Some scenes are missing narrator or image assets"
+                )
                 return
 
             missing_videos = self.video_assets.get_missing_videos()

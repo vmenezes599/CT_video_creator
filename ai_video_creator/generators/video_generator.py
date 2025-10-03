@@ -98,45 +98,6 @@ class WanGenerator(IVideoGenerator):
 
         return moved_files
 
-    def _prepare_image_to_video_recipe(
-        self, recipe: "WanRecipeBase"
-    ) -> "WanRecipeBase":
-        """
-        Prepare the recipe for image to video conversion.
-        This method can be expanded in the future if any preprocessing is needed.
-        """
-        new_media_path = copy_media_to_comfyui_input_folder(recipe.media_path)
-
-        changed_recipe = copy.deepcopy(recipe)
-        changed_recipe.media_path = Path(new_media_path.name)
-
-        return changed_recipe
-
-    def _prepare_video_to_video_recipe(
-        self, recipe: "WanRecipeBase"
-    ) -> "WanRecipeBase":
-        """
-        Prepare the recipe for video to video conversion.
-        This method can be expanded in the future if any preprocessing is needed.
-        """
-        return self._prepare_image_to_video_recipe(recipe)
-
-    def _prepare_text_to_video_recipe(self, recipe: "WanRecipeBase") -> "WanRecipeBase":
-        """
-        Prepare the recipe for text to video conversion.
-        This method can be expanded in the future if any preprocessing is needed.
-        """
-        return recipe
-
-    def _cleanup_comfyui_input_files(self, recipe: "WanRecipeBase") -> None:
-        """Cleanup any temporary files in the ComfyUI input folder."""
-        if hasattr(recipe, "media_path") and recipe.media_path:
-            media_path = recipe.media_path.name
-            delete_media_from_comfyui_input_folder(media_path)
-        if hasattr(recipe, "color_match_media_path") and recipe.color_match_media_path:
-            color_match_path = recipe.color_match_media_path
-            delete_media_from_comfyui_input_folder(color_match_path)
-
     @override
     def generate_video(self, recipe: "WanRecipeBase", output_file_path: Path) -> Path:
         """
@@ -145,48 +106,15 @@ class WanGenerator(IVideoGenerator):
         result = None
 
         if recipe.recipe_type == "WanT2VRecipeType":
-            prepared_recipe = self._prepare_text_to_video_recipe(recipe)
-            result = self.text_to_video(prepared_recipe, output_file_path)
+            result = self.text_to_video(recipe, output_file_path)
         elif recipe.recipe_type == "WanI2VRecipeType":
-            prepared_recipe = self._prepare_image_to_video_recipe(recipe)
-            result = self.image_to_video(prepared_recipe, output_file_path)
+            result = self.image_to_video(recipe, output_file_path)
         elif recipe.recipe_type == "WanV2VRecipeType":
-            prepared_recipe = self._prepare_video_to_video_recipe(recipe)
-            result = self.video_to_video(prepared_recipe, output_file_path)
+            result = self.video_to_video(recipe, output_file_path)
 
-        self._cleanup_comfyui_input_files(prepared_recipe)
         return result
 
-    def image_to_video(self, recipe: "WanRecipeBase", output_file_path: Path) -> Path:
-        """
-        Generate images for a list of prompts and return the paths to the generated images.
-
-        :param prompts: A list of text prompts to generate images for.
-        :return: A list of file paths to the generated images.
-        """
-
-        workflow = WanI2VWorkflow()
-
-        workflow.set_positive_prompt(recipe.prompt)
-        workflow.set_output_filename(output_file_path.stem)
-        workflow.set_image_path(str(recipe.media_path))
-
-        for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
-            workflow.add_high_lora(lora, strength)
-
-        for lora, strength in zip(recipe.low_lora, recipe.low_lora_strength):
-            workflow.add_low_lora(lora, strength)
-
-        workflow.set_seed(recipe.seed)
-        output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
-
-        moved_files = self._clean_and_move_generated_files(
-            output_file_path, output_file_names
-        )
-
-        return moved_files[0]
-
-    def video_to_video(self, recipe: "WanRecipeBase", output_file_path: Path) -> Path:
+    def image_to_video(self, recipe: "WanI2VRecipe", output_file_path: Path) -> Path:
         """
         Generate images for a list of prompts and return the paths to the generated images.
 
@@ -197,13 +125,51 @@ class WanGenerator(IVideoGenerator):
         new_color_match_media_path = copy_media_to_comfyui_input_folder(
             recipe.color_match_media_path
         )
+        new_media_path = copy_media_to_comfyui_input_folder(recipe.media_path)
+
+        workflow = WanI2VWorkflow()
+
+        workflow.set_positive_prompt(recipe.prompt)
+        workflow.set_output_filename(output_file_path.stem)
+        workflow.set_image_path(new_media_path.name)
+
+        for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
+            workflow.add_high_lora(lora, strength)
+
+        for lora, strength in zip(recipe.low_lora, recipe.low_lora_strength):
+            workflow.add_low_lora(lora, strength)
+
+        workflow.set_seed(recipe.seed)
+        output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
+
+        delete_media_from_comfyui_input_folder(new_color_match_media_path)
+        delete_media_from_comfyui_input_folder(new_media_path)
+
+        moved_files = self._clean_and_move_generated_files(
+            output_file_path, output_file_names
+        )
+
+        return moved_files[0]
+
+    def video_to_video(self, recipe: "WanV2VRecipe", output_file_path: Path) -> Path:
+        """
+        Generate images for a list of prompts and return the paths to the generated images.
+
+        :param prompts: A list of text prompts to generate images for.
+        :return: A list of file paths to the generated images.
+        """
+
+        new_color_match_media_path = copy_media_to_comfyui_input_folder(
+            recipe.color_match_media_path
+        )
+        new_media_path = copy_media_to_comfyui_input_folder(recipe.media_path)
 
         workflow = WanV2VWorkflow()
 
         workflow.set_positive_prompt(recipe.prompt)
         workflow.set_output_filename(output_file_path.stem)
-        workflow.set_color_match_filename(str(new_color_match_media_path.name))
-        workflow.set_video_path(str(recipe.media_path))
+        workflow.set_color_match_filename(new_color_match_media_path.name)
+        workflow.set_video_path(new_media_path.name)
 
         for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
             workflow.add_high_lora(lora, strength)
@@ -216,6 +182,7 @@ class WanGenerator(IVideoGenerator):
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
 
         delete_media_from_comfyui_input_folder(new_color_match_media_path)
+        delete_media_from_comfyui_input_folder(new_media_path)
 
         moved_files = self._clean_and_move_generated_files(
             output_file_path, output_file_names
@@ -223,7 +190,7 @@ class WanGenerator(IVideoGenerator):
 
         return moved_files[0]
 
-    def text_to_video(self, recipe: "WanRecipeBase", output_file_path: Path) -> Path:
+    def text_to_video(self, recipe: "WanT2VRecipe", output_file_path: Path) -> Path:
         """
         Generate images for a list of prompts and return the paths to the generated images.
 
@@ -262,6 +229,7 @@ class WanGenerator(IVideoGenerator):
 class WanRecipeBase(VideoRecipeBase):
     """Video recipe for creating videos from stories."""
 
+    GENERATOR = WanGenerator
     LORA_SUBFOLDER = ["Wan2.2_General"]
 
     color_media_path: str
