@@ -134,7 +134,7 @@ class FluxImageRecipe(ImageRecipeBase):
         for lora in comfyui_available_loras:
             lora_folder = lora.parent.name
             if lora_folder in self.LORA_SUBFOLDER:
-                available_loras.append(lora)
+                available_loras.append(str(lora))
 
         return {
             "prompt": self.prompt,

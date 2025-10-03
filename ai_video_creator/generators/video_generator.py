@@ -364,7 +364,7 @@ class WanRecipeBase(VideoRecipeBase):
         for lora in comfyui_available_loras:
             lora_folder = lora.parent.name
             if lora_folder in self.lora_subfolder:
-                available_loras.append(lora)
+                available_loras.append(str(lora))
 
         return {
             "color_match_media_path": str(self.color_match_media_path),
