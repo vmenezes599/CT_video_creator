@@ -495,7 +495,8 @@ class WanV2VRecipe(WanI2VRecipe):
     recipe_type = "WanV2VRecipeType"
 
 
-class WanT2VRecipe(WanRecipeBase):
+# TODO: Change subclass to WanRecipeBase. This is to simplify the manual recipe editing.
+class WanT2VRecipe(WanI2VRecipe):
     """Video recipe for creating videos from stories."""
 
     LORA_SUBFOLDER = ["Wan2.2_T2V"]
@@ -513,6 +514,8 @@ class WanT2VRecipe(WanRecipeBase):
         high_lora_strength: list[float] | None = None,
         low_lora: list[str] | None = _DEFAULT,
         low_lora_strength: list[float] | None = None,
+        # TODO: Remove media_path when changing subclass to WanRecipeBase
+        media_path: str | None = None,
         seed: int | None = None,
     ):
         """Initialize WanVideoRecipe with media data.
@@ -534,6 +537,7 @@ class WanT2VRecipe(WanRecipeBase):
             high_lora_strength=high_lora_strength,
             low_lora=low_lora,
             low_lora_strength=low_lora_strength,
+            media_path=media_path,
             seed=seed,
         )
         # Create instance-specific LORA_SUBFOLDER combining parent and child
