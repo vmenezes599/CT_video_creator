@@ -9,7 +9,7 @@ from logging_utils import begin_file_logging, logger
 
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
-from ai_video_creator.generators import WanRecipeBase
+from ai_video_creator.generators import WanI2VRecipe, WanV2VRecipe
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.prompt import Prompt
 from ai_video_creator.utils import get_audio_duration
@@ -37,7 +37,7 @@ class SubVideoRecipeBuilder:
 
         # Load video prompt
         self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
-        
+
         # Load separate narrator and image assets
         self.__narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
         self.__image_assets = ImageAssets(self.__paths.image_asset_file)
@@ -53,8 +53,7 @@ class SubVideoRecipeBuilder:
         if (
             not self._recipe.video_data
             or len(self._recipe.video_data) != len(self.__video_prompt)
-            or len(self.__image_assets.image_assets)
-            != len(self.__video_prompt)
+            or len(self.__image_assets.image_assets) != len(self.__video_prompt)
         ):
             return False
 
@@ -96,7 +95,7 @@ class SubVideoRecipeBuilder:
             )
 
             recipe_list = []
-            recipe = self._create_wan_video_recipe(
+            recipe = self._create_wan_i2v_recipe(
                 prompt=prompt,
                 color_match_image_asset=image_asset,
                 image_asset=image_asset,
@@ -104,7 +103,7 @@ class SubVideoRecipeBuilder:
             )
             recipe_list.append(recipe)
             for _ in range(sub_video_count - 1):
-                recipe = self._create_wan_video_recipe(
+                recipe = self._create_wan_v2v_recipe(
                     prompt=prompt,
                     color_match_image_asset=image_asset,
                     seed=seed,
@@ -119,7 +118,7 @@ class SubVideoRecipeBuilder:
             f"Successfully created {len(self.__video_prompt)} Wan video recipes"
         )
 
-    def _create_wan_video_recipe(
+    def _create_wan_i2v_recipe(
         self,
         prompt: Prompt,
         color_match_image_asset: Path,
@@ -131,7 +130,32 @@ class SubVideoRecipeBuilder:
         seed: int | None = None,
     ) -> None:
         """Create video recipe from story folder and chapter prompt index."""
-        return WanRecipeBase(
+        return WanI2VRecipe(
+            prompt=prompt.visual_description,
+            high_lora=high_lora if high_lora else None,
+            high_lora_strength=high_lora_strength if high_lora_strength else None,
+            low_lora=low_lora if low_lora else None,
+            low_lora_strength=low_lora_strength if low_lora_strength else None,
+            media_path=str(image_asset) if image_asset else None,
+            color_match_media_path=(
+                str(color_match_image_asset) if color_match_image_asset else None
+            ),
+            seed=seed,
+        )
+
+    def _create_wan_v2v_recipe(
+        self,
+        prompt: Prompt,
+        color_match_image_asset: Path,
+        image_asset: Path | None = None,
+        high_lora: list[str] | None = None,
+        high_lora_strength: list[float] | None = None,
+        low_lora: list[str] | None = None,
+        low_lora_strength: list[float] | None = None,
+        seed: int | None = None,
+    ) -> None:
+        """Create video recipe from story folder and chapter prompt index."""
+        return WanV2VRecipe(
             prompt=prompt.visual_description,
             high_lora=high_lora if high_lora else None,
             high_lora_strength=high_lora_strength if high_lora_strength else None,

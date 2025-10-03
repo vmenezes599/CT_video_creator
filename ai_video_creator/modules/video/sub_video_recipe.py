@@ -9,7 +9,9 @@ from logging_utils import logger
 
 from ai_video_creator.generators import (
     VideoRecipeBase,
-    WanRecipeBase,
+    WanI2VRecipe,
+    WanV2VRecipe,
+    WanT2VRecipe,
 )
 
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
@@ -128,21 +130,26 @@ class SubVideoRecipe:
         """Create the appropriate recipe object from dictionary data based on recipe_type."""
         recipe_type = data.get("recipe_type")
 
-        if recipe_type == "WanVideoRecipeType":
-            recipe = WanRecipeBase.from_dict(data)
-            # Validate and resolve media paths
-            if recipe.media_path:
-                recipe.media_path = self.__validate_and_resolve_path(
-                    Path(recipe.media_path)
-                )
-            if recipe.color_match_media_path:
-                recipe.color_match_media_path = self.__validate_and_resolve_path(
-                    Path(recipe.color_match_media_path)
-                )
-            return recipe
+        recipe = None
+        if recipe_type == "WanI2VRecipeType":
+            recipe = WanI2VRecipe.from_dict(data)
+        elif recipe_type == "WanT2VRecipeType":
+            recipe = WanT2VRecipe.from_dict(data)
+        elif recipe_type == "WanV2VRecipeType":
+            recipe = WanV2VRecipe.from_dict(data)
         else:
             logger.error(f"Unknown recipe_type: {recipe_type}")
             raise ValueError(f"Unknown recipe_type: {recipe_type}")
+
+        if recipe.media_path:
+            recipe.media_path = self.__validate_and_resolve_path(
+                Path(recipe.media_path)
+            )
+        if recipe.color_match_media_path:
+            recipe.color_match_media_path = self.__validate_and_resolve_path(
+                Path(recipe.color_match_media_path)
+            )
+        return recipe
 
     def clean(self) -> None:
         """Clean the current recipe data."""
