@@ -280,7 +280,8 @@ class ZonosTTSRecipe(AudioRecipeBase):
     seed = 0
 
     def __init__(self, prompt: str, clone_voice_path: str, seed: int | None = None):
-        """Initialize AudioRecipe with audio data.
+        """
+        Initialize AudioRecipe with audio data.
 
         Args:
             audio_path: Path to the audio file
@@ -290,7 +291,8 @@ class ZonosTTSRecipe(AudioRecipeBase):
         self.seed = random.randint(0, 2**64 - 1) if seed is None else seed
 
     def to_dict(self) -> dict:
-        """Convert AudioRecipe to dictionary.
+        """
+        Convert AudioRecipe to dictionary.
 
         Returns:
             Dictionary representation of the AudioRecipe
@@ -311,7 +313,8 @@ class ZonosTTSRecipe(AudioRecipeBase):
     def from_dict(
         cls, data: dict
     ) -> "AudioRecipe":  # pyright: ignore[reportUndefinedVariable]
-        """Create AudioRecipe from dictionary.
+        """
+        Create AudioRecipe from dictionary.
 
         Args:
             data: Dictionary containing AudioRecipe data
