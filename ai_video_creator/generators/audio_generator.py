@@ -297,7 +297,7 @@ class ZonosTTSRecipe(AudioRecipeBase):
         """
 
         voices_path = Path(DEFAULT_ASSETS_FOLDER) / "voices"
-        available_voices = [f.name for f in voices_path.glob("*.json")]
+        available_voices = [f.name for f in voices_path.glob("*.mp3")]
 
         return {
             "prompt": self.prompt,
