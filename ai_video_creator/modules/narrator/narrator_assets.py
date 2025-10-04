@@ -64,10 +64,10 @@ class NarratorAssets:
                 if asset_data is None:
                     self.narrator_assets.append(None)
                 else:
-                    asset_path = Path(asset_data.get("narrator", None))
+                    asset_path = asset_data.get("narrator", "")
                     absolute_path = (
-                        self.convert_from_relative_to_absolute(asset_path)
-                        if asset_data
+                        self.convert_from_relative_to_absolute(Path(asset_path))
+                        if asset_path
                         else None
                     )
                     self.narrator_assets.append(absolute_path)

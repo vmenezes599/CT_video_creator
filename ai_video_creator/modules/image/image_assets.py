@@ -64,10 +64,10 @@ class ImageAssets:
                 if asset_data is None:
                     self.image_assets.append(None)
                 else:
-                    asset_path = Path(asset_data.get("image", None))
+                    asset_path = asset_data.get("image", "")
                     absolute_path = (
-                        self.convert_from_relative_to_absolute(asset_path)
-                        if asset_data
+                        self.convert_from_relative_to_absolute(Path(asset_path))
+                        if asset_path
                         else None
                     )
                     self.image_assets.append(absolute_path)
