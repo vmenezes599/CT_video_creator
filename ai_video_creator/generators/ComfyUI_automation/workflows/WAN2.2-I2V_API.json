@@ -273,7 +273,7 @@
             "pingpong": false,
             "save_output": true,
             "images": [
-                "27",
+                "9",
                 0
             ]
         },
@@ -303,26 +303,6 @@
         "class_type": "PreviewImage",
         "_meta": {
             "title": "Preview Image"
-        }
-    },
-    "27": {
-        "inputs": {
-            "color_space": "LAB",
-            "factor": 1,
-            "device": "gpu",
-            "batch_size": 0,
-            "image": [
-                "9",
-                0
-            ],
-            "reference": [
-                "15",
-                0
-            ]
-        },
-        "class_type": "ImageColorMatch+",
-        "_meta": {
-            "title": "🔧 Image Color Match"
         }
     }
 }
