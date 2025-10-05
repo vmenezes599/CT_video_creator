@@ -107,6 +107,35 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
 
         return {new_last_key: lora_dict}
 
+    def _remove_node(self, to_remove_index: int, output_rewire_list: list[str]):
+        """
+        Remove a node from the workflow and rewire the outputs.
+        """
+        to_remove_index_str = str(to_remove_index)
+        if to_remove_index_str not in self.workflow.keys():
+            raise ValueError(f"Node index {to_remove_index} not found in the workflow.")
+
+        # Rewire the outputs
+        for output_node in output_rewire_list:
+            if output_node not in self.workflow[to_remove_index_str]["inputs"]:
+                raise ValueError(
+                    f"Output node {output_node} not found in the inputs of node {to_remove_index}."
+                )
+
+            list_of_connections: list[str] = self.workflow[to_remove_index_str][
+                "inputs"
+            ][output_node]
+            list_of_connections_to_rewire = []
+            for index in range(0, len(list_of_connections), 2):
+                list_of_connections_to_rewire.append(list_of_connections[index])
+
+            for to_rewire in list_of_connections_to_rewire:
+                self._replace_model_node_reference(
+                    to_remove_index, int(to_rewire), ["images"]
+                )
+
+        del self.workflow[to_remove_index_str]
+
     def add_high_lora(self, high_lora_name: str, strength: float) -> None:
         """Add high LORA to the workflow."""
         new_entry = self._generate_new_lora_node_dict(
@@ -115,7 +144,7 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
 
         new_entry_key = int(deque(new_entry.keys())[-1])
         self._replace_model_node_reference(
-            self.last_high_lora_node_index, new_entry_key
+            self.last_high_lora_node_index, new_entry_key, ["model"]
         )
 
         self.workflow.update(new_entry)
@@ -128,7 +157,9 @@ class WanWorkflowBase(ComfyUIWorkflowBase):
         )
 
         new_entry_key = int(deque(new_entry.keys())[-1])
-        self._replace_model_node_reference(self.last_low_lora_node_index, new_entry_key)
+        self._replace_model_node_reference(
+            self.last_low_lora_node_index, new_entry_key, ["model"]
+        )
 
         self.workflow.update(new_entry)
         self.last_low_lora_node_index = new_entry_key
@@ -214,7 +245,8 @@ class WanV2VWorkflow(WanWorkflowBase):
     OUTPUT_FILENAME_NODE_INDEX = 17
     RESOLUTION_NODE_INDEX = 22
     LOAD_VIDEO_NODE_INDEX = 23
-    COLOR_MATCH_NODE_INDEX = 29
+    COLOR_MATCH_NODE_INDEX = 28
+    COLOR_MATCH_IMAGE_NODE_INDEX = 29
     FIRST_HIGH_LORA_NODE_INDEX = 2
     FIRST_LOW_LORA_NODE_INDEX = 4
 
@@ -250,12 +282,15 @@ class WanV2VWorkflow(WanWorkflowBase):
         """
         Set the output filename for the generated image.
         """
-        parameters = {
-            self.COLOR_MATCH_NODE_INDEX: {
-                "image": filename,
+        if filename:
+            parameters = {
+                self.COLOR_MATCH_IMAGE_NODE_INDEX: {
+                    "image": filename,
+                }
             }
-        }
-        super()._set_fields(parameters)
+            super()._set_fields(parameters)
+        else:
+            self._remove_node(self.COLOR_MATCH_NODE_INDEX, ["image"])
 
     def set_seed(self, seed: int) -> None:
         """

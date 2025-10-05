@@ -88,7 +88,10 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
                 self.workflow[index_str]["inputs"][key] = value
 
     def _replace_model_node_reference(
-        self, from_node_index: int, to_node_index: int
+        self,
+        from_node_index: int,
+        to_node_index: int,
+        reference_keys: list[str],
     ) -> None:
         """
         Change all references from one node to another node in the workflow.
@@ -103,7 +106,7 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
                 result = {}
 
                 for key, value in obj.items():
-                    if key == "model":
+                    if key in reference_keys:
                         new_values = [
                             to_index_str if v == from_index_str else v for v in value
                         ]
