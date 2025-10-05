@@ -75,10 +75,10 @@ class SubVideoRecipeBuilder:
         )
 
         sub_video_count = ceil(
-            audio_duration / (2.0 * self._default_sub_video_duration_seconds)
+            audio_duration / self._default_sub_video_duration_seconds
         )
 
-        return max(sub_video_count, self._min_sub_videos)
+        return sub_video_count
 
     def _create_video_recipes(self, seed: int | None = None) -> None:
         """Create video recipe from story folder and chapter prompt index."""
