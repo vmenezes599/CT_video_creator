@@ -121,9 +121,6 @@ class WanGenerator(IVideoGenerator):
         :return: A list of file paths to the generated images.
         """
 
-        new_color_match_media_path = copy_media_to_comfyui_input_folder(
-            recipe.color_match_media_path
-        )
         new_media_path = copy_media_to_comfyui_input_folder(recipe.media_path)
 
         workflow = WanI2VWorkflow()
@@ -141,7 +138,6 @@ class WanGenerator(IVideoGenerator):
         workflow.set_seed(recipe.seed)
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
 
-        delete_media_from_comfyui_input_folder(new_color_match_media_path)
         delete_media_from_comfyui_input_folder(new_media_path)
 
         moved_files = self._clean_and_move_generated_files(
@@ -157,7 +153,6 @@ class WanGenerator(IVideoGenerator):
         :param prompts: A list of text prompts to generate images for.
         :return: A list of file paths to the generated images.
         """
-
         new_color_match_media_path = copy_media_to_comfyui_input_folder(
             recipe.color_match_media_path
         )
