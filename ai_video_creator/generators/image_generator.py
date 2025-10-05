@@ -111,10 +111,14 @@ class FluxImageRecipe(ImageRecipeBase):
             image_path: Path to the image file
             seed: Seed used for image generation
         """
+        requests = ComfyUIRequests()
+        available_loras = requests.comfyui_get_available_loras()
+        validated_lora = lora if lora in available_loras else ""
+
         super().__init__(
             prompt=prompt,
             recipe_type=self.recipe_type,
-            lora=lora if lora is not None else "",
+            lora=validated_lora,
             batch_size=batch_size if batch_size is not None else 1,
             seed=random.randint(0, 2**64 - 1) if seed is None else seed,
         )

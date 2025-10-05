@@ -268,6 +268,9 @@ class WanRecipeBase(VideoRecipeBase):
             seed=random.randint(0, 2**64 - 1) if seed is None else seed,
             recipe_type=self.recipe_type,
         )
+        requests = ComfyUIRequests()
+        available_loras = requests.comfyui_get_available_loras()
+
         self.color_match_media_path = (
             color_match_media_path if color_match_media_path else ""
         )
@@ -276,7 +279,11 @@ class WanRecipeBase(VideoRecipeBase):
                 "Wan2.2_General/Wan2.2-Fun-A14B-InP-high-noise-MPS.safetensors"
             ]
         else:
-            self.high_lora = high_lora if high_lora else []
+            self.high_lora = (
+                [lora for lora in high_lora if lora in available_loras]
+                if high_lora
+                else []
+            )
 
         self.high_lora_strength = high_lora_strength if high_lora_strength else []
 
@@ -296,7 +303,11 @@ class WanRecipeBase(VideoRecipeBase):
                 "Wan2.2_General/Wan2.2-Fun-A14B-InP-low-noise-HPS2.1.safetensors"
             ]
         else:
-            self.low_lora = low_lora if low_lora else []
+            self.low_lora = (
+                [lora for lora in low_lora if lora in available_loras]
+                if low_lora
+                else []
+            )
 
         self.low_lora_strength = low_lora_strength if low_lora_strength else []
 
