@@ -108,7 +108,7 @@ class VideoAssembler:
             / f"temp_{video_path_obj.stem}.mp4"
         )
 
-        output_path = create_video_segment_from_sub_video_and_audio_reverse_video(
+        output_path = create_video_segment_from_sub_video_and_audio_freeze_last_frame(
             sub_video_path=video_path, audio_path=audio_path, output_path=temp_file
         )
 
