@@ -153,8 +153,10 @@ class WanGenerator(IVideoGenerator):
         :param prompts: A list of text prompts to generate images for.
         :return: A list of file paths to the generated images.
         """
-        new_color_match_media_path = copy_media_to_comfyui_input_folder(
-            recipe.color_match_media_path
+        new_color_match_media_path = (
+            copy_media_to_comfyui_input_folder(Path(recipe.color_match_media_path))
+            if recipe.color_match_media_path
+            else None
         )
         new_media_path = copy_media_to_comfyui_input_folder(recipe.media_path)
 
@@ -162,7 +164,9 @@ class WanGenerator(IVideoGenerator):
 
         workflow.set_positive_prompt(recipe.prompt)
         workflow.set_output_filename(output_file_path.stem)
-        workflow.set_color_match_filename(new_color_match_media_path.name)
+        workflow.set_color_match_filename(
+            new_color_match_media_path.name if new_color_match_media_path else ""
+        )
         workflow.set_video_path(new_media_path.name)
 
         for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
