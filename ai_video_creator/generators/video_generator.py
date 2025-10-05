@@ -274,7 +274,7 @@ class WanRecipeBase(VideoRecipeBase):
         self.color_match_media_path = (
             color_match_media_path if color_match_media_path else ""
         )
-        if high_lora == self._DEFAULT:
+        if high_lora is None or high_lora == self._DEFAULT:
             self.high_lora = [
                 "Wan2.2_General/Wan2.2-Fun-A14B-InP-high-noise-MPS.safetensors"
             ]
@@ -298,7 +298,7 @@ class WanRecipeBase(VideoRecipeBase):
             # Clip if longer
             self.high_lora_strength = self.high_lora_strength[: len(self.high_lora)]
 
-        if low_lora == self._DEFAULT:
+        if low_lora is None or low_lora == self._DEFAULT:
             self.low_lora = [
                 "Wan2.2_General/Wan2.2-Fun-A14B-InP-low-noise-HPS2.1.safetensors"
             ]
@@ -409,17 +409,13 @@ class WanI2VRecipe(WanRecipeBase):
     media_path: str
     recipe_type = "WanI2VRecipeType"
 
-    # Lists are dangerous default values because they are shared between instances
-    # Thats why I use this _DEFAULT to fix this
-    _DEFAULT = object()
-
     def __init__(
         self,
         prompt: str,
         color_match_media_path: str | None,
-        high_lora: list[str] | None = _DEFAULT,
+        high_lora: list[str] | None = WanRecipeBase._DEFAULT,
         high_lora_strength: list[float] | None = None,
-        low_lora: list[str] | None = _DEFAULT,
+        low_lora: list[str] | None = WanRecipeBase._DEFAULT,
         low_lora_strength: list[float] | None = None,
         media_path: str | None = None,
         seed: int | None = None,
@@ -513,17 +509,13 @@ class WanT2VRecipe(WanI2VRecipe):
     LORA_SUBFOLDER = ["Wan2.2_T2V"]
     recipe_type = "WanT2VRecipeType"
 
-    # Lists are dangerous default values because they are shared between instances
-    # Thats why I use this _DEFAULT to fix this
-    _DEFAULT = object()
-
     def __init__(
         self,
         prompt: str,
         color_match_media_path: str | None,
-        high_lora: list[str] | None = _DEFAULT,
+        high_lora: list[str] | None = WanRecipeBase._DEFAULT,
         high_lora_strength: list[float] | None = None,
-        low_lora: list[str] | None = _DEFAULT,
+        low_lora: list[str] | None = WanRecipeBase._DEFAULT,
         low_lora_strength: list[float] | None = None,
         # TODO: Remove media_path when changing subclass to WanRecipeBase
         media_path: str | None = None,
