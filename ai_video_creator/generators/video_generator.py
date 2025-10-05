@@ -364,7 +364,9 @@ class WanRecipeBase(VideoRecipeBase):
         for field in missing_fields:
             raise KeyError(f"Missing required key: {field}")
 
-        if not isinstance(data["color_match_media_path"], str):
+        if data["color_match_media_path"] is not None and not isinstance(
+            data["color_match_media_path"], str
+        ):
             raise ValueError("color_match_media_path must be a string")
 
         if not isinstance(data["prompt"], str):
