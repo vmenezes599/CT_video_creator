@@ -25,6 +25,7 @@ from ai_video_creator.utils import (
     create_video_segment_from_sub_video_and_audio_freeze_last_frame,
     create_video_segment_from_sub_video_and_audio_reverse_video,
     create_video_segment_from_image_and_audio,
+    concatenate_videos_with_fade_in_out,
     concatenate_videos_with_reencoding,
     concatenate_videos_no_reencoding,
     safe_move,
@@ -125,7 +126,7 @@ class VideoAssembler:
 
         # Step 2: Create concat list
         output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_raw")
-        raw_video_path = concatenate_videos_with_reencoding(
+        raw_video_path = concatenate_videos_with_fade_in_out(
             video_segments=video_segments, output_path=output_video_path
         )
         # self._temp_files.append(raw_video_path)

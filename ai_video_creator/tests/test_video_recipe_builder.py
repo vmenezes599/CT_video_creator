@@ -49,7 +49,10 @@ class TestVideoRecipeBuilder:
             video_folder / "test_story_chapter_001_narrator_and_image_assets.json"
         )
         empty_assets = {
-            "assets": [{"narrator": "", "image": ""}, {"narrator": "", "image": ""}]
+            "assets": [
+                {"index": 1, "narrator": "", "image": ""}, 
+                {"index": 2, "narrator": "", "image": ""}
+            ]
         }
         with open(narrator_image_asset_file, "w", encoding="utf-8") as f:
             json.dump(empty_assets, f)
@@ -86,7 +89,7 @@ class TestVideoRecipeBuilder:
 
                 # First sub-video should have image path, others should not
                 first_recipe = scene_data["recipe_list"][0]
-                assert first_recipe["recipe_type"] == "WanVideoRecipeType"
+                assert first_recipe["recipe_type"] == "WanI2VRecipeType"
                 assert (
                     first_recipe["prompt"] == f"First visual description"
                     if scene_index == 0
@@ -173,9 +176,9 @@ class TestVideoRecipeBuilder:
         )
         empty_assets = {
             "assets": [
-                {"narrator": "", "image": ""},
-                {"narrator": "", "image": ""},
-                {"narrator": "", "image": ""},
+                {"index": 1, "narrator": "", "image": ""},
+                {"index": 2, "narrator": "", "image": ""},
+                {"index": 3, "narrator": "", "image": ""},
             ]
         }
         with open(narrator_image_asset_file, "w", encoding="utf-8") as f:

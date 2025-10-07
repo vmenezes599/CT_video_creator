@@ -62,7 +62,7 @@ class SubVideoAssetManager:
             f"Asset synchronization completed - video assets: {len(self.video_assets.assembled_sub_video)}"
         )
 
-    def _set_next_recipe_media_path(
+    def _set_next_recipe_media_path_and_color_match(
         self, scene_index: int, recipe_index: int, media_path: Path
     ) -> None:
         """Set the media path of the next recipe in the list, if it exists."""

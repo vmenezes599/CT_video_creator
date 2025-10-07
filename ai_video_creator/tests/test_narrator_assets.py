@@ -33,9 +33,9 @@ class TestNarratorAssets:
         test_narrator2.touch()
 
         test_data = {
-            "narrator_assets": [
-                str(test_narrator1.relative_to(tmp_path)),
-                str(test_narrator2.relative_to(tmp_path)),
+            "assets": [
+                {"narrator": str(test_narrator1.relative_to(tmp_path))},
+                {"narrator": str(test_narrator2.relative_to(tmp_path))},
             ]
         }
 

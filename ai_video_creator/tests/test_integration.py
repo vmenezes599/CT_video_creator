@@ -142,8 +142,8 @@ class TestVideoCreationWorkflow:
         assert len(tracking.get_calls_by_type("image")) == 3
 
         # Verify actual files were created
-        narrator_folder = chapter_folder / "assets" / "narrator"
-        image_folder = chapter_folder / "assets" / "image"
+        narrator_folder = chapter_folder / "assets" / "narrators"
+        image_folder = chapter_folder / "assets" / "images"
 
         assert narrator_folder.exists()
         assert image_folder.exists()

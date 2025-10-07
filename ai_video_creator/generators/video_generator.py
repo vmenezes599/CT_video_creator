@@ -111,6 +111,22 @@ class WanGenerator(IVideoGenerator):
 
         return result
 
+    def _copy_media_to_comfyui_input_folder(self, media_path: Path | str) -> Path:
+        media_path = Path(media_path)
+        with tempfile.TemporaryDirectory() as temp_folder:
+            if media_path.suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]:
+                media_path = extract_video_last_frame(media_path, temp_folder)
+
+            return copy_media_to_comfyui_input_folder(media_path)
+
+    def _copy_color_match_media_to_comfyui_input_folder(
+        self, media_path: Path | str
+    ) -> Path | None:
+        media_path = Path(media_path)
+        if media_path.exists() and media_path.is_file():
+            return copy_media_to_comfyui_input_folder(media_path)
+        return None
+
     def image_to_video(self, recipe: "WanI2VRecipe", output_file_path: Path) -> Path:
         """
         Generate images for a list of prompts and return the paths to the generated images.
@@ -119,18 +135,20 @@ class WanGenerator(IVideoGenerator):
         :return: A list of file paths to the generated images.
         """
 
-        media_path = Path(recipe.media_path)
-        with tempfile.TemporaryDirectory() as temp_folder:
-            if media_path.suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]:
-                media_path = extract_video_last_frame(media_path, temp_folder)
+        new_media_path = self._copy_media_to_comfyui_input_folder(recipe.media_path)
 
-            new_media_path = copy_media_to_comfyui_input_folder(media_path)
+        new_color_match_media_path = (
+            self._copy_color_match_media_to_comfyui_input_folder(
+                recipe.color_match_media_path
+            )
+        )
 
         workflow = WanI2VWorkflow()
 
         workflow.set_positive_prompt(recipe.prompt)
         workflow.set_output_filename(output_file_path.stem)
         workflow.set_image_path(new_media_path.name)
+        workflow.set_color_match_filename(new_color_match_media_path.name)
 
         for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
             workflow.add_high_lora(lora, strength)
@@ -142,6 +160,8 @@ class WanGenerator(IVideoGenerator):
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
 
         delete_media_from_comfyui_input_folder(new_media_path)
+        if new_color_match_media_path:
+            delete_media_from_comfyui_input_folder(new_color_match_media_path)
 
         moved_files = self._clean_and_move_generated_files(
             output_file_path, output_file_names
@@ -157,8 +177,11 @@ class WanGenerator(IVideoGenerator):
         :return: A list of file paths to the generated images.
         """
 
-        new_color_match_media_path = copy_media_to_comfyui_input_folder(
-            recipe.color_match_media_path
+        color_match_media_path = Path(recipe.color_match_media_path)
+        new_color_match_media_path = (
+            copy_media_to_comfyui_input_folder(recipe.color_match_media_path)
+            if color_match_media_path.exists() and color_match_media_path.is_file()
+            else None
         )
 
         workflow = WanT2VWorkflow()
@@ -176,7 +199,8 @@ class WanGenerator(IVideoGenerator):
 
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
 
-        delete_media_from_comfyui_input_folder(new_color_match_media_path)
+        if new_color_match_media_path:
+            delete_media_from_comfyui_input_folder(new_color_match_media_path)
 
         moved_files = self._clean_and_move_generated_files(
             output_file_path, output_file_names

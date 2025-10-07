@@ -250,7 +250,7 @@ class TestComfyUIRequests:
             assert processing_time == 15
             assert mock_get_history.call_count == 2
             assert mock_sleep.call_count == 1
-            mock_sleep.assert_called_with(5)  # Default check_interval
+            mock_sleep.assert_called_with(1)  # Default check_interval
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.datetime")

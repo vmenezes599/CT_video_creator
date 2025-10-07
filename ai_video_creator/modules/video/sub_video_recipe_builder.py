@@ -104,7 +104,11 @@ class SubVideoRecipeBuilder:
             )
             recipe_list.append(recipe)
             for _ in range(sub_video_count - 1):
-                recipe = self._create_wan_i2v_recipe(seed=seed)
+                recipe = self._create_wan_i2v_recipe(
+                    prompt=prompt.visual_description,
+                    seed=seed,
+                    color_match_image_asset=image_asset
+                )
                 recipe_list.append(recipe)
 
             self._recipe.add_video_data(

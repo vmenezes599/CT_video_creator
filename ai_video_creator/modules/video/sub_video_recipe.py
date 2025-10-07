@@ -161,19 +161,23 @@ class SubVideoRecipe:
 
         for i, item in enumerate(self.video_data, 1):
             recipe_list = []
-            for recipe in item:
+            for recipe_index, recipe in enumerate(item, 1):
                 recipe_dict = recipe.to_dict()
-                media_path = recipe.media_path
-                if media_path:
-                    # Convert to relative path for storage
-                    try:
-                        relative_path = Path(media_path).relative_to(
-                            self.recipe_file_parent.resolve()
-                        )
-                        recipe_dict["media_path"] = str(relative_path)
-                    except ValueError:
-                        # Path is outside the directory, store as absolute
-                        recipe_dict["media_path"] = str(media_path)
+                recipe_dict = {"sub_video_index": recipe_index, **recipe_dict}
+                
+                # Handle media_path if it exists (only for WanI2VRecipe)
+                if hasattr(recipe, 'media_path'):
+                    media_path = recipe.media_path
+                    if media_path:
+                        # Convert to relative path for storage
+                        try:
+                            relative_path = Path(media_path).relative_to(
+                                self.recipe_file_parent.resolve()
+                            )
+                            recipe_dict["media_path"] = str(relative_path)
+                        except ValueError:
+                            # Path is outside the directory, store as absolute
+                            recipe_dict["media_path"] = str(media_path)
                 color_match_media_path = recipe.color_match_media_path
                 if color_match_media_path:
                     # Convert to relative path for storage

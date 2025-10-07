@@ -175,6 +175,8 @@ class WanI2VWorkflow(WanWorkflowBase):
     SEED_NODE_INDEX = 7
     POSITIVE_PROMPT_NODE_INDEX = 12
     OUTPUT_FILENAME_NODE_INDEX = 20
+    COLOR_MATCH_NODE_INDEX = 28
+    COLOR_MATCH_IMAGE_NODE_INDEX = 29
     RESOLUTION_NODE_INDEX = 15
     LOAD_IMAGE_NODE_INDEX = 14
     FIRST_HIGH_LORA_NODE_INDEX = 3
@@ -231,6 +233,20 @@ class WanI2VWorkflow(WanWorkflowBase):
         Set the output filename for the generated image.
         """
         self._set_output_filename(self.OUTPUT_FILENAME_NODE_INDEX, filename)
+
+    def set_color_match_filename(self, filename: str) -> None:
+        """
+        Set the output filename for the generated image.
+        """
+        if filename:
+            parameters = {
+                self.COLOR_MATCH_IMAGE_NODE_INDEX: {
+                    "image": filename,
+                }
+            }
+            super()._set_fields(parameters)
+        else:
+            self._remove_node(self.COLOR_MATCH_NODE_INDEX, ["image"])
 
 
 class WanT2VWorkflow(WanWorkflowBase):

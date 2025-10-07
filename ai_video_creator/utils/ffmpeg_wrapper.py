@@ -262,8 +262,7 @@ def extract_video_last_frame(
     # The key is to avoid raw strings and let ffmpeg-python handle the escaping
     cmd = (
         ffmpeg.input(str(video_path))
-        .video
-        .filter('reverse')
+        .video.filter("reverse")
         .filter("select", "eq(n,0)")
         .output(str(last_frame_output_path), vframes=1)
         .overwrite_output()
@@ -670,6 +669,129 @@ def concatenate_videos_with_reencoding(
     # Clean up concat list file
     if concat_list_path.exists():
         concat_list_path.unlink()
+
+    return output_path
+
+
+def concatenate_videos_with_fade_in_out(
+    video_segments: list[str | Path],
+    output_path: str | Path,
+    width: int = 1920,
+    height: int = 1080,
+    fade_duration: float = 1.0,
+) -> Path:
+    """
+    Concatenate video segments into a single video file with fade-in and fade-out effects.
+
+    Args:
+        video_segments: List of paths to video segment files
+        output_path: Path for the concatenated output video
+        width: Target video width in pixels (default: 1920)
+        height: Target video height in pixels (default: 1080)
+        fade_duration: Duration of fade-in/fade-out effects in seconds (default: 1.0)
+
+    Returns:
+        Path to the concatenated video file
+    """
+    video_segments = [Path(segment) for segment in video_segments]
+    output_path = Path(output_path)
+
+    logger.info(f"Concatenating {len(video_segments)} video segments with fade effects")
+
+    # Create temporary directory for processed segments
+    temp_dir = output_path.parent / "temp_fade_segments"
+    temp_dir.mkdir(exist_ok=True)
+
+    try:
+        processed_segments = []
+
+        # Process each segment with fade effects
+        for i, segment in enumerate(video_segments):
+            logger.debug(
+                f"Processing segment {i+1}/{len(video_segments)}: {segment.name}"
+            )
+
+            # Get segment duration for fade calculations
+            probe = _probe(segment)
+            _, duration = _fps_and_duration(probe)
+
+            # Adjust fade duration if segment is too short
+            actual_fade_duration = min(fade_duration, duration / 3.0)
+
+            temp_output = temp_dir / f"fade_segment_{i:03d}.mp4"
+
+            # Create video filter with scaling and fade effects
+            video_filter_parts = [f"scale={width}:{height}"]
+
+            # Every segment gets both fade-in from black and fade-out to black
+            # This creates: black -> fade in -> video content -> fade out -> black
+
+            # Fade-in from black at the start of each segment
+            video_filter_parts.append(f"fade=t=in:st=0:d={actual_fade_duration}")
+
+            # Fade-out to black at the end of each segment
+            fade_start = max(0, duration - actual_fade_duration)
+            video_filter_parts.append(
+                f"fade=t=out:st={fade_start}:d={actual_fade_duration}"
+            )
+
+            video_filter = ",".join(video_filter_parts)
+
+            cmd = (
+                ffmpeg.input(str(segment))
+                .output(
+                    str(temp_output),
+                    vf=video_filter,
+                    **{
+                        "c:v": "h264_nvenc",
+                        "preset": "p5",
+                        "crf": "23",
+                        "c:a": "aac",
+                        "pix_fmt": "yuv420p",
+                        "movflags": "+faststart",
+                    },
+                )
+                .overwrite_output()
+                .compile()
+            )
+
+            _run_ffmpeg_trace(cmd)
+            processed_segments.append(temp_output)
+            logger.debug(f"Successfully processed segment {i+1} with fade effects")
+
+        # Create concat list file
+        concat_list_path = output_path.parent / "concat_list_fade.txt"
+        with open(concat_list_path, "w", encoding="utf-8") as f:
+            for segment in processed_segments:
+                f.write(f"file '{segment.resolve()}'\n")
+
+        # Concatenate processed segments
+        logger.info("Concatenating processed segments with fade effects")
+        cmd = (
+            ffmpeg.input(str(concat_list_path), format="concat", safe=0)
+            .output(str(output_path), c="copy", **{"bsf:a": "aac_adtstoasc"})
+            .overwrite_output()
+            .compile()
+        )
+        _run_ffmpeg_trace(cmd)
+
+        logger.info(
+            f"Video concatenation with fade effects completed successfully: {output_path.name}"
+        )
+
+    finally:
+        # Clean up temporary files
+        concat_list_path = output_path.parent / "concat_list_fade.txt"
+        if concat_list_path.exists():
+            concat_list_path.unlink()
+
+        if temp_dir.exists():
+            for temp_file in temp_dir.glob("*"):
+                temp_file.unlink(missing_ok=True)
+            try:
+                temp_dir.rmdir()
+            except OSError:
+                pass
 
     return output_path
 

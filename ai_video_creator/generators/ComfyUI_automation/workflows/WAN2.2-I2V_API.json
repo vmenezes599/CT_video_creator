@@ -273,7 +273,7 @@
             "pingpong": false,
             "save_output": true,
             "images": [
-                "9",
+                "28",
                 0
             ]
         },
@@ -303,6 +303,55 @@
         "class_type": "PreviewImage",
         "_meta": {
             "title": "Preview Image"
+        }
+    },
+    "28": {
+        "inputs": {
+            "color_space": "LAB",
+            "factor": 1,
+            "device": "gpu",
+            "batch_size": 0,
+            "image": [
+                "9",
+                0
+            ],
+            "reference": [
+                "30",
+                0
+            ]
+        },
+        "class_type": "ImageColorMatch+",
+        "_meta": {
+            "title": "🔧 Image Color Match"
+        }
+    },
+    "29": {
+        "inputs": {
+            "image": "chapter_001_image_001_00001_.png"
+        },
+        "class_type": "LoadImage",
+        "_meta": {
+            "title": "Load Image"
+        }
+    },
+    "30": {
+        "inputs": {
+            "width": 832,
+            "height": 480,
+            "upscale_method": "nearest-exact",
+            "keep_proportion": "crop",
+            "pad_color": "0, 0, 0",
+            "crop_position": "center",
+            "divisible_by": 1,
+            "device": "cpu",
+            "image": [
+                "29",
+                0
+            ]
+        },
+        "class_type": "ImageResizeKJv2",
+        "_meta": {
+            "title": "Resize Image v2"
         }
     }
 }

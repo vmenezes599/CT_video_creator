@@ -5,7 +5,7 @@ Unit tests for video_recipe module.
 import json
 
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
-from ai_video_creator.generators import WanRecipeBase
+from ai_video_creator.generators import WanI2VRecipe, WanT2VRecipe
 from ai_video_creator.modules.video import (
     SubVideoRecipe,
     SubVideoRecipeDefaultSettings,
@@ -50,7 +50,7 @@ class TestVideoRecipeFile:
         test_color_match.touch()
 
         # Add real video recipe data
-        video_recipe = WanRecipeBase(
+        video_recipe = WanI2VRecipe(
             prompt="Test video prompt",
             color_match_media_path=str(test_color_match),
             media_path=str(test_image),
@@ -88,7 +88,7 @@ class TestVideoRecipeFile:
         assert recipe_data["media_path"] == "image.jpg"
         assert recipe_data["color_match_media_path"] == "color_match_image.jpg"
         assert recipe_data["seed"] == 12345
-        assert recipe_data["recipe_type"] == "WanVideoRecipeType"
+        assert recipe_data["recipe_type"] == "WanI2VRecipeType"
 
     def test_recipe_loading_from_file(self, tmp_path):
         """Test loading recipe from existing file."""
@@ -112,7 +112,7 @@ class TestVideoRecipeFile:
                             "color_match_media_path": "color_match.jpg",  # Relative path
                             "high_lora": [],  # Required field
                             "seed": 99999,
-                            "recipe_type": "WanVideoRecipeType",
+                            "recipe_type": "WanI2VRecipeType",
                         }
                     ],
                     "extra_data": {},
@@ -129,7 +129,7 @@ class TestVideoRecipeFile:
         # Verify data was loaded correctly
         assert len(recipe.video_data) == 1
         assert len(recipe.video_data[0]) == 1
-        assert isinstance(recipe.video_data[0][0], WanRecipeBase)
+        assert isinstance(recipe.video_data[0][0], WanI2VRecipe)
         assert recipe.video_data[0][0].prompt == "Loaded video prompt"
         # Internal paths should be absolute after loading
         assert str(recipe.video_data[0][0].media_path) == str(test_image)
@@ -185,13 +185,23 @@ class TestVideoRecipeFile:
             video_recipes = []
             image_file, color_match_file = scene_files[scene]
             for sub_video in range(2):
-                video_recipe = WanRecipeBase(
-                    prompt=f"Scene {scene} sub-video {sub_video}",
-                    color_match_media_path=str(color_match_file),
-                    media_path=str(image_file) if sub_video == 0 else None,
-                    high_lora=[],  # Required parameter
-                    seed=scene * 100 + sub_video,
-                )
+                if sub_video == 0:
+                    # First sub-video has media_path, use WanI2VRecipe
+                    video_recipe = WanI2VRecipe(
+                        prompt=f"Scene {scene} sub-video {sub_video}",
+                        color_match_media_path=str(color_match_file),
+                        media_path=str(image_file),
+                        high_lora=[],  # Required parameter
+                        seed=scene * 100 + sub_video,
+                    )
+                else:
+                    # No media_path, use WanT2VRecipe
+                    video_recipe = WanT2VRecipe(
+                        prompt=f"Scene {scene} sub-video {sub_video}",
+                        color_match_media_path=str(color_match_file),
+                        high_lora=[],  # Required parameter
+                        seed=scene * 100 + sub_video,
+                    )
                 video_recipes.append(video_recipe)
             recipe.add_video_data(video_recipes)
 

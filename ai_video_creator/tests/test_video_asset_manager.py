@@ -93,14 +93,14 @@ class TestVideoAssetManager:
                             "media_path": "assets/narrator_and_image/image1.jpg",
                             "color_match_media_path": "assets/narrator_and_image/color_match1.jpg",
                             "seed": 12345,
-                            "recipe_type": "WanVideoRecipeType",
+                            "recipe_type": "WanI2VRecipeType",
                         },
                         {
                             "prompt": "Test description 1",
                             "media_path": None,
                             "color_match_media_path": "assets/narrator_and_image/color_match1.jpg",
                             "seed": 67890,
-                            "recipe_type": "WanVideoRecipeType",
+                            "recipe_type": "WanT2VRecipeType",
                         },
                     ],
                 },
@@ -113,14 +113,14 @@ class TestVideoAssetManager:
                             "media_path": "assets/narrator_and_image/image2.jpg",
                             "color_match_media_path": "assets/narrator_and_image/color_match2.jpg",
                             "seed": 11111,
-                            "recipe_type": "WanVideoRecipeType",
+                            "recipe_type": "WanI2VRecipeType",
                         },
                         {
                             "prompt": "Test description 2",
                             "media_path": None,
                             "color_match_media_path": "assets/narrator_and_image/color_match2.jpg",
                             "seed": 22222,
-                            "recipe_type": "WanVideoRecipeType",
+                            "recipe_type": "WanT2VRecipeType",
                         },
                     ],
                 },
@@ -411,8 +411,8 @@ class TestVideoAssetManager:
         image_asset_file = chapter_folder / "image_assets.json"
 
         # Create actual asset files within the allowed directory
-        narrator_folder = chapter_folder / "assets" / "narrator"
-        image_folder = chapter_folder / "assets" / "image"
+        narrator_folder = chapter_folder / "assets" / "narrators"
+        image_folder = chapter_folder / "assets" / "images"
         narrator_folder.mkdir(parents=True, exist_ok=True)
         image_folder.mkdir(parents=True, exist_ok=True)
 
@@ -426,13 +426,16 @@ class TestVideoAssetManager:
 
         # Create separate asset files
         narrator_data = {
-            "narrator_assets": [
-                "assets/narrator/narrator1.mp3",
-                "assets/narrator/narrator2.mp3",
+            "assets": [
+                {"index": 1, "narrator": "assets/narrators/narrator1.mp3"},
+                {"index": 2, "narrator": "assets/narrators/narrator2.mp3"},
             ]
         }
         image_data = {
-            "image_assets": ["assets/image/image1.jpg", "assets/image/image2.jpg"]
+            "assets": [
+                {"index": 1, "image": "assets/images/image1.jpg"},
+                {"index": 2, "image": "assets/images/image2.jpg"},
+            ]
         }
 
         with open(narrator_asset_file, "w", encoding="utf-8") as f:
@@ -444,7 +447,7 @@ class TestVideoAssetManager:
 
         # Create a fake video generator that creates real files
         class FakeVideoGenerator:
-            def media_to_video(self, recipe, output_path):
+            def generate_video(self, recipe, output_path):
                 # Create actual file to test file operations
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 output_path.write_text(f"fake video for: {recipe.prompt}")
@@ -455,17 +458,25 @@ class TestVideoAssetManager:
             for recipe in scene_data:
                 recipe.GENERATOR = lambda: FakeVideoGenerator()
 
-        # Also mock the concatenation function since it requires real video files
+        # Also mock the concatenation function and FFmpeg operations since they require real video files
         with patch(
             "ai_video_creator.modules.video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
-        ) as mock_concat:
+        ) as mock_concat, patch(
+            "ai_video_creator.modules.video.sub_video_asset_manager.extract_video_last_frame"
+        ) as mock_extract:
 
             def fake_concat(input_videos, output_path):
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 output_path.write_text("concatenated video")
                 return output_path
 
+            def fake_extract(video_path, frame_path):
+                frame_path.parent.mkdir(parents=True, exist_ok=True)
+                frame_path.write_text("fake frame image")
+                return frame_path
+
             mock_concat.side_effect = fake_concat
+            mock_extract.side_effect = fake_extract
 
             # Test the actual workflow
             manager.generate_video_assets()
@@ -493,14 +504,24 @@ class TestVideoAssetManager:
         image_asset_file = chapter_folder / "image_assets.json"
 
         # Create narrator assets folder and one file (incomplete)
-        narrator_folder = chapter_folder / "assets" / "narrator"
+        narrator_folder = chapter_folder / "assets" / "narrators"
         narrator_folder.mkdir(parents=True, exist_ok=True)
         narrator_file1 = narrator_folder / "narrator1.mp3"
         narrator_file1.write_text("narrator content 1")
 
-        # Create only partial assets (missing second narrator and all images)
-        narrator_data = {"narrator_assets": ["assets/narrator/narrator1.mp3", None]}
-        image_data = {"image_assets": [None, None]}
+        # Create only partial assets (missing second narrator and all images) using new format
+        narrator_data = {
+            "assets": [
+                {"index": 1, "narrator": "assets/narrators/narrator1.mp3"},
+                {"index": 2, "narrator": ""},  # Missing narrator
+            ]
+        }
+        image_data = {
+            "assets": [
+                {"index": 1, "image": ""},  # Missing image
+                {"index": 2, "image": ""},  # Missing image
+            ]
+        }
 
         with open(narrator_asset_file, "w", encoding="utf-8") as f:
             json.dump(narrator_data, f)
@@ -513,7 +534,7 @@ class TestVideoAssetManager:
         generation_attempts = []
 
         class TrackingFakeGenerator:
-            def media_to_video(self, recipe, output_path):
+            def generate_video(self, recipe, output_path):
                 generation_attempts.append(f"Generated: {output_path.name}")
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 output_path.write_text("fake video")

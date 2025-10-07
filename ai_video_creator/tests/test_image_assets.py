@@ -34,9 +34,9 @@ class TestImageAssets:
         test_image2.touch()
 
         test_data = {
-            "image_assets": [
-                str(test_image1.relative_to(tmp_path)),
-                str(test_image2.relative_to(tmp_path)),
+            "assets": [
+                {"image": str(test_image1.relative_to(tmp_path))},
+                {"image": str(test_image2.relative_to(tmp_path))},
             ]
         }
 

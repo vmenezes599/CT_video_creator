@@ -120,10 +120,10 @@ class TestNarratorAndImageAssetManager:
 
         # Create separate asset folders for narrator and image
         narrator_assets_folder = (
-            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrator"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrators"
         )
         image_assets_folder = (
-            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "image"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "images"
         )
         narrator_assets_folder.mkdir(parents=True, exist_ok=True)
         image_assets_folder.mkdir(parents=True, exist_ok=True)
@@ -149,17 +149,17 @@ class TestNarratorAndImageAssetManager:
         with open(image_asset_file, "r", encoding="utf-8") as f:
             image_saved_data = json.load(f)
 
-        assert "narrator_assets" in narrator_saved_data
-        assert "image_assets" in image_saved_data
-        assert len(narrator_saved_data["narrator_assets"]) == 2
-        assert len(image_saved_data["image_assets"]) == 2
+        assert "assets" in narrator_saved_data
+        assert "assets" in image_saved_data
+        assert len(narrator_saved_data["assets"]) == 2
+        assert len(image_saved_data["assets"]) == 2
         assert (
-            narrator_saved_data["narrator_assets"][0]
-            == "assets/narrator/narrator_001.mp3"
+            narrator_saved_data["assets"][0]["narrator"]
+            == "assets/narrators/narrator_001.mp3"
         )
-        assert image_saved_data["image_assets"][0] == "assets/image/image_001.jpg"
-        assert narrator_saved_data["narrator_assets"][1] is None
-        assert image_saved_data["image_assets"][1] is None
+        assert image_saved_data["assets"][0]["image"] == "assets/images/image_001.jpg"
+        assert narrator_saved_data["assets"][1]["narrator"] is None
+        assert image_saved_data["assets"][1]["image"] is None
 
     def test_asset_manager_with_existing_assets(self, story_setup_with_recipe):
         """Test VideoAssetManager loading existing asset files."""
@@ -172,8 +172,8 @@ class TestNarratorAndImageAssetManager:
         image_asset_file = chapter_folder / "image_assets.json"
 
         # Create actual asset files within the allowed directory
-        narrator_assets_folder = chapter_folder / "assets" / "narrator"
-        image_assets_folder = chapter_folder / "assets" / "image"
+        narrator_assets_folder = chapter_folder / "assets" / "narrators"
+        image_assets_folder = chapter_folder / "assets" / "images"
         narrator_assets_folder.mkdir(parents=True, exist_ok=True)
         image_assets_folder.mkdir(parents=True, exist_ok=True)
 
@@ -186,16 +186,16 @@ class TestNarratorAndImageAssetManager:
             file.touch()
 
         narrator_existing_data = {
-            "narrator_assets": [
-                "assets/narrator/narrator1.mp3",
-                "assets/narrator/narrator2.mp3",
+            "assets": [
+                {"index": 1, "narrator": "assets/narrators/narrator1.mp3"},
+                {"index": 2, "narrator": "assets/narrators/narrator2.mp3"},
             ]
         }
 
         image_existing_data = {
-            "image_assets": [
-                "assets/image/image1.jpg",
-                "assets/image/image2.jpg",
+            "assets": [
+                {"index": 1, "image": "assets/images/image1.jpg"},
+                {"index": 2, "image": "assets/images/image2.jpg"},
             ]
         }
 
@@ -228,8 +228,8 @@ class TestNarratorAndImageAssetManager:
         image_asset_file = chapter_folder / "image_assets.json"
 
         # Create actual asset files within the allowed directory using new structure
-        narrator_assets_folder = chapter_folder / "assets" / "narrator"
-        image_assets_folder = chapter_folder / "assets" / "image"
+        narrator_assets_folder = chapter_folder / "assets" / "narrators"
+        image_assets_folder = chapter_folder / "assets" / "images"
         narrator_assets_folder.mkdir(parents=True, exist_ok=True)
         image_assets_folder.mkdir(parents=True, exist_ok=True)
 
@@ -241,14 +241,14 @@ class TestNarratorAndImageAssetManager:
 
         # Create asset files with only one asset each (recipe has 2)
         narrator_existing_data = {
-            "narrator_assets": [
-                "assets/narrator/narrator1.mp3",
+            "assets": [
+                {"index": 1, "narrator": "assets/narrators/narrator1.mp3"},
             ]
         }
 
         image_existing_data = {
-            "image_assets": [
-                "assets/image/image1.jpg",
+            "assets": [
+                {"index": 1, "image": "assets/images/image1.jpg"},
             ]
         }
 
@@ -286,8 +286,8 @@ class TestNarratorAndImageAssetManager:
         chapter_folder.mkdir(parents=True, exist_ok=True)
 
         # Create separate asset folders for new architecture
-        narrator_assets_folder = chapter_folder / "assets" / "narrator"
-        image_assets_folder = chapter_folder / "assets" / "image"
+        narrator_assets_folder = chapter_folder / "assets" / "narrators"
+        image_assets_folder = chapter_folder / "assets" / "images"
         narrator_assets_folder.mkdir(parents=True, exist_ok=True)
         image_assets_folder.mkdir(parents=True, exist_ok=True)
 
@@ -341,8 +341,8 @@ class TestNarratorAndImageAssetManager:
         chapter_folder.mkdir(parents=True, exist_ok=True)
 
         # Create separate asset folders for new architecture
-        narrator_assets_folder = chapter_folder / "assets" / "narrator"
-        image_assets_folder = chapter_folder / "assets" / "image"
+        narrator_assets_folder = chapter_folder / "assets" / "narrators"
+        image_assets_folder = chapter_folder / "assets" / "images"
         narrator_assets_folder.mkdir(parents=True, exist_ok=True)
         image_assets_folder.mkdir(parents=True, exist_ok=True)
 
@@ -451,7 +451,7 @@ class TestNarratorAndImageAssetManager:
             / "video"
             / "chapter_001"
             / "assets"
-            / "narrator"
+            / "narrators"
             / "chapter_001_narrator_001.mp3"
         )
         expected_narrator_path_2 = (
@@ -459,7 +459,7 @@ class TestNarratorAndImageAssetManager:
             / "video"
             / "chapter_001"
             / "assets"
-            / "narrator"
+            / "narrators"
             / "chapter_001_narrator_002.mp3"
         )
         expected_image_path_1 = (
@@ -467,7 +467,7 @@ class TestNarratorAndImageAssetManager:
             / "video"
             / "chapter_001"
             / "assets"
-            / "image"
+            / "images"
             / "chapter_001_image_001.png"
         )
         expected_image_path_2 = (
@@ -475,7 +475,7 @@ class TestNarratorAndImageAssetManager:
             / "video"
             / "chapter_001"
             / "assets"
-            / "image"
+            / "images"
             / "chapter_001_image_002.png"
         )
 
@@ -587,10 +587,10 @@ class TestNarratorAndImageAssetManager:
 
         # Create asset folders and set up existing narrator for scene 0 only
         narrator_folder = (
-            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrator"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "narrators"
         )
         image_folder = (
-            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "image"
+            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "images"
         )
         narrator_folder.mkdir(parents=True, exist_ok=True)
         image_folder.mkdir(parents=True, exist_ok=True)
@@ -663,7 +663,7 @@ class TestNarratorAndImageAssetManager:
                 / "video"
                 / "chapter_001"
                 / "assets"
-                / "narrator"
+                / "narrators"
                 / "chapter_001_narrator_002.mp3"
             )
             expected_image_path_1 = (
@@ -671,7 +671,7 @@ class TestNarratorAndImageAssetManager:
                 / "video"
                 / "chapter_001"
                 / "assets"
-                / "image"
+                / "images"
                 / "chapter_001_image_001.png"
             )
             expected_image_path_2 = (
@@ -679,7 +679,7 @@ class TestNarratorAndImageAssetManager:
                 / "video"
                 / "chapter_001"
                 / "assets"
-                / "image"
+                / "images"
                 / "chapter_001_image_002.png"
             )
 
