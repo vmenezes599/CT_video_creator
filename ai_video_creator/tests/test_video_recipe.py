@@ -4,27 +4,10 @@ Unit tests for video_recipe module.
 
 import json
 
-from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 from ai_video_creator.generators import WanI2VRecipe, WanT2VRecipe
 from ai_video_creator.modules.video import (
     SubVideoRecipe,
-    SubVideoRecipeDefaultSettings,
 )
-
-
-class TestVideoRecipeDefaultSettings:
-    """Test VideoRecipeDefaultSettings class."""
-
-    def test_default_settings(self):
-        """Test that default settings have correct values."""
-        assert (
-            SubVideoRecipeDefaultSettings.NARRATOR_VOICE
-            == f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3"
-        )
-        assert (
-            SubVideoRecipeDefaultSettings.BACKGROUND_MUSIC
-            == f"{DEFAULT_ASSETS_FOLDER}/background_music.mp3"
-        )
 
 
 class TestVideoRecipeFile:

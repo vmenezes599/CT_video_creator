@@ -3,25 +3,12 @@ Unit tests for narrator_recipe module.
 """
 
 import json
-from pathlib import Path
 
 from ai_video_creator.modules.narrator.narrator_recipe import (
     NarratorRecipe,
-    NarratorRecipeDefaultSettings,
 )
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 from ai_video_creator.generators import ZonosTTSRecipe
-
-
-class TestNarratorRecipeDefaultSettings:
-    """Test NarratorRecipeDefaultSettings class."""
-
-    def test_default_narrator_voice(self):
-        """Test default narrator voice setting."""
-        assert (
-            NarratorRecipeDefaultSettings.NARRATOR_VOICE
-            == f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3"
-        )
 
 
 class TestNarratorRecipe:

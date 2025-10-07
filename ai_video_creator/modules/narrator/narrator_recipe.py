@@ -14,7 +14,7 @@ from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 class NarratorRecipeDefaultSettings:
     """Default settings for narrator recipe."""
 
-    NARRATOR_VOICE = f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3"
+    NARRATOR_VOICE = f"{DEFAULT_ASSETS_FOLDER}/voices/ElevenLabs_Clyde.mp3"
 
 
 class NarratorRecipe:

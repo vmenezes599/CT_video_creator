@@ -18,7 +18,6 @@ from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 class SubVideoRecipeDefaultSettings:
     """Default settings for video recipe."""
 
-    NARRATOR_VOICE = f"{DEFAULT_ASSETS_FOLDER}/voices/voice_002.mp3"
     BACKGROUND_MUSIC = f"{DEFAULT_ASSETS_FOLDER}/background_music.mp3"
 
 
