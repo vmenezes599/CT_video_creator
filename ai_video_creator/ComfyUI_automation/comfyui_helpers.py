@@ -13,6 +13,7 @@ def comfyui_get_history_output_name(history_entry_dict: dict) -> list[str]:
     """
     Get the output names from a history entry dictionary.
     """
+
     result = []
     for _, output_types in history_entry_dict.get("outputs", {}).items():
         for _, value in output_types.items():
@@ -24,6 +25,8 @@ def comfyui_get_history_output_name(history_entry_dict: dict) -> list[str]:
 
 def copy_media_to_comfyui_input_folder(media_path: Path) -> Path:
     """Copy media file to ComfyUI input folder and return the new path."""
+
+    media_path = Path(media_path)
 
     if not media_path:
         logger.debug("No media path provided, skipping copy.")
@@ -42,6 +45,9 @@ def copy_media_to_comfyui_input_folder(media_path: Path) -> Path:
 
 def delete_media_from_comfyui_input_folder(media_path: Path) -> None:
     """Delete asset from the ComfyUI input folder."""
+
+    media_path = Path(media_path)
+
     if not media_path:
         logger.debug("No media path provided, skipping deletion.")
         return

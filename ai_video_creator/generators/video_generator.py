@@ -3,6 +3,7 @@ AI Video Generation Module
 """
 
 import random
+import tempfile
 
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -14,7 +15,7 @@ from ai_video_creator.ComfyUI_automation import (
     copy_media_to_comfyui_input_folder,
     delete_media_from_comfyui_input_folder,
 )
-from ai_video_creator.utils import safe_move
+from ai_video_creator.utils import safe_move, extract_video_last_frame
 
 from .ComfyUI_automation.comfyui_video_workflows import (
     WanI2VWorkflow,
@@ -118,7 +119,12 @@ class WanGenerator(IVideoGenerator):
         :return: A list of file paths to the generated images.
         """
 
-        new_media_path = copy_media_to_comfyui_input_folder(recipe.media_path)
+        media_path = Path(recipe.media_path)
+        with tempfile.TemporaryDirectory() as temp_folder:
+            if media_path.suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]:
+                media_path = extract_video_last_frame(media_path, temp_folder)
+
+            new_media_path = copy_media_to_comfyui_input_folder(media_path)
 
         workflow = WanI2VWorkflow()
 

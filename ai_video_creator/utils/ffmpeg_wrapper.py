@@ -258,10 +258,14 @@ def extract_video_last_frame(
         f"Extracting last frame from {video_path.name} to {last_frame_output_path.name}"
     )
 
+    # Use select filter to get the actual last frame (frame number -1)
+    # The key is to avoid raw strings and let ffmpeg-python handle the escaping
     cmd = (
         ffmpeg.input(str(video_path))
-        .filter("select", r"eq(n\,-1)")
-        .output(str(last_frame_output_path), vframes=1, format="png")
+        .video
+        .filter('reverse')
+        .filter("select", "eq(n,0)")
+        .output(str(last_frame_output_path), vframes=1)
         .overwrite_output()
         .compile()
     )

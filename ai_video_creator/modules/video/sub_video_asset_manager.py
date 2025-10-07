@@ -4,9 +4,9 @@ from pathlib import Path
 
 from logging_utils import begin_file_logging, logger
 from ai_video_creator.generators import IVideoGenerator, FlorenceGenerator
-from ai_video_creator.utils import VideoCreatorPaths
-from ai_video_creator.utils import ensure_collection_index_exists
 from ai_video_creator.utils import (
+    VideoCreatorPaths,
+    ensure_collection_index_exists,
     concatenate_videos_remove_last_frame_except_last,
     extract_video_last_frame,
 )
@@ -39,42 +39,12 @@ class SubVideoAssetManager:
         self.recipe = SubVideoRecipe(self.__paths.sub_video_recipe_file)
         self.video_assets = SubVideoAssets(self.__paths.sub_video_asset_file)
 
-        self._fix_sub_video_recipe_paths()
-
         # Ensure video_assets lists have the same size as recipe
         self._synchronize_assets_with_image_assets()
 
         logger.debug(
             f"VideoAssetManager initialized with {len(self.recipe.video_data)} scenes"
         )
-
-    def _fix_sub_video_recipe_paths(self):
-        """Fix paths in the sub video recipe to be absolute and secure."""
-        for scene_index, (video_asset, video_recipe) in enumerate(
-            zip(self.video_assets.sub_video_assets, self.recipe.video_data)
-        ):
-            previous_recipe = None
-            for recipe_index, (asset, recipe) in enumerate(
-                zip(video_asset, video_recipe)
-            ):
-                media_path = Path(recipe.media_path) if recipe.media_path else None
-                if (
-                    not recipe.media_path
-                    or not media_path.exists()
-                    or media_path.suffix.lower()
-                    in [
-                        ".mp4",
-                        ".mov",
-                    ]
-                ):
-                    if previous_recipe is not None:
-                        video_last_frame = extract_video_last_frame(
-                            previous_recipe, self.__paths.image_asset_folder
-                        )
-                        self._set_next_recipe_media_path(
-                            scene_index, recipe_index, video_last_frame
-                        )
-                previous_recipe = recipe
 
     def _synchronize_assets_with_image_assets(self):
         """Ensure video_assets lists have the same size as recipe."""
