@@ -422,7 +422,14 @@ class TestVideoAssetManager:
         color_match1 = narrator_image_folder / "color_match1.jpg"
         color_match2 = narrator_image_folder / "color_match2.jpg"
 
-        for temp_file in [narrator1, narrator2, image1, image2, color_match1, color_match2]:
+        for temp_file in [
+            narrator1,
+            narrator2,
+            image1,
+            image2,
+            color_match1,
+            color_match2,
+        ]:
             temp_file.write_text("fake content")
 
         # Create separate asset files using the paths that match the recipe
@@ -449,11 +456,6 @@ class TestVideoAssetManager:
         # Create a fake video generator that creates real files
         class FakeVideoGenerator:
             def generate_video(self, recipe, output_path):
-                # Debug: Print the recipe media_path to see what it contains
-                print(f"DEBUG: recipe.media_path = {getattr(recipe, 'media_path', 'NOT_SET')}")
-                print(f"DEBUG: recipe type = {type(recipe)}")
-                print(f"DEBUG: recipe.__dict__ = {getattr(recipe, '__dict__', 'NO_DICT')}")
-                
                 # Create actual file to test file operations
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 output_path.write_text(f"fake video for: {recipe.prompt}")
@@ -477,12 +479,13 @@ class TestVideoAssetManager:
                 return output_path
 
             def fake_extract(video_path, last_frame_output_folder):
-                print(f"DEBUG: fake_extract called with video_path={video_path}, last_frame_output_folder={last_frame_output_folder}")
                 # Create the output folder
                 Path(last_frame_output_folder).mkdir(parents=True, exist_ok=True)
                 # Create the actual output file path (like the real function does)
                 video_stem = Path(video_path).stem
-                last_frame_output_path = Path(last_frame_output_folder) / f"{video_stem}_last_frame.png"
+                last_frame_output_path = (
+                    Path(last_frame_output_folder) / f"{video_stem}_last_frame.png"
+                )
                 last_frame_output_path.write_text("fake frame image")
                 return last_frame_output_path
 
@@ -501,6 +504,38 @@ class TestVideoAssetManager:
             assert len(manager.video_assets.sub_video_assets) == 2
             assert len(manager.video_assets.sub_video_assets[0]) > 0
             assert len(manager.video_assets.sub_video_assets[1]) > 0
+
+            # Verify production code business logic worked correctly
+            # Check that recipes were properly linked (next recipe should have media_path from previous)
+            recipe_scene_1 = manager.recipe.video_data[0]
+            recipe_scene_2 = manager.recipe.video_data[1]
+
+            # Second recipe in each scene should have media_path set from first recipe's frame
+            if len(recipe_scene_1) > 1:
+                second_recipe = recipe_scene_1[1]
+                assert hasattr(second_recipe, "media_path")
+                assert second_recipe.media_path is not None
+                # Should contain the generated frame path
+                assert "_last_frame.png" in str(second_recipe.media_path)
+
+            # Test that asset synchronization worked
+            assert len(manager.video_assets.sub_video_assets) == len(
+                manager.recipe.video_data
+            )
+
+            # Test that the asset files were created and have proper structure
+            for scene_idx in range(2):
+                scene_assets = manager.video_assets.sub_video_assets[scene_idx]
+                assert (
+                    len(scene_assets) > 0
+                ), f"Scene {scene_idx} should have sub-video assets"
+
+            # Test that assembled videos were created
+            for scene_idx in range(2):
+                assembled_video = manager.video_assets.assembled_sub_video[scene_idx]
+                assert (
+                    assembled_video is not None
+                ), f"Scene {scene_idx} should have assembled video"
 
     def test_generate_video_assets_skips_when_assets_missing(
         self, story_setup_with_recipe
