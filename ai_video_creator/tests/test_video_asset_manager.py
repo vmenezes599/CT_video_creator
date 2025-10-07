@@ -3,6 +3,7 @@ Unit tests for video_asset_manager module.
 """
 
 import json
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -411,30 +412,30 @@ class TestVideoAssetManager:
         image_asset_file = chapter_folder / "image_assets.json"
 
         # Create actual asset files within the allowed directory
-        narrator_folder = chapter_folder / "assets" / "narrators"
-        image_folder = chapter_folder / "assets" / "images"
-        narrator_folder.mkdir(parents=True, exist_ok=True)
-        image_folder.mkdir(parents=True, exist_ok=True)
+        narrator_image_folder = chapter_folder / "assets" / "narrator_and_image"
+        narrator_image_folder.mkdir(parents=True, exist_ok=True)
 
-        narrator1 = narrator_folder / "narrator1.mp3"
-        narrator2 = narrator_folder / "narrator2.mp3"
-        image1 = image_folder / "image1.jpg"
-        image2 = image_folder / "image2.jpg"
+        narrator1 = narrator_image_folder / "narrator1.mp3"
+        narrator2 = narrator_image_folder / "narrator2.mp3"
+        image1 = narrator_image_folder / "image1.jpg"
+        image2 = narrator_image_folder / "image2.jpg"
+        color_match1 = narrator_image_folder / "color_match1.jpg"
+        color_match2 = narrator_image_folder / "color_match2.jpg"
 
-        for temp_file in [narrator1, narrator2, image1, image2]:
+        for temp_file in [narrator1, narrator2, image1, image2, color_match1, color_match2]:
             temp_file.write_text("fake content")
 
-        # Create separate asset files
+        # Create separate asset files using the paths that match the recipe
         narrator_data = {
             "assets": [
-                {"index": 1, "narrator": "assets/narrators/narrator1.mp3"},
-                {"index": 2, "narrator": "assets/narrators/narrator2.mp3"},
+                {"index": 1, "narrator": "assets/narrator_and_image/narrator1.mp3"},
+                {"index": 2, "narrator": "assets/narrator_and_image/narrator2.mp3"},
             ]
         }
         image_data = {
             "assets": [
-                {"index": 1, "image": "assets/images/image1.jpg"},
-                {"index": 2, "image": "assets/images/image2.jpg"},
+                {"index": 1, "image": "assets/narrator_and_image/image1.jpg"},
+                {"index": 2, "image": "assets/narrator_and_image/image2.jpg"},
             ]
         }
 
@@ -448,6 +449,11 @@ class TestVideoAssetManager:
         # Create a fake video generator that creates real files
         class FakeVideoGenerator:
             def generate_video(self, recipe, output_path):
+                # Debug: Print the recipe media_path to see what it contains
+                print(f"DEBUG: recipe.media_path = {getattr(recipe, 'media_path', 'NOT_SET')}")
+                print(f"DEBUG: recipe type = {type(recipe)}")
+                print(f"DEBUG: recipe.__dict__ = {getattr(recipe, '__dict__', 'NO_DICT')}")
+                
                 # Create actual file to test file operations
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 output_path.write_text(f"fake video for: {recipe.prompt}")
@@ -470,10 +476,15 @@ class TestVideoAssetManager:
                 output_path.write_text("concatenated video")
                 return output_path
 
-            def fake_extract(video_path, frame_path):
-                frame_path.parent.mkdir(parents=True, exist_ok=True)
-                frame_path.write_text("fake frame image")
-                return frame_path
+            def fake_extract(video_path, last_frame_output_folder):
+                print(f"DEBUG: fake_extract called with video_path={video_path}, last_frame_output_folder={last_frame_output_folder}")
+                # Create the output folder
+                Path(last_frame_output_folder).mkdir(parents=True, exist_ok=True)
+                # Create the actual output file path (like the real function does)
+                video_stem = Path(video_path).stem
+                last_frame_output_path = Path(last_frame_output_folder) / f"{video_stem}_last_frame.png"
+                last_frame_output_path.write_text("fake frame image")
+                return last_frame_output_path
 
             mock_concat.side_effect = fake_concat
             mock_extract.side_effect = fake_extract

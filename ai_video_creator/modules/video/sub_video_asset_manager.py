@@ -138,7 +138,7 @@ class SubVideoAssetManager:
                     output_sub_video, self.__paths.image_asset_folder
                 )
 
-                self._set_next_recipe_media_path(
+                self._set_next_recipe_media_path_and_color_match(
                     scene_index, recipe_index, video_last_frame
                 )
 
