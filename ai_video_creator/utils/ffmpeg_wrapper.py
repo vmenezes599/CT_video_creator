@@ -233,6 +233,44 @@ def extend_audio_to_duration(
     return output_path
 
 
+def extract_video_last_frame(
+    video_path: str | Path, last_frame_output_folder: str | Path
+) -> Path:
+    """
+    Extract the last frame of a video as an image.
+
+    Args:
+        path: Path to the input video file
+        output_path: Path for the output image file
+
+    Returns:
+        Path to the extracted image file
+    """
+    video_path = Path(video_path)
+    last_frame_output_path = (
+        Path(last_frame_output_folder) / f"{video_path.stem}_last_frame.png"
+    )
+
+    # Create output directory if it doesn't exist
+    last_frame_output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    logger.info(
+        f"Extracting last frame from {video_path.name} to {last_frame_output_path.name}"
+    )
+
+    cmd = (
+        ffmpeg.input(str(video_path))
+        .filter("select", r"eq(n\,-1)")
+        .output(str(last_frame_output_path), vframes=1, format="png")
+        .overwrite_output()
+        .compile()
+    )
+
+    _run_ffmpeg_trace(cmd)
+
+    return last_frame_output_path
+
+
 def create_video_segment_from_image_and_audio(
     image_path: str | Path,
     audio_path: str | Path,

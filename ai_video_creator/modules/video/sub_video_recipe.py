@@ -10,7 +10,6 @@ from logging_utils import logger
 from ai_video_creator.generators import (
     VideoRecipeBase,
     WanI2VRecipe,
-    WanV2VRecipe,
     WanT2VRecipe,
 )
 
@@ -135,8 +134,6 @@ class SubVideoRecipe:
             recipe = WanI2VRecipe.from_dict(data)
         elif recipe_type == "WanT2VRecipeType":
             recipe = WanT2VRecipe.from_dict(data)
-        elif recipe_type == "WanV2VRecipeType":
-            recipe = WanV2VRecipe.from_dict(data)
         else:
             logger.error(f"Unknown recipe_type: {recipe_type}")
             raise ValueError(f"Unknown recipe_type: {recipe_type}")

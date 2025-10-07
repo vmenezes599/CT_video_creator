@@ -11,7 +11,6 @@ from .video_generator import (
     VideoRecipeBase,
     WanRecipeBase,
     WanI2VRecipe,
-    WanV2VRecipe,
     WanT2VRecipe,
     WanGenerator,
 )
@@ -36,5 +35,7 @@ __all__ = [
     "ImageRecipeBase",
     "AudioRecipeBase",
     "WanRecipeBase",
+    "WanI2VRecipe",
+    "WanT2VRecipe",
     "WanGenerator",
 ]

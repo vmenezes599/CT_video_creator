@@ -7,12 +7,13 @@ from .utils import (
     safe_move,
 )
 from .ffmpeg_wrapper import (
-    concatenate_videos_remove_last_frame_except_last,
     create_video_segment_from_sub_video_and_audio_freeze_last_frame,
     create_video_segment_from_sub_video_and_audio_reverse_video,
+    concatenate_videos_remove_last_frame_except_last,
     create_video_segment_from_image_and_audio,
     concatenate_videos_with_reencoding,
     concatenate_videos_no_reencoding,
+    extract_video_last_frame,
     extend_audio_to_duration,
     burn_subtitles_to_video,
     get_audio_duration,
@@ -29,6 +30,7 @@ __all__ = [
     "ensure_collection_index_exists",
     "get_next_available_filename",
     "extend_audio_to_duration",
+    "extract_video_last_frame",
     "burn_subtitles_to_video",
     "get_audio_duration",
     "VideoCreatorPaths",

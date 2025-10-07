@@ -3,10 +3,13 @@
 from pathlib import Path
 
 from logging_utils import begin_file_logging, logger
-from ai_video_creator.generators import IVideoGenerator
+from ai_video_creator.generators import IVideoGenerator, FlorenceGenerator
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.utils import ensure_collection_index_exists
-from ai_video_creator.utils import concatenate_videos_remove_last_frame_except_last
+from ai_video_creator.utils import (
+    concatenate_videos_remove_last_frame_except_last,
+    extract_video_last_frame,
+)
 
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
@@ -74,6 +77,25 @@ class SubVideoAssetManager:
             )
             self.recipe.save_current_state()
 
+    def _generate_and_set_next_recipe_prompt_if_empty(
+        self, scene_index: int, recipe_index: int, sub_video_path: Path
+    ) -> None:
+        """Set the prompt of the next recipe in the list, if it exists."""
+        video_recipe_list = self.recipe.video_data[scene_index]
+        next_recipe_index = recipe_index + 1
+        if next_recipe_index < len(video_recipe_list):
+            next_recipe = video_recipe_list[next_recipe_index]
+            if next_recipe.prompt:
+                return
+            next_recipe.prompt = FlorenceGenerator().generate_description(
+                sub_video_path
+            )
+            logger.debug(
+                f"Set prompt for next recipe at scene {scene_index + 1},"
+                f" current recipe {recipe_index + 1}, next recipe {next_recipe_index + 1}: {next_recipe.prompt}"
+            )
+            self.recipe.save_current_state()
+
     def _generate_sub_video_file_path(
         self, scene_index: int, recipe_index: int
     ) -> Path:
@@ -112,8 +134,16 @@ class SubVideoAssetManager:
                     recipe, sub_video_file_path
                 )
 
+                video_last_frame = extract_video_last_frame(
+                    output_sub_video, self.__paths.image_asset_folder
+                )
+
                 self._set_next_recipe_media_path(
-                    scene_index, recipe_index, output_sub_video
+                    scene_index, recipe_index, video_last_frame
+                )
+
+                self._generate_and_set_next_recipe_prompt_if_empty(
+                    scene_index, recipe_index, video_last_frame
                 )
 
                 self.video_assets.set_scene_sub_video(

@@ -18,7 +18,6 @@ from ai_video_creator.utils import safe_move
 
 from .ComfyUI_automation.comfyui_video_workflows import (
     WanI2VWorkflow,
-    WanV2VWorkflow,
     WanT2VWorkflow,
 )
 
@@ -108,8 +107,6 @@ class WanGenerator(IVideoGenerator):
             result = self.text_to_video(recipe, output_file_path)
         elif recipe.recipe_type == "WanI2VRecipeType":
             result = self.image_to_video(recipe, output_file_path)
-        elif recipe.recipe_type == "WanV2VRecipeType":
-            result = self.video_to_video(recipe, output_file_path)
 
         return result
 
@@ -138,48 +135,6 @@ class WanGenerator(IVideoGenerator):
         workflow.set_seed(recipe.seed)
         output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
 
-        delete_media_from_comfyui_input_folder(new_media_path)
-
-        moved_files = self._clean_and_move_generated_files(
-            output_file_path, output_file_names
-        )
-
-        return moved_files[0]
-
-    def video_to_video(self, recipe: "WanV2VRecipe", output_file_path: Path) -> Path:
-        """
-        Generate images for a list of prompts and return the paths to the generated images.
-
-        :param prompts: A list of text prompts to generate images for.
-        :return: A list of file paths to the generated images.
-        """
-        new_color_match_media_path = (
-            copy_media_to_comfyui_input_folder(Path(recipe.color_match_media_path))
-            if recipe.color_match_media_path
-            else None
-        )
-        new_media_path = copy_media_to_comfyui_input_folder(recipe.media_path)
-
-        workflow = WanV2VWorkflow()
-
-        workflow.set_positive_prompt(recipe.prompt)
-        workflow.set_output_filename(output_file_path.stem)
-        workflow.set_color_match_filename(
-            new_color_match_media_path.name if new_color_match_media_path else ""
-        )
-        workflow.set_video_path(new_media_path.name)
-
-        for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
-            workflow.add_high_lora(lora, strength)
-
-        for lora, strength in zip(recipe.low_lora, recipe.low_lora_strength):
-            workflow.add_low_lora(lora, strength)
-
-        workflow.set_seed(recipe.seed)
-
-        output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
-
-        delete_media_from_comfyui_input_folder(new_color_match_media_path)
         delete_media_from_comfyui_input_folder(new_media_path)
 
         moved_files = self._clean_and_move_generated_files(
@@ -243,7 +198,7 @@ class WanRecipeBase(VideoRecipeBase):
 
     def __init__(
         self,
-        prompt: str,
+        prompt: str | None,
         color_match_media_path: str | None,
         high_lora: list[str] | None = _DEFAULT,
         high_lora_strength: list[float] | None = None,
@@ -264,7 +219,7 @@ class WanRecipeBase(VideoRecipeBase):
             seed: Seed used for media generation
         """
         super().__init__(
-            prompt=prompt,
+            prompt=prompt if prompt else "",
             seed=random.randint(0, 2**64 - 1) if seed is None else seed,
             recipe_type=self.recipe_type,
         )
@@ -411,7 +366,7 @@ class WanI2VRecipe(WanRecipeBase):
 
     def __init__(
         self,
-        prompt: str,
+        prompt: str | None,
         color_match_media_path: str | None,
         high_lora: list[str] | None = WanRecipeBase._DEFAULT,
         high_lora_strength: list[float] | None = None,
@@ -495,13 +450,6 @@ class WanI2VRecipe(WanRecipeBase):
         )
 
 
-class WanV2VRecipe(WanI2VRecipe):
-    """Video recipe for V2V - alias for I2V since they use the same functionality."""
-
-    LORA_SUBFOLDER = ["Wan2.2_V2V"]  # V2V specific LoRA folder
-    recipe_type = "WanV2VRecipeType"
-
-
 # TODO: Change subclass to WanRecipeBase. This is to simplify the manual recipe editing.
 class WanT2VRecipe(WanI2VRecipe):
     """Video recipe for creating videos from stories."""
@@ -511,7 +459,7 @@ class WanT2VRecipe(WanI2VRecipe):
 
     def __init__(
         self,
-        prompt: str,
+        prompt: str | None,
         color_match_media_path: str | None,
         high_lora: list[str] | None = WanRecipeBase._DEFAULT,
         high_lora_strength: list[float] | None = None,
