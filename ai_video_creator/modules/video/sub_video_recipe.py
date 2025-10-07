@@ -8,7 +8,6 @@ from pathlib import Path
 from logging_utils import logger
 
 from ai_video_creator.generators import (
-    VideoRecipeBase,
     WanI2VRecipe,
     WanT2VRecipe,
 )
@@ -32,7 +31,7 @@ class SubVideoRecipe:
         self.recipe_path = recipe_path
 
         self.extra_data: list[dict] = []
-        self.video_data: list[list[VideoRecipeBase]] = []
+        self.video_data: list[list[WanI2VRecipe | WanT2VRecipe]] = []
 
         self.__from_dict(recipe_path)
 
@@ -77,7 +76,7 @@ class SubVideoRecipe:
             raise ValueError(f"Invalid path: {asset_path} - {e}") from e
 
     def add_video_data(
-        self, video_data: list[VideoRecipeBase], extra_data: dict = None
+        self, video_data: list[WanI2VRecipe | WanT2VRecipe], extra_data: dict = None
     ) -> None:
         """Add video data to the recipe."""
         self.video_data.append(video_data)
