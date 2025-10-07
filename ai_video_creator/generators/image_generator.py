@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from logging_utils import logger
 
+from ai_video_creator.utils import safe_move
 from ai_video_creator.ComfyUI_automation import ComfyUIRequests
 from .ComfyUI_automation.comfyui_image_workflows import FluxWorkflow
 
@@ -58,9 +59,9 @@ class FluxAIImageGenerator(IImageGenerator):
             raise FileNotFoundError(f"Asset file does not exist: {asset_path}")
 
         complete_target_path = target_path / asset_path.name
-        shutil.move(asset_path, complete_target_path)
+        move_result = safe_move(asset_path, complete_target_path)
         logger.trace(f"Asset moved successfully to: {complete_target_path}")
-        return complete_target_path
+        return move_result
 
     def text_to_image(self, recipe: "FluxImageRecipe", output_file_path: Path) -> Path:
         """
