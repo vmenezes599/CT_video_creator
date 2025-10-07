@@ -148,7 +148,9 @@ class WanGenerator(IVideoGenerator):
         workflow.set_positive_prompt(recipe.prompt)
         workflow.set_output_filename(output_file_path.stem)
         workflow.set_image_path(new_media_path.name)
-        workflow.set_color_match_filename(new_color_match_media_path.name)
+        workflow.set_color_match_filename(
+            new_color_match_media_path.name if new_color_match_media_path else None
+        )
 
         for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
             workflow.add_high_lora(lora, strength)
