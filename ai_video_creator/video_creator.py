@@ -4,13 +4,15 @@ AI Video Generation Module
 
 from pathlib import Path
 
-from logging_utils import setup_console_logging, cleanup_logging
+from logging_utils import setup_console_logging, setup_file_logging, cleanup_logging
 
 from .modules.narrator_and_image import NarratorAndImageAssetManager
 from .modules.video import SubVideoRecipeBuilder
 from .modules.video import SubVideoAssetManager
 from .modules.video import MediaEffectsManager
 from .modules.video import VideoAssembler
+
+from .utils import VideoCreatorPaths
 
 
 def create_narrator_and_image_recipe_from_prompt(
@@ -25,8 +27,18 @@ def create_narrator_and_image_recipe_from_prompt(
     Returns:
         None
     """
+
     log_id = setup_console_logging(
         "create_narrator_and_image_recipes_from_prompt", log_level="TRACE"
+    )
+
+    paths = VideoCreatorPaths(
+        story_folder=story_path, chapter_prompt_index=chapter_index
+    )
+    file_log_id = setup_file_logging(
+        "create_narrator_and_image_recipes_from_prompt",
+        log_level="TRACE",
+        base_folder=paths.chapter_folder,
     )
 
     asset_manager = NarratorAndImageAssetManager(
@@ -35,6 +47,7 @@ def create_narrator_and_image_recipe_from_prompt(
     asset_manager.create_narrator_and_image_recipes()
 
     cleanup_logging(log_id)
+    cleanup_logging(file_log_id)
 
 
 def create_narrators_and_images_from_recipe(
@@ -47,6 +60,15 @@ def create_narrators_and_images_from_recipe(
         "create_narrator_and_images_from_recipe", log_level="TRACE"
     )
 
+    paths = VideoCreatorPaths(
+        story_folder=story_path, chapter_prompt_index=chapter_index
+    )
+    file_log_id = setup_file_logging(
+        "create_narrator_and_images_from_recipe",
+        log_level="TRACE",
+        base_folder=paths.chapter_folder,
+    )
+
     narrator_img_asset_manager = NarratorAndImageAssetManager(
         story_folder=story_path, chapter_index=chapter_index
     )
@@ -57,6 +79,7 @@ def create_narrators_and_images_from_recipe(
     )
 
     cleanup_logging(log_id)
+    cleanup_logging(file_log_id)
 
 
 def create_sub_video_recipes_from_images(story_path: Path, chapter_index: int) -> None:
@@ -67,12 +90,22 @@ def create_sub_video_recipes_from_images(story_path: Path, chapter_index: int) -
         "create_sub_video_recipes_from_images", log_level="TRACE"
     )
 
+    paths = VideoCreatorPaths(
+        story_folder=story_path, chapter_prompt_index=chapter_index
+    )
+    file_log_id = setup_file_logging(
+        "create_sub_video_recipes_from_images",
+        log_level="TRACE",
+        base_folder=paths.chapter_folder,
+    )
+
     video_recipe_builder = SubVideoRecipeBuilder(
         story_folder=story_path, chapter_prompt_index=chapter_index
     )
     video_recipe_builder.create_video_recipe()
 
     cleanup_logging(log_id)
+    cleanup_logging(file_log_id)
 
 
 def create_sub_videos_from_sub_video_recipes(
@@ -85,12 +118,22 @@ def create_sub_videos_from_sub_video_recipes(
         "create_sub_videos_from_sub_video_recipes", log_level="TRACE"
     )
 
+    paths = VideoCreatorPaths(
+        story_folder=story_path, chapter_prompt_index=chapter_index
+    )
+    file_log_id = setup_file_logging(
+        "create_sub_videos_from_sub_video_recipes",
+        log_level="TRACE",
+        base_folder=paths.chapter_folder,
+    )
+
     video_asset_manager = SubVideoAssetManager(
         story_folder=story_path, chapter_index=chapter_index
     )
     video_asset_manager.generate_video_assets()
 
     cleanup_logging(log_id)
+    cleanup_logging(file_log_id)
 
 
 def assemble_final_video(story_path: Path, chapter_index: int) -> None:
@@ -104,10 +147,16 @@ def assemble_final_video(story_path: Path, chapter_index: int) -> None:
     Returns:
         None
     """
-
-    # raise NotImplementedError("Temporary disabled for fixing issues.")
-
     log_id = setup_console_logging("assemble_final_video", log_level="TRACE")
+
+    paths = VideoCreatorPaths(
+        story_folder=story_path, chapter_prompt_index=chapter_index
+    )
+    file_log_id = setup_file_logging(
+        "assemble_final_video",
+        log_level="TRACE",
+        base_folder=paths.chapter_folder,
+    )
 
     video_assembler = VideoAssembler(
         story_folder=story_path,
@@ -116,6 +165,7 @@ def assemble_final_video(story_path: Path, chapter_index: int) -> None:
     video_assembler.assemble_video()
 
     cleanup_logging(log_id)
+    cleanup_logging(file_log_id)
 
 
 def clean_unused_assets(story_path: Path, chapter_index: int) -> None:

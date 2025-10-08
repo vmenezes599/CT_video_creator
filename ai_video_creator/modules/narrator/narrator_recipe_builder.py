@@ -4,7 +4,7 @@ Narrator recipe builder for creating narrator recipes from prompts.
 
 from pathlib import Path
 
-from logging_utils import begin_file_logging, logger
+from logging_utils import logger
 from ai_video_creator.prompt import Prompt
 
 from ai_video_creator.generators import ZonosTTSRecipe
@@ -71,20 +71,16 @@ class NarratorRecipeBuilder:
     def create_narrator_recipes(self) -> None:
         """Create narrator recipe from story folder and chapter prompt index."""
 
-        with begin_file_logging(
-            name="create_narrator_recipes_from_prompt",
-            log_level="TRACE",
-            base_folder=self._paths.chapter_folder,
-        ):
-            logger.info("Starting narrator recipe creation process")
+        
+        logger.info("Starting narrator recipe creation process")
 
-            # Create narrator recipe file path
-            narrator_recipe_file = self._paths.narrator_recipe_file
+        # Create narrator recipe file path
+        narrator_recipe_file = self._paths.narrator_recipe_file
 
-            self._recipe = NarratorRecipe(narrator_recipe_file)
+        self._recipe = NarratorRecipe(narrator_recipe_file)
 
-            if not self._verify_recipe_against_prompt():
-                self._recipe.clean()
-                self._create_zonos_tts_narrator_recipe()
+        if not self._verify_recipe_against_prompt():
+            self._recipe.clean()
+            self._create_zonos_tts_narrator_recipe()
 
-            logger.info("Narrator recipe creation completed successfully")
+        logger.info("Narrator recipe creation completed successfully")

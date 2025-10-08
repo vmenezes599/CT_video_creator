@@ -5,7 +5,7 @@ Video executor for create_video command.
 from pathlib import Path
 from math import ceil
 
-from logging_utils import begin_file_logging, logger
+from logging_utils import logger
 
 from ai_video_creator.generators import WanI2VRecipe
 from ai_video_creator.modules.narrator import NarratorAssets
@@ -147,17 +147,12 @@ class SubVideoRecipeBuilder:
     def create_video_recipe(self) -> None:
         """Create video recipe from story folder and chapter prompt index."""
 
-        with begin_file_logging(
-            name="create_sub_video_recipes_from_images",
-            log_level="TRACE",
-            base_folder=self.__paths.chapter_folder,
-        ):
-            logger.info("Starting video recipe creation process")
+        logger.info("Starting video recipe creation process")
 
-            self._recipe = SubVideoRecipe(self.__paths.sub_video_recipe_file)
+        self._recipe = SubVideoRecipe(self.__paths.sub_video_recipe_file)
 
-            if not self._verify_recipe_against_prompt():
-                self._recipe.clean()
-                self._create_video_recipes()
+        if not self._verify_recipe_against_prompt():
+            self._recipe.clean()
+            self._create_video_recipes()
 
-            logger.info("Video recipe creation completed successfully")
+        logger.info("Video recipe creation completed successfully")

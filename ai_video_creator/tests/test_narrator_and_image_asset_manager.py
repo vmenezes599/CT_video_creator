@@ -845,11 +845,8 @@ class TestNarratorAndImageAssetManager:
         assert video_asset_manager.narrator_builder.narrator_assets.is_complete()
         assert video_asset_manager.image_builder.image_assets.is_complete()
 
-    @patch(
-        "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.begin_file_logging"
-    )
     def test_generate_narrator_asset_error_handling(
-        self, mock_logging, story_setup_with_recipe
+        self, story_setup_with_recipe
     ):
         """Test error handling during narrator asset generation."""
         # Create asset manager
@@ -873,11 +870,8 @@ class TestNarratorAndImageAssetManager:
                 is None
             )
 
-    @patch(
-        "ai_video_creator.modules.narrator_and_image.narrator_and_image_asset_manager.begin_file_logging"
-    )
     def test_generate_image_asset_error_handling(
-        self, mock_logging, story_setup_with_recipe
+        self, story_setup_with_recipe
     ):
         """Test error handling during image asset generation."""
         # Create asset manager

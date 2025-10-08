@@ -4,7 +4,7 @@ Image recipe builder for creating image recipes from prompts.
 
 from pathlib import Path
 
-from logging_utils import begin_file_logging, logger
+from logging_utils import logger
 from ai_video_creator.prompt import Prompt
 
 from ai_video_creator.generators import FluxImageRecipe
@@ -64,20 +64,16 @@ class ImageRecipeBuilder:
     def create_image_recipes(self) -> None:
         """Create image recipe from story folder and chapter prompt index."""
 
-        with begin_file_logging(
-            name="create_image_recipes_from_prompt",
-            log_level="TRACE",
-            base_folder=self._paths.chapter_folder,
-        ):
-            logger.info("Starting image recipe creation process")
+        
+        logger.info("Starting image recipe creation process")
 
-            # Create image recipe file path
-            image_recipe_file = self._paths.image_recipe_file
+        # Create image recipe file path
+        image_recipe_file = self._paths.image_recipe_file
 
-            self._recipe = ImageRecipe(image_recipe_file)
+        self._recipe = ImageRecipe(image_recipe_file)
 
-            if not self._verify_recipe_against_prompt():
-                self._recipe.clean()
-                self._create_flux_image_recipe()
+        if not self._verify_recipe_against_prompt():
+            self._recipe.clean()
+            self._create_flux_image_recipe()
 
-            logger.info("Image recipe creation completed successfully")
+        logger.info("Image recipe creation completed successfully")

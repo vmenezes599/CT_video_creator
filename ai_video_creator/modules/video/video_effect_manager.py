@@ -5,7 +5,7 @@ Video effect manager for create_video command.
 import json
 from pathlib import Path
 
-from logging_utils import begin_file_logging, logger
+from logging_utils import logger
 
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.media_effects.effect_base import EffectBase
@@ -192,8 +192,11 @@ class MediaEffectsManager:
         # Load separate narrator and image assets
         self.narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
         self.image_assets = ImageAssets(self.__paths.image_asset_file)
-        
-        if not self.narrator_assets.is_complete() or not self.image_assets.is_complete():
+
+        if (
+            not self.narrator_assets.is_complete()
+            or not self.image_assets.is_complete()
+        ):
             raise ValueError(
                 "Video assets are incomplete. Please ensure all required assets are present."
             )
@@ -239,17 +242,12 @@ class MediaEffectsManager:
     def _add_default_values(self):
         """Add default values for video effects."""
 
-        with begin_file_logging(
-            name="media_effects_manager",
-            log_level="TRACE",
-            base_folder=self.__paths.chapter_folder,
-        ):
-            logger.info("Adding default effect values")
+        logger.info("Adding default effect values")
 
-            if len(self.video_effects.narrator_effects) > 0:
-                self.video_effects.add_narrator_effect(0, AudioExtender(1.5))
+        if len(self.video_effects.narrator_effects) > 0:
+            self.video_effects.add_narrator_effect(0, AudioExtender(1.5))
 
-            for index in range(1, len(self.video_effects.narrator_effects)):
-                self.video_effects.add_narrator_effect(index, AudioExtender(1))
+        for index in range(1, len(self.video_effects.narrator_effects)):
+            self.video_effects.add_narrator_effect(index, AudioExtender(1))
 
-            logger.debug("Default effect values added successfully")
+        logger.debug("Default effect values added successfully")

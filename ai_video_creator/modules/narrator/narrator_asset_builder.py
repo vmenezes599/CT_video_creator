@@ -4,7 +4,7 @@ Narrator asset builder for creating narrator assets from recipes.
 
 from pathlib import Path
 
-from logging_utils import begin_file_logging, logger
+from logging_utils import logger
 from ai_video_creator.generators import IAudioGenerator
 from ai_video_creator.utils import VideoCreatorPaths
 
@@ -92,22 +92,18 @@ class NarratorAssetBuilder:
 
     def generate_narrator_assets(self):
         """Generate all missing narrator assets from the recipe."""
-        with begin_file_logging(
-            name="create_narrator_assets_from_recipes",
-            log_level="TRACE",
-            base_folder=self.__paths.chapter_folder,
-        ):
-            logger.info("Starting narrator asset generation process")
+        
+        logger.info("Starting narrator asset generation process")
 
-            missing = self.narrator_assets.get_missing_narrator_assets()
+        missing = self.narrator_assets.get_missing_narrator_assets()
 
-            logger.info(f"Found {len(missing)} scenes missing narrator assets")
+        logger.info(f"Found {len(missing)} scenes missing narrator assets")
 
-            for scene_index in missing:
-                logger.info(f"Processing narrator for scene {scene_index + 1}...")
-                self.generate_narrator_asset(scene_index)
+        for scene_index in missing:
+            logger.info(f"Processing narrator for scene {scene_index + 1}...")
+            self.generate_narrator_asset(scene_index)
 
-            logger.info("Narrator asset generation process completed successfully")
+        logger.info("Narrator asset generation process completed successfully")
 
     def clean_unused_narrator_assets(self):
         """Clean up narrator assets for a specific story folder."""

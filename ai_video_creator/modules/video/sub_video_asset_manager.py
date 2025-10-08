@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from logging_utils import begin_file_logging, logger
+from logging_utils import logger
 from ai_video_creator.generators import IVideoGenerator, FlorenceGenerator
 from ai_video_creator.utils import (
     VideoCreatorPaths,
@@ -188,32 +188,28 @@ class SubVideoAssetManager:
 
     def generate_video_assets(self):
         """Generate a video from the image assets using ffmpeg."""
-        with begin_file_logging(
-            name="create_sub_videos_from_sub_video_recipes",
-            log_level="TRACE",
-            base_folder=self.__paths.chapter_folder,
+        
+        logger.info("Starting video asset generation process")
+
+        if (
+            not self.__narrator_assets.is_complete()
+            or not self.__image_assets.is_complete()
         ):
-            logger.info("Starting video asset generation process")
+            logger.error(
+                "Cannot generate videos - Some scenes are missing narrator or image assets"
+            )
+            return
 
-            if (
-                not self.__narrator_assets.is_complete()
-                or not self.__image_assets.is_complete()
-            ):
-                logger.error(
-                    "Cannot generate videos - Some scenes are missing narrator or image assets"
-                )
-                return
+        missing_videos = self.video_assets.get_missing_videos()
 
-            missing_videos = self.video_assets.get_missing_videos()
+        logger.info(f"Found {len(missing_videos)} scenes missing video assets")
+        logger.info(f"Total scenes requiring processing: {len(missing_videos)}")
 
-            logger.info(f"Found {len(missing_videos)} scenes missing video assets")
-            logger.info(f"Total scenes requiring processing: {len(missing_videos)}")
+        for scene_index in sorted(missing_videos):
+            logger.info(f"Processing scene {scene_index + 1}...")
+            self._generate_video_asset(scene_index)
 
-            for scene_index in sorted(missing_videos):
-                logger.info(f"Processing scene {scene_index + 1}...")
-                self._generate_video_asset(scene_index)
-
-            logger.info("Video asset generation process completed successfully")
+        logger.info("Video asset generation process completed successfully")
 
     def clean_unused_assets(self):
         """Clean up video assets for a specific story folder."""

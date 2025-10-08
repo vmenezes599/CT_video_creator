@@ -4,7 +4,7 @@ Image asset builder for creating image assets from recipes.
 
 from pathlib import Path
 
-from logging_utils import begin_file_logging, logger
+from logging_utils import logger
 from ai_video_creator.generators import IImageGenerator
 from ai_video_creator.utils import VideoCreatorPaths
 
@@ -91,22 +91,18 @@ class ImageAssetBuilder:
 
     def generate_image_assets(self):
         """Generate all missing image assets from the recipe."""
-        with begin_file_logging(
-            name="create_image_assets_from_recipes",
-            log_level="TRACE",
-            base_folder=self.__paths.chapter_folder,
-        ):
-            logger.info("Starting image asset generation process")
+        
+        logger.info("Starting image asset generation process")
 
-            missing = self.image_assets.get_missing_image_assets()
+        missing = self.image_assets.get_missing_image_assets()
 
-            logger.info(f"Found {len(missing)} scenes missing image assets")
+        logger.info(f"Found {len(missing)} scenes missing image assets")
 
-            for scene_index in missing:
-                logger.info(f"Processing image for scene {scene_index + 1}...")
-                self.generate_image_asset(scene_index)
+        for scene_index in missing:
+            logger.info(f"Processing image for scene {scene_index + 1}...")
+            self.generate_image_asset(scene_index)
 
-            logger.info("Image asset generation process completed successfully")
+        logger.info("Image asset generation process completed successfully")
 
     def clean_unused_image_assets(self):
         """Clean up image assets for a specific story folder."""

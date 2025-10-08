@@ -7,7 +7,7 @@ by coordinating image generation, audio generation, and video composition.
 
 from pathlib import Path
 
-from logging_utils import begin_file_logging, logger
+from logging_utils import logger
 
 from ai_video_creator.ComfyUI_automation import (
     ComfyUIRequests,
@@ -359,20 +359,16 @@ class VideoAssembler:
             video_recipe: VideoRecipe object containing narrator text and visual descriptions
             output_filename: Name of the output video file
         """
-        with begin_file_logging(
-            log_level="TRACE",
-            name="assemble_final_video",
-            base_folder=self.__paths.chapter_folder,
-        ):
-            logger.info("Starting video assembly process")
+       
+        logger.info("Starting video assembly process")
 
-            # video_segments = self._create_video_segments_from_images()
-            video_segments = self._create_video_segments_from_sub_videos()
-            self._compose(video_segments)
+        # video_segments = self._create_video_segments_from_images()
+        video_segments = self._create_video_segments_from_sub_videos()
+        self._compose(video_segments)
 
-            self._cleanup()
+        self._cleanup()
 
-            logger.info(f"Video assembly completed successfully: {self.output_path}")
+        logger.info(f"Video assembly completed successfully: {self.output_path}")
 
     def clean_unused_assets(self):
         """Clean up video assets for a specific story folder."""
