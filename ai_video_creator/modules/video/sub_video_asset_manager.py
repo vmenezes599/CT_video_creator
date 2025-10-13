@@ -188,7 +188,7 @@ class SubVideoAssetManager:
 
     def generate_video_assets(self):
         """Generate a video from the image assets using ffmpeg."""
-        
+
         logger.info("Starting video asset generation process")
 
         if (
@@ -227,9 +227,23 @@ class SubVideoAssetManager:
             for sub_asset in sublist
             if sub_asset is not None
         ]
-        assets_to_keep = set(valid_video_assets + valid_sub_video_assets)
+        valid_sub_video_last_frames = [
+            recipe.media_path
+            for recipe_list in self.recipe.video_data
+            for recipe in recipe_list
+        ]
+        assets_to_keep = set(
+            valid_video_assets + valid_sub_video_assets + valid_sub_video_last_frames
+        )
 
         for file in self.__paths.sub_videos_asset_folder.glob("*"):
+            if file.is_file():
+                if file in assets_to_keep:
+                    continue
+                file.unlink()
+                logger.info(f"Deleted asset file: {file}")
+
+        for file in self.__paths.image_asset_folder.glob("*last_frame*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue
