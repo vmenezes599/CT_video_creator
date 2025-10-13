@@ -15,6 +15,7 @@ class VideoAssemblerAssets:
         self.asset_file_parent = asset_file_path.parent
         self.asset_file_path = asset_file_path
         self.final_sub_videos: list[Path] = []
+
         self._load_assets_from_file()
 
     def __validate_asset_path(self, asset_path: Path) -> Path:
@@ -69,6 +70,8 @@ class VideoAssemblerAssets:
                     video_value_path = Path(video_value) if video_value else None
                     self.final_sub_videos[index] = (
                         self._convert_from_relative_to_absolute(video_value_path)
+                        if video_value_path
+                        else None
                     )
 
                 self.save_assets_to_file()
