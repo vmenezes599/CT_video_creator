@@ -43,7 +43,7 @@ class SubVideoRecipeBuilder:
         self.__image_assets = ImageAssets(self.__paths.image_asset_file)
         self._recipe = None
 
-        self._min_sub_videos = 3
+        self._min_sub_videos = 1
         self._max_sub_videos = 5
         self._default_sub_video_duration_seconds = 5
 
@@ -63,13 +63,6 @@ class SubVideoRecipeBuilder:
     def _calculate_sub_videos_count(self, sub_video_index: int) -> int:
         """Calculate the number of sub-videos to generate per prompt."""
 
-        # Handle case where narrator assets don't exist
-        if (
-            sub_video_index >= len(self.__narrator_assets.narrator_assets)
-            or self.__narrator_assets.narrator_assets[sub_video_index] is None
-        ):
-            return self._min_sub_videos
-
         audio_duration = get_audio_duration(
             str(self.__narrator_assets.narrator_assets[sub_video_index])
         )
@@ -78,7 +71,7 @@ class SubVideoRecipeBuilder:
             audio_duration / self._default_sub_video_duration_seconds
         )
 
-        return max(sub_video_count, self._max_sub_videos)
+        return min(sub_video_count, self._max_sub_videos)
 
     def _create_video_recipes(self, seed: int | None = None) -> None:
         """Create video recipe from story folder and chapter prompt index."""
