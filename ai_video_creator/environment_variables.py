@@ -3,9 +3,12 @@ Environment variables for ComfyUI automation module.
 """
 
 import os
+from ai_llm import GPT_4oMini_LLM
 from dotenv import load_dotenv
 
 load_dotenv()
+
+DESCRIPTION_GENERATION_LLM_MODEL = GPT_4oMini_LLM
 
 DEFAULT_ASSETS_FOLDER = os.getenv("DEFAULT_ASSETS_FOLDER")
 if not DEFAULT_ASSETS_FOLDER:

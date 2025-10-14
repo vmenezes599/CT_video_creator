@@ -1,2 +1,3 @@
 # Private GitHub Repository (requires GITHUB_TOKEN in .env file)
+ai_llm @ git+https://github.com/vmenezes599/AI-LLM.git@${GIT_BRANCH}
 logging_utils @ git+https://github.com/vmenezes599/Logging-Utils@master

@@ -23,8 +23,10 @@ class VideoCreatorPaths:
 
         # Initialize paths
         self.video_folder = self.story_folder / "video"
-        self.chapter_folder = self.video_folder / f"chapter_{chapter_prompt_index+1:03}"
-        self.asset_folder = self.chapter_folder / "assets"
+        self.video_chapter_folder = (
+            self.video_folder / f"chapter_{chapter_prompt_index+1:03}"
+        )
+        self.asset_folder = self.video_chapter_folder / "assets"
 
         # Final modules paths
         self.narrator_asset_folder = self.asset_folder / "narrators"
@@ -39,15 +41,15 @@ class VideoCreatorPaths:
         self.video_assembler_asset_folder.mkdir(parents=True, exist_ok=True)
 
         # Recipe file paths
-        self.narrator_recipe_file = self.chapter_folder / "narrator_recipe.json"
-        self.narrator_asset_file = self.chapter_folder / "narrator_assets.json"
-        self.image_recipe_file = self.chapter_folder / "image_recipe.json"
-        self.image_asset_file = self.chapter_folder / "image_assets.json"
+        self.narrator_recipe_file = self.video_chapter_folder / "narrator_recipe.json"
+        self.narrator_asset_file = self.video_chapter_folder / "narrator_assets.json"
+        self.image_recipe_file = self.video_chapter_folder / "image_recipe.json"
+        self.image_asset_file = self.video_chapter_folder / "image_assets.json"
 
-        self.sub_video_recipe_file = self.chapter_folder / "sub_video_recipe.json"
-        self.sub_video_asset_file = self.chapter_folder / "sub_video_assets.json"
+        self.sub_video_recipe_file = self.video_chapter_folder / "sub_video_recipe.json"
+        self.sub_video_asset_file = self.video_chapter_folder / "sub_video_assets.json"
         self.video_assembler_asset_file = (
-            self.chapter_folder / "video_assembler_assets.json"
+            self.video_chapter_folder / "video_assembler_assets.json"
         )
-        self.video_effects_file = self.chapter_folder / "video_effects.json"
-        self.video_output_file = self.chapter_folder / "output.mp4"
+        self.video_effects_file = self.video_chapter_folder / "video_effects.json"
+        self.video_output_file = self.video_chapter_folder / "output.mp4"

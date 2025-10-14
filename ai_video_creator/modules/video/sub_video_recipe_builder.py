@@ -4,10 +4,11 @@ Video executor for create_video command.
 
 from pathlib import Path
 from math import ceil
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from logging_utils import logger
+from logging_utils import logger, begin_file_logging
 
-from ai_video_creator.generators import WanI2VRecipe
+from ai_video_creator.generators import WanI2VRecipe, SceneScriptGenerator
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
 from ai_video_creator.utils import VideoCreatorPaths
@@ -73,11 +74,61 @@ class SubVideoRecipeBuilder:
 
         return min(sub_video_count, self._max_sub_videos)
 
+    def _run_script_generator_parallel(self):
+        """Run the scene script generator in parallel for all prompts."""
+
+        def _generate_scene_script(i: int, prompt):
+            """Helper function to generate scene script for a single prompt."""
+            sub_video_count = self._calculate_sub_videos_count(i)
+            image_asset = (
+                self.__image_assets.image_assets[i]
+                if i < len(self.__image_assets.image_assets)
+                else None
+            )
+
+            previous_prompt = self.__video_prompt[i - 1] if i > 0 else None
+
+            scene_script_generator = SceneScriptGenerator(
+                scene_initial_image=image_asset,
+                number_of_subdivisions=sub_video_count,
+                sub_video_prompt=prompt,
+                previous_sub_video_prompt=previous_prompt,
+            )
+
+            return i, scene_script_generator.generate_scenes_script()
+
+        results_dict = {}
+        with begin_file_logging(
+            "run_script_generator_parallel",
+            self.__paths.video_chapter_folder,
+            log_level="TRACE",
+        ):
+
+            with ThreadPoolExecutor() as executor:
+                # Submit all tasks
+                futures = {
+                    executor.submit(_generate_scene_script, i, prompt): i
+                    for i, prompt in enumerate(self.__video_prompt)
+                }
+
+                # Collect results as they complete
+                for future in as_completed(futures):
+                    i, scene_scripts = future.result()
+                    results_dict[i] = scene_scripts
+                    logger.debug(f"Completed scene script generation for prompt {i}")
+
+            # Return results in original order
+            results = [results_dict[i] for i in range(len(self.__video_prompt))]
+
+        return results
+
     def _create_video_recipes(self, seed: int | None = None) -> None:
         """Create video recipe from story folder and chapter prompt index."""
         logger.info(
             f"Creating Wan video recipes for {len(self.__video_prompt)} prompts"
         )
+
+        scene_scripts_results = self._run_script_generator_parallel()
 
         for i, prompt in enumerate(self.__video_prompt):
             # Get corresponding image asset if available, otherwise None
@@ -88,19 +139,21 @@ class SubVideoRecipeBuilder:
                 else None
             )
 
-            recipe_list = []
+            scene_scripts = scene_scripts_results[i]
+
+            recipe_list: list[WanI2VRecipe] = []
             recipe = self._create_wan_i2v_recipe(
-                prompt=prompt.visual_description,
+                prompt=scene_scripts[0],
                 color_match_image_asset=image_asset,
                 image_asset=image_asset,
                 seed=seed,
             )
             recipe_list.append(recipe)
-            for _ in range(sub_video_count - 1):
+            for j in range(sub_video_count - 1):
                 recipe = self._create_wan_i2v_recipe(
-                    prompt=prompt.visual_description,
+                    prompt=scene_scripts[1 + j],
                     seed=seed,
-                    color_match_image_asset=image_asset
+                    color_match_image_asset=image_asset,
                 )
                 recipe_list.append(recipe)
 

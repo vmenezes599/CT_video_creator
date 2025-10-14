@@ -38,7 +38,7 @@ def create_narrator_and_image_recipe_from_prompt(
     file_log_id = setup_file_logging(
         "create_narrator_and_image_recipes_from_prompt",
         log_level="TRACE",
-        base_folder=paths.chapter_folder,
+        base_folder=paths.video_chapter_folder,
     )
 
     asset_manager = NarratorAndImageAssetManager(
@@ -66,7 +66,7 @@ def create_narrators_and_images_from_recipe(
     file_log_id = setup_file_logging(
         "create_narrator_and_images_from_recipe",
         log_level="TRACE",
-        base_folder=paths.chapter_folder,
+        base_folder=paths.video_chapter_folder,
     )
 
     narrator_img_asset_manager = NarratorAndImageAssetManager(
@@ -96,7 +96,7 @@ def create_sub_video_recipes_from_images(story_path: Path, chapter_index: int) -
     file_log_id = setup_file_logging(
         "create_sub_video_recipes_from_images",
         log_level="TRACE",
-        base_folder=paths.chapter_folder,
+        base_folder=paths.video_chapter_folder,
     )
 
     video_recipe_builder = SubVideoRecipeBuilder(
@@ -124,7 +124,7 @@ def create_sub_videos_from_sub_video_recipes(
     file_log_id = setup_file_logging(
         "create_sub_videos_from_sub_video_recipes",
         log_level="TRACE",
-        base_folder=paths.chapter_folder,
+        base_folder=paths.video_chapter_folder,
     )
 
     video_asset_manager = SubVideoAssetManager(
@@ -155,7 +155,7 @@ def assemble_final_video(story_path: Path, chapter_index: int) -> None:
     file_log_id = setup_file_logging(
         "assemble_final_video",
         log_level="TRACE",
-        base_folder=paths.chapter_folder,
+        base_folder=paths.video_chapter_folder,
     )
 
     video_assembler = VideoAssembler(
