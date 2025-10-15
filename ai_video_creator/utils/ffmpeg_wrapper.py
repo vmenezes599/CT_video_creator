@@ -7,6 +7,7 @@ import subprocess
 import time
 from pathlib import Path
 
+import shutil
 import ffmpeg
 from logging_utils import logger
 
@@ -199,31 +200,59 @@ def get_audio_duration(path: str) -> float:
 
 
 def extend_audio_to_duration(
-    input_path: Path, output_path: Path, extra_time: float
+    input_path: Path,
+    output_path: Path,
+    extra_time_front: float = 0.0,
+    extra_time_back: float = 0.0,
 ) -> Path:
     """
-    Extend the audio clip to the target duration.
+    Extend the audio clip by prepending and/or appending silence.
 
     Args:
         input_path: Path to the input audio file
         output_path: Path for the output audio file
-        extra_time: Number of seconds to extend the audio
+        extra_time_front: Number of seconds to prepend (extend at the front)
+        extra_time_back: Number of seconds to append (extend at the back)
 
     Returns:
         Path to the extended audio file
     """
+    if extra_time_front == 0.0 and extra_time_back == 0.0:
+        # No extension needed, just copy the file
+
+        shutil.copy2(input_path, output_path)
+        return output_path
+
     current_duration = get_audio_duration(str(input_path))
-    target_duration = current_duration + extra_time
+
+    # Build the FFmpeg filter chain
+    audio_stream = ffmpeg.input(str(input_path))
+
+    # Prepend silence if needed
+    if extra_time_front > 0:
+        audio_stream = audio_stream.filter(
+            "adelay", f"{int(extra_time_front * 1000)}|{int(extra_time_front * 1000)}"
+        )
+
+    # Append silence if needed
+    if extra_time_back > 0:
+        target_duration = current_duration + extra_time_front + extra_time_back
+        audio_stream = audio_stream.filter("apad")
+        output_args = {
+            "t": target_duration,
+            "acodec": "libmp3lame",
+            "format": "mp3",
+        }
+    else:
+        target_duration = current_duration + extra_time_front
+        output_args = {
+            "t": target_duration,
+            "acodec": "libmp3lame",
+            "format": "mp3",
+        }
 
     cmd = (
-        ffmpeg.input(str(input_path))
-        .filter("apad")
-        .output(
-            str(output_path),
-            t=target_duration,
-            acodec="libmp3lame",
-            format="mp3",
-        )
+        audio_stream.output(str(output_path), **output_args)
         .overwrite_output()
         .compile()
     )
@@ -509,6 +538,9 @@ def create_video_segment_from_sub_video_and_audio_freeze_last_frame(
                     "preset": "p5",  # Encoding speed/quality tradeoff
                     "crf": "23",  # Video quality (lower is better, 18–28 range)
                     "c:a": "aac",  # Audio codec
+                    "b:a": "192k",  # Audio bitrate for consistency
+                    "ar": "48000",  # Audio sample rate (48kHz)
+                    "ac": "2",  # Audio channels (stereo)
                     "pix_fmt": "yuv420p",
                     "movflags": "+faststart",  # Optimize for web streaming
                 },
@@ -720,23 +752,17 @@ def concatenate_videos_with_fade_in_out(
 
             temp_output = temp_dir / f"fade_segment_{i:03d}.mp4"
 
-            # Create video filter with scaling and fade effects
-            video_filter_parts = [f"scale={width}:{height}"]
-
-            # Every segment gets both fade-in from black and fade-out to black
-            # This creates: black -> fade in -> video content -> fade out -> black
-
-            # Fade-in from black at the start of each segment
-            video_filter_parts.append(f"fade=t=in:st=0:d={actual_fade_duration}")
-
-            # Fade-out to black at the end of each segment
+            # Calculate fade-out start time
             fade_start = max(0, duration - actual_fade_duration)
-            video_filter_parts.append(
+
+            # Create video filter with scaling and fade effects
+            video_filter = (
+                f"scale={width}:{height},"
+                f"fade=t=in:st=0:d={actual_fade_duration},"
                 f"fade=t=out:st={fade_start}:d={actual_fade_duration}"
             )
 
-            video_filter = ",".join(video_filter_parts)
-
+            # Process each segment with uniform settings
             cmd = (
                 ffmpeg.input(str(segment))
                 .output(
@@ -747,6 +773,9 @@ def concatenate_videos_with_fade_in_out(
                         "preset": "p5",
                         "crf": "23",
                         "c:a": "aac",
+                        "b:a": "192k",
+                        "ar": "48000",
+                        "ac": "2",
                         "pix_fmt": "yuv420p",
                         "movflags": "+faststart",
                     },
@@ -766,10 +795,17 @@ def concatenate_videos_with_fade_in_out(
                 f.write(f"file '{segment.resolve()}'\n")
 
         # Concatenate processed segments
+        # Copy both video and audio since segments are already processed uniformly
         logger.info("Concatenating processed segments with fade effects")
         cmd = (
             ffmpeg.input(str(concat_list_path), format="concat", safe=0)
-            .output(str(output_path), c="copy", **{"bsf:a": "aac_adtstoasc"})
+            .output(
+                str(output_path),
+                **{
+                    "c:v": "copy",  # Copy video (already processed)
+                    "c:a": "copy",  # Copy audio (already processed and uniform)
+                },
+            )
             .overwrite_output()
             .compile()
         )

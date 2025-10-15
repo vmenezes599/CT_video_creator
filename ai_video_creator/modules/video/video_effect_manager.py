@@ -245,9 +245,15 @@ class MediaEffectsManager:
         logger.info("Adding default effect values")
 
         if len(self.video_effects.narrator_effects) > 0:
-            self.video_effects.add_narrator_effect(0, AudioExtender(1.5))
+            self.video_effects.add_narrator_effect(
+                0,
+                AudioExtender(seconds_to_extend_front=1.5, seconds_to_extend_back=1.5),
+            )
 
         for index in range(1, len(self.video_effects.narrator_effects)):
-            self.video_effects.add_narrator_effect(index, AudioExtender(1))
+            self.video_effects.add_narrator_effect(
+                index,
+                AudioExtender(seconds_to_extend_front=0, seconds_to_extend_back=1),
+            )
 
         logger.debug("Default effect values added successfully")

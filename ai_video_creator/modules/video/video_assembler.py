@@ -359,11 +359,16 @@ class VideoAssembler:
             video_recipe: VideoRecipe object containing narrator text and visual descriptions
             output_filename: Name of the output video file
         """
-       
+
         logger.info("Starting video assembly process")
 
         # video_segments = self._create_video_segments_from_images()
         video_segments = self._create_video_segments_from_sub_videos()
+
+        # intro_video = Path("/home/vitor/projects/DATABASES/AI-Video-Default-Assets/logo/combined.mp4")
+        # if intro_video.exists():
+        #     video_segments = [intro_video, *video_segments]
+
         self._compose(video_segments)
 
         self._cleanup()

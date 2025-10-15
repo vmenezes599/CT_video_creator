@@ -16,28 +16,36 @@ class AudioExtender(EffectBase):
 
     effect_type: str = "AudioExtenderType"
 
-    def __init__(self, seconds_to_extend: float):
+    def __init__(
+        self,
+        seconds_to_extend_front: float = 0.0,
+        seconds_to_extend_back: float = 0.0,
+    ):
         """
         Initialize the audio extender effect.
 
         Args:
-            seconds_to_extend: The number of seconds to extend the audio clip.
+            seconds_to_extend_front: The number of seconds to prepend (extend at the front).
+            seconds_to_extend_back: The number of seconds to append (extend at the back).
         """
         super().__init__(effect_type=self.effect_type)
-        self.seconds_to_extend = seconds_to_extend
+        self.__seconds_to_extend_front = seconds_to_extend_front
+        self.__seconds_to_extend_back = seconds_to_extend_back
 
     @override
     def apply(self, media_file_path: Path, **kwargs) -> Path:
         """Apply the audio extender effect."""
         logger.info(
-            f"Applying AudioExtender to {media_file_path.name} of {self.seconds_to_extend} seconds"
+            f"Applying AudioExtender to {media_file_path.name} - "
+            f"front: {self.__seconds_to_extend_front}s, back: {self.__seconds_to_extend_back}s"
         )
         output_path = media_file_path.with_stem(f"{media_file_path.stem}_extended")
 
         result = extend_audio_to_duration(
             input_path=media_file_path,
             output_path=output_path,
-            extra_time=self.seconds_to_extend,
+            extra_time_front=self.__seconds_to_extend_front,
+            extra_time_back=self.__seconds_to_extend_back,
         )
 
         logger.info(f"Audio extended successfully: {output_path.name}")
@@ -46,7 +54,11 @@ class AudioExtender(EffectBase):
     @override
     def to_dict(self):
         """Convert the effect to a JSON-serializable format."""
-        return {"type": self.effect_type, "seconds_to_extend": self.seconds_to_extend}
+        return {
+            "type": self.effect_type,
+            "seconds_to_extend_front": self.__seconds_to_extend_front,
+            "seconds_to_extend_back": self.__seconds_to_extend_back,
+        }
 
     @override
     def from_dict(self, json_data: dict):
@@ -54,9 +66,10 @@ class AudioExtender(EffectBase):
         Initialize the effect from a JSON-serialized format.
         """
 
-        required_fields = ["seconds_to_extend"]
+        required_fields = ["seconds_to_extend_front", "seconds_to_extend_back"]
         missing_fields = set(required_fields) - json_data.keys()
         for field in missing_fields:
             raise KeyError(f"Missing required key: {field}")
 
-        self.seconds_to_extend = json_data["seconds_to_extend"]
+        self.__seconds_to_extend_front = json_data["seconds_to_extend_front"]
+        self.__seconds_to_extend_back = json_data["seconds_to_extend_back"]
