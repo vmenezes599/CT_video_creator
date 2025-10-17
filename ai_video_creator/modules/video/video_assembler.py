@@ -69,7 +69,6 @@ class VideoAssembler:
         self.effects = MediaEffects(self._paths)
 
         self.output_path = self._paths.video_output_file
-        self.srt_file: Path | None = None
         self._temp_files = []
 
     def _cleanup(self):
@@ -132,9 +131,7 @@ class VideoAssembler:
         # self._temp_files.append(raw_video_path)
 
         # Generate subtitles using SubtitleGenerator
-        self.str_file = self._subtitle_generator.generate_subtitles_from_audio(  # pylint:disable=unused-variable
-            raw_video_path
-        )
+
         # self._temp_files.append(str_file)
 
         # Add subtitles to the final video
@@ -395,9 +392,6 @@ class VideoAssembler:
             output_path=output_video_path,
         )
 
-        if self.srt_file:
-            self.srt_file.rename(self.srt_file.with_stem(output_video_path.stem))
-
         return output_path
 
     def assemble_video(self) -> None:
@@ -417,11 +411,13 @@ class VideoAssembler:
 
         output_file = self._compose(video_segments)
 
-        self._post_compose_effects(output_file)
+        output_file = self._post_compose_effects(output_file)
+
+        _ = self._subtitle_generator.generate_subtitles_from_audio(output_file)
 
         self._cleanup()
 
-        logger.info(f"Video assembly completed successfully: {self.output_path}")
+        logger.info(f"Video assembly completed successfully: {output_file.name}")
 
     def clean_unused_assets(self):
         """Clean up video assets for a specific story folder."""

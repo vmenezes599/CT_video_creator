@@ -747,9 +747,9 @@ def concatenate_videos_with_fade_in_out(
                 f"Processing segment {i+1}/{len(video_segments)}: {segment.name}"
             )
 
-            # Get segment duration for fade calculations
+            # Get segment duration and FPS for processing
             probe = _probe(segment)
-            _, duration = _fps_and_duration(probe)
+            fps, duration = _fps_and_duration(probe)
 
             # Adjust fade duration if segment is too short
             actual_fade_duration = min(fade_duration, duration / 3.0)
@@ -771,6 +771,7 @@ def concatenate_videos_with_fade_in_out(
                 ffmpeg.input(str(segment))
                 .output(
                     str(temp_output),
+                    r=fps,  # Preserve original FPS of each segment
                     vf=video_filter,
                     **{
                         "c:v": "h264_nvenc",
@@ -1079,21 +1080,6 @@ class VideoBlitPosition(str, Enum):
     BOTTOM_LEFT = "bottom-left"
     BOTTOM_RIGHT = "bottom-right"
     CENTER = "center"
-
-
-def _check_encoder_available(encoder: str) -> bool:
-    """Check if a video encoder is available in FFmpeg."""
-    try:
-        result = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-encoders"],
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=5,
-        )
-        return encoder in result.stdout
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return False
 
 
 def blit_outro_video_onto_main_video(
