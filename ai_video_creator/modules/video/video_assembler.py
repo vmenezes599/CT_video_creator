@@ -147,7 +147,7 @@ class VideoAssembler:
         """
         processed_images: list[Path] = []
         for image_path, image_effects in zip(
-            image_file_paths, self.effects.image_effects
+            image_file_paths, self.effects.assets_effects.image_effects
         ):
             processed_image_path = image_path
             for effect in image_effects:
@@ -164,7 +164,7 @@ class VideoAssembler:
         """
         processed_videos: list[Path] = []
         for image_path, image_effects in zip(
-            video_file_paths, self.effects.image_effects
+            video_file_paths, self.effects.assets_effects.image_effects
         ):
             processed_video_path = image_path
             for effect in image_effects:
@@ -181,7 +181,7 @@ class VideoAssembler:
         """
         processed_narrators: list[Path] = []
         for audio_path, audio_effects in zip(
-            narrator_file_paths, self.effects.narrator_effects
+            narrator_file_paths, self.effects.assets_effects.narrator_effects
         ):
             processed_narrator_path = audio_path
             for effect in audio_effects:
