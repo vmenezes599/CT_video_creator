@@ -69,6 +69,7 @@ class VideoAssembler:
         self.effects = MediaEffects(self._paths)
 
         self.output_path = self._paths.video_output_file
+        self.srt_file: Path | None = None
         self._temp_files = []
 
     def _cleanup(self):
@@ -131,7 +132,7 @@ class VideoAssembler:
         # self._temp_files.append(raw_video_path)
 
         # Generate subtitles using SubtitleGenerator
-        str_file = self._subtitle_generator.generate_subtitles_from_audio(  # pylint:disable=unused-variable
+        self.str_file = self._subtitle_generator.generate_subtitles_from_audio(  # pylint:disable=unused-variable
             raw_video_path
         )
         # self._temp_files.append(str_file)
@@ -393,6 +394,9 @@ class VideoAssembler:
             main_video=main_video_path,
             output_path=output_video_path,
         )
+
+        if self.srt_file:
+            self.srt_file.rename(self.srt_file.with_stem(output_video_path.stem))
 
         return output_path
 
