@@ -141,6 +141,8 @@ class VideoAssembler:
         #    video_path=video_path, srt_path=srt_path, output_path=self.output_path
         # )
 
+        return output_video_path
+
     def _apply_image_effects(self, image_file_paths: list[Path]) -> list[Path]:
         """
         Apply media effects to the image files.
@@ -367,7 +369,7 @@ class VideoAssembler:
         logger.info(f"Adding intro video segment: {intro_video_path.name}")
         return [intro_video_path, *video_segments]
 
-    def _post_compose_effects(self):
+    def _post_compose_effects(self, main_video_path: Path):
         """
         Apply post-compose effects to the final video.
         """
@@ -384,13 +386,15 @@ class VideoAssembler:
         logger.info(f"Adding outro video segment: {outro_video_path.name}")
         output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_final")
 
-        self._temp_files.append(self.output_path)
+        self._temp_files.append(main_video_path)
 
-        self.output_path = blit_outro_video_onto_main_video(
+        output_path = blit_outro_video_onto_main_video(
             outro_video=outro_video_path,
-            main_video=self.output_path,
+            main_video=main_video_path,
             output_path=output_video_path,
         )
+
+        return output_path
 
     def assemble_video(self) -> None:
         """
@@ -407,9 +411,9 @@ class VideoAssembler:
         video_segments = self._create_video_segments_from_sub_videos()
         video_segments = self._add_intro_video_segment(video_segments)
 
-        self._compose(video_segments)
+        output_file = self._compose(video_segments)
 
-        self._post_compose_effects()
+        self._post_compose_effects(output_file)
 
         self._cleanup()
 
