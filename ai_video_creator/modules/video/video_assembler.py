@@ -20,7 +20,7 @@ from ai_video_creator.generators.ComfyUI_automation import (
     VideoUpscaleFrameInterpWorkflow,
 )
 from ai_video_creator.generators import SubtitleGenerator
-from ai_video_creator.utils import (
+from ai_video_creator.utils import (  # pylint: disable=unused-import
     burn_subtitles_to_video,
     create_video_segment_from_sub_video_and_audio_freeze_last_frame,
     create_video_segment_from_sub_video_and_audio_reverse_video,
@@ -29,6 +29,7 @@ from ai_video_creator.utils import (
     concatenate_videos_with_reencoding,
     blit_outro_video_onto_main_video,
     concatenate_videos_no_reencoding,
+    reencode_to_reference_basic,
     safe_move,
     VideoCreatorPaths,
 )
@@ -139,7 +140,7 @@ class VideoAssembler:
         #    video_path=video_path, srt_path=srt_path, output_path=self.output_path
         # )
 
-        return output_video_path
+        return raw_video_path
 
     def _apply_image_effects(self, image_file_paths: list[Path]) -> list[Path]:
         """
@@ -364,8 +365,17 @@ class VideoAssembler:
             logger.warning("Intro video path is invalid or does not exist.")
             return video_segments
 
+        reencoded_intro = intro_video_path
+        # reencoded_intro = reencode_to_reference_basic(
+        #     intro_video_path,
+        #     video_segments[0],
+        #     intro_video_path.with_stem(f"{intro_video_path.stem}_reencoded"),
+        # )
+
+        # self._temp_files.append(reencoded_intro)
+
         logger.info(f"Adding intro video segment: {intro_video_path.name}")
-        return [intro_video_path, *video_segments]
+        return [reencoded_intro, *video_segments]
 
     def _post_compose_effects(self, main_video_path: Path):
         """

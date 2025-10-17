@@ -15,6 +15,7 @@ from .ffmpeg_wrapper import (
     concatenate_videos_with_reencoding,
     blit_outro_video_onto_main_video,
     concatenate_videos_no_reencoding,
+    reencode_to_reference_basic,
     extract_video_last_frame,
     extend_audio_to_duration,
     burn_subtitles_to_video,

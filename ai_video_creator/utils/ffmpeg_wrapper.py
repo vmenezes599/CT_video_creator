@@ -2,16 +2,16 @@
 Helpers for FFmpeg operations, including running commands and probing audio durations.
 """
 
-from enum import Enum
-import json
-import subprocess
-import time
+from fractions import Fraction
 from pathlib import Path
+from enum import Enum
+import subprocess
+import json
+import time
 
+from logging_utils import logger
 import shutil
 import ffmpeg
-from logging_utils import logger
-
 
 # =============================================================================
 # Helper Functions
@@ -33,7 +33,6 @@ def _check_gpu_memory():
             capture_output=True,
             text=True,
             check=False,
-            timeout=10,
         )
 
         if result.returncode == 0:
@@ -53,18 +52,17 @@ def _check_gpu_memory():
         else:
             logger.debug("nvidia-smi not available or failed")
             return None
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+    except (FileNotFoundError, OSError):
         logger.debug("Could not check GPU memory")
         return None
 
 
-def _run_ffmpeg_trace(ffmpeg_compiled: str | list[str], timeout: int | None = None):
+def _run_ffmpeg_trace(ffmpeg_compiled: str | list[str]):
     """
-    Run the FFmpeg command with timeout and comprehensive logging.
+    Run the FFmpeg command and comprehensive logging.
 
     Args:
         ffmpeg_compiled: The FFmpeg command (string or list)
-        timeout: Optional timeout in seconds
     """
     try:
         result = subprocess.run(
@@ -73,7 +71,6 @@ def _run_ffmpeg_trace(ffmpeg_compiled: str | list[str], timeout: int | None = No
             stderr=subprocess.STDOUT,
             text=True,
             check=True,
-            timeout=timeout,
         )
 
         # Log the output
@@ -81,9 +78,6 @@ def _run_ffmpeg_trace(ffmpeg_compiled: str | list[str], timeout: int | None = No
             if line.strip():
                 logger.trace(line.strip())
 
-    except subprocess.TimeoutExpired as exc:
-        logger.error(f"FFmpeg process timed out after {timeout} seconds")
-        raise RuntimeError(f"FFmpeg process timed out after {timeout} seconds") from exc
     except subprocess.CalledProcessError as exc:
         logger.error(f"FFmpeg exited with code {exc.returncode}")
         # Log stderr output if available
@@ -131,17 +125,14 @@ def _fps_and_duration(probe: dict) -> tuple[float, float]:
     return fps, duration
 
 
-def _reencode_with_optional_trim(
-    src: Path, dst: Path, trim_seconds: float | None, timeout: int = 300
-):
+def _reencode_with_optional_trim(src: Path, dst: Path, trim_seconds: float | None):
     """
-    Re-encode video with optional trimming and timeout.
+    Re-encode video with optional trimming.
 
     Args:
         src: Source video path
         dst: Destination video path
         trim_seconds: Optional number of seconds to trim to
-        timeout: Timeout in seconds for the operation
     """
     cmd = ["ffmpeg", "-y", "-i", str(src)]
     if trim_seconds is not None:
@@ -164,7 +155,7 @@ def _reencode_with_optional_trim(
 
     try:
         logger.debug(f"Starting re-encode: {src.name} -> {dst.name}")
-        _run_ffmpeg_trace(cmd, timeout=timeout)
+        _run_ffmpeg_trace(cmd)
         logger.debug(f"Successfully processed {src.name} -> {dst.name}")
     except RuntimeError as e:
         logger.error(f"FFmpeg failed processing {src.name}: {e}")
@@ -841,7 +832,6 @@ def concatenate_videos_remove_last_frame_except_last(
     video_segments: list[str | Path],
     output_path: str | Path,
     max_retries: int = 3,
-    timeout: int = 300,
 ) -> Path:
     """
     Remove exactly one frame from the end of every segment except the final one,
@@ -863,7 +853,6 @@ def concatenate_videos_remove_last_frame_except_last(
         video_segments: List of video segment paths
         output_path: Output path for concatenated video
         max_retries: Maximum number of retry attempts if processing fails
-        timeout: Timeout in seconds for individual FFmpeg operations
 
     Returns:
         Path to the concatenated video file
@@ -949,7 +938,7 @@ def concatenate_videos_remove_last_frame_except_last(
                         )
 
                     out = temp_dir / f"seg_{i:03d}.mp4"
-                    _reencode_with_optional_trim(seg, out, target, timeout)
+                    _reencode_with_optional_trim(seg, out, target)
 
                     # Verify the output file was created and has reasonable size
                     if not out.exists() or out.stat().st_size < 1000:
@@ -964,7 +953,6 @@ def concatenate_videos_remove_last_frame_except_last(
 
                 except (
                     subprocess.CalledProcessError,
-                    subprocess.TimeoutExpired,
                     RuntimeError,
                     OSError,
                 ) as e:
@@ -1008,7 +996,7 @@ def concatenate_videos_remove_last_frame_except_last(
 
             try:
                 logger.debug(f"Starting concatenation of {len(processed)} segments")
-                _run_ffmpeg_trace(concat_cmd, timeout=timeout * 2)
+                _run_ffmpeg_trace(concat_cmd)
                 logger.info(f"Successfully concatenated video: {output_path.name}")
             except RuntimeError as e:
                 logger.error(f"Concatenation failed: {e}")
@@ -1038,7 +1026,6 @@ def concatenate_videos_remove_last_frame_except_last(
 
         except (
             subprocess.CalledProcessError,
-            subprocess.TimeoutExpired,
             RuntimeError,
             OSError,
         ) as e:
@@ -1563,3 +1550,155 @@ def blit_outro_video_onto_main_video(
 
     logger.info(f"Successfully created video with intro overlay: {output_path.name}")
     return output_path
+
+
+def reencode_to_reference_basic(
+    input_video: Path,
+    reference_video: Path,
+    output_video: Path,
+) -> Path:
+    """
+    Always re-encode input_video to match basic settings from reference_video:
+      - Resolution: match reference (preserve AR via scale+pad, setsar=1)
+      - FPS: match rounded integer FPS of reference (e.g., 29.97 -> 30) if known
+      - Codec family: NVENC flavor chosen by reference (h264/hevc/av1), fallback h264
+      - Pixel format: yuv420p for broad compatibility
+      - Audio: if ref has audio and input has audio -> AAC 160k stereo @ 48k; else -an
+
+    Requires: _probe(path) -> ffprobe dict, _run_ffmpeg_trace(cmd: list) -> None
+    """
+    input_video = Path(input_video)
+    reference_video = Path(reference_video)
+    output_video = Path(output_video)
+
+    if not input_video.exists():
+        raise FileNotFoundError(input_video)
+    if not reference_video.exists():
+        raise FileNotFoundError(reference_video)
+    if input_video.resolve() == output_video.resolve():
+        raise ValueError("output_video must differ from input_video")
+    output_video.parent.mkdir(parents=True, exist_ok=True)
+
+    # --- local helpers (kept inside to satisfy “one function”) ---
+    def _first_stream(pr, kind):
+        return next(
+            (s for s in pr.get("streams", []) if s.get("codec_type") == kind), None
+        )
+
+    def _rounded_fps(stream):
+        r = stream.get("avg_frame_rate") or stream.get("r_frame_rate") or "0/0"
+        try:
+            num, den = map(int, r.split("/"))
+            if num == 0 or den == 0:
+                return None
+            return int(round(num / den))
+        except Exception:
+            return None
+
+    def _codec_family(name: str) -> str:
+        n = (name or "").lower()
+        if "264" in n or n in {"h264", "avc"}:
+            return "h264"
+        if "265" in n or n in {"hevc", "h265"}:
+            return "hevc"
+        if "av1" in n:
+            return "av1"
+        return "h264"
+
+    def _encoder_for_family(fam: str) -> str:
+        return {"h264": "h264_nvenc", "hevc": "hevc_nvenc", "av1": "av1_nvenc"}.get(
+            fam, "h264_nvenc"
+        )
+
+    # --- probe ---
+    refp = _probe(reference_video)
+    inp = _probe(input_video)
+
+    rv = _first_stream(refp, "video")
+    sv = _first_stream(inp, "video")
+    if not rv or not sv:
+        raise RuntimeError("Missing video stream in reference or input")
+
+    ra = _first_stream(refp, "audio")
+    sa = _first_stream(inp, "audio")
+    has_audio = (ra is not None) and (sa is not None)
+
+    # --- reference targets ---
+    rw, rh = int(rv["width"]), int(rv["height"])
+    ref_fps = _rounded_fps(rv)  # int or None
+    fam = _codec_family(rv.get("codec_name") or "")
+    venc = _encoder_for_family(fam)
+    container = output_video.suffix.lower().lstrip(".")
+    cont_args = ["-movflags", "+faststart"] if container in {"mp4", "mov"} else []
+
+    # --- filters: always scale+pad to exact ref; set fps if known ---
+    vf_parts = [
+        f"scale=w={rw}:h={rh}:force_original_aspect_ratio=decrease",
+        f"pad=w={rw}:h={rh}:x=(ow-iw)/2:y=(oh-ih)/2:color=black",
+        "setsar=1",
+    ]
+    vsync = "vfr"
+    if ref_fps:
+        vf_parts.append(f"fps=fps={ref_fps}")
+        vsync = "cfr"
+
+    # --- video encode: simple & deterministic ---
+    v_args = [
+        "-c:v",
+        venc,
+        "-preset",
+        "p5",
+        "-rc",
+        "vbr",
+        "-cq",
+        "23",
+        "-pix_fmt",
+        "yuv420p",
+    ]
+
+    # --- audio: mirror presence, keep it simple ---
+    if has_audio:
+        a_args = [
+            "-map",
+            "0:a:0",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "160k",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+        ]
+    else:
+        a_args = ["-an"]
+
+    # --- build & run ---
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        str(input_video),
+        "-map",
+        "0:v:0",
+        "-vf",
+        ",".join(vf_parts),
+        *v_args,
+        *a_args,
+        "-sn",
+        "-dn",
+        *cont_args,
+        "-vsync",
+        vsync,
+        str(output_video),
+    ]
+
+    logger.debug("FFmpeg cmd: %s", " ".join(map(str, cmd)))
+    _run_ffmpeg_trace(cmd)
+
+    if not output_video.exists() or output_video.stat().st_size < 1024:
+        raise RuntimeError(f"Output missing/too small: {output_video}")
+    return output_video
