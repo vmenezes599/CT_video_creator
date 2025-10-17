@@ -49,9 +49,8 @@ class AssetsEffects:
 
     def has_any_assets_effects(self) -> bool:
         """Check if there are any effects for either narrator or image assets."""
-        return any(
-            len(effects_list) > 0
-            for effects_list in self.narrator_effects + self.image_effects
+        return any(effects for effects in self.narrator_effects) or any(
+            effects for effects in self.image_effects
         )
 
     def clear_assets_effects(self, scene_index: int) -> None:
@@ -336,13 +335,13 @@ class MediaEffectsManager:
 
         logger.info("Adding default effect values")
 
-        if len(self.media_effects.narrator_effects) > 0:
+        if len(self.media_effects.assets_effects.narrator_effects) > 0:
             self.media_effects.assets_effects.add_narrator_effect(
                 0,
                 AudioExtender(seconds_to_extend_front=0.5, seconds_to_extend_back=1.5),
             )
 
-        for index in range(1, len(self.media_effects.narrator_effects)):
+        for index in range(1, len(self.media_effects.assets_effects.narrator_effects)):
             self.media_effects.assets_effects.add_narrator_effect(
                 index,
                 AudioExtender(seconds_to_extend_front=0, seconds_to_extend_back=1),
