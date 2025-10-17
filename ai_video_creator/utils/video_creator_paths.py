@@ -3,29 +3,34 @@ Path management for video recipe creation.
 """
 
 from pathlib import Path
+from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 
 
 class VideoCreatorPaths:
     """Handles path management for video recipe creation."""
 
-    def __init__(self, story_folder: Path, chapter_prompt_index: int):
+    DEFAULT_ASSETS_MASK = "default_assets"
+    USER_ASSETS_MASK = "user_assets"
+
+    def __init__(self, user_folder: Path, story_name: str, chapter_index: int):
         """Initialize VideoRecipePaths with story folder and chapter prompt path.
 
         Args:
-            story_folder: Path to the story folder
-            chapter_prompt_path: Path to the chapter prompt file
+            user_folder: Path to the user folder
+            story_name: Name of the story
+            chapter_index: Index of the chapter
         """
-        self.story_folder = story_folder
+        self.user_folder = user_folder
+        self.story_folder = user_folder / "stories" / story_name
+        self.chapter_index = chapter_index
 
         self.chapter_prompt_path = (
-            story_folder / "prompts" / f"chapter_{chapter_prompt_index+1:03}.json"
+            self.story_folder / "prompts" / f"chapter_{chapter_index+1:03}.json"
         )
 
         # Initialize paths
         self.video_folder = self.story_folder / "video"
-        self.video_chapter_folder = (
-            self.video_folder / f"chapter_{chapter_prompt_index+1:03}"
-        )
+        self.video_chapter_folder = self.video_folder / f"chapter_{chapter_index+1:03}"
         self.asset_folder = self.video_chapter_folder / "assets"
 
         # Final modules paths
@@ -53,3 +58,162 @@ class VideoCreatorPaths:
         )
         self.video_effects_file = self.video_chapter_folder / "video_effects.json"
         self.video_output_file = self.video_chapter_folder / "output.mp4"
+
+    def mask_asset_path(self, asset_path: Path):
+        """Get the masked asset path for this instance."""
+        user_folder = self.get_user_assets_folder()
+        default_assets_folder = self.get_default_assets_folder()
+
+        # Resolve to absolute path and validate
+        asset_path = asset_path.resolve()
+
+        if asset_path.is_relative_to(user_folder):
+            # Use relative_to() instead of string replacement
+            relative_path = asset_path.relative_to(user_folder)
+            return Path(self.USER_ASSETS_MASK) / relative_path
+
+        elif asset_path.is_relative_to(default_assets_folder):
+            # Use relative_to() instead of string replacement
+            relative_path = asset_path.relative_to(default_assets_folder)
+            return Path(self.DEFAULT_ASSETS_MASK) / relative_path
+
+        else:
+            raise ValueError(
+                f"Asset path is not under known assets folders: {asset_path}"
+            )
+
+    def unmask_asset_path(self, asset_path: Path):
+        """Get the unmasked asset path for this instance."""
+        user_folder = self.get_user_assets_folder()
+        default_assets_folder = self.get_default_assets_folder()
+
+        # Extract relative path from masked path
+        asset_path_str = str(asset_path)
+
+        if asset_path_str.startswith(self.USER_ASSETS_MASK):
+            # Get the relative portion after the mask
+            relative_str = asset_path_str[len(self.USER_ASSETS_MASK) :].lstrip("/")
+
+            # Reconstruct and resolve the full path
+            result = (user_folder / relative_str).resolve()
+
+            # CRITICAL: Validate AFTER resolving to prevent path traversal
+            if not result.is_relative_to(user_folder.resolve()):
+                raise ValueError(f"Asset path escapes user folder: {result}")
+
+            if not result.exists():
+                raise ValueError(f"Asset path does not exist: {result}")
+
+            return result
+
+        elif asset_path_str.startswith(self.DEFAULT_ASSETS_MASK):
+            # Get the relative portion after the mask
+            relative_str = asset_path_str[len(self.DEFAULT_ASSETS_MASK) :].lstrip("/")
+
+            # Reconstruct and resolve the full path
+            result = (default_assets_folder / relative_str).resolve()
+
+            # CRITICAL: Validate AFTER resolving to prevent path traversal
+            if not result.is_relative_to(default_assets_folder.resolve()):
+                raise ValueError(f"Asset path escapes default folder: {result}")
+
+            if not result.exists():
+                raise ValueError(f"Asset path does not exist: {result}")
+
+            return result
+
+        else:
+            raise ValueError(
+                f"Asset path does not start with known masks: {asset_path}"
+            )
+
+    def _mask_user_assets_folder(self, asset_path: Path):
+        """Get the user assets folder path for this instance."""
+        user_folder = self.get_user_assets_folder()
+
+        # Resolve to absolute path and validate
+        asset_path = asset_path.resolve()
+
+        if not asset_path.is_relative_to(user_folder):
+            raise ValueError(
+                f"Asset path is not under user assets folder: {asset_path}"
+            )
+
+        # Use relative_to() instead of string replacement
+        relative_path = asset_path.relative_to(user_folder)
+        return Path(self.USER_ASSETS_MASK) / relative_path
+
+    def _unmask_user_assets_folder(self, asset_path: Path):
+        """Get the unmasked user assets folder path for this instance."""
+        user_folder = self.get_user_assets_folder()
+
+        # Extract relative path from masked path
+        if not str(asset_path).startswith(self.USER_ASSETS_MASK):
+            raise ValueError(f"Asset path does not start with mask: {asset_path}")
+
+        # Get the relative portion after the mask
+        relative_str = str(asset_path)[len(self.USER_ASSETS_MASK) :].lstrip("/")
+
+        # Reconstruct and resolve the full path
+        result = (user_folder / relative_str).resolve()
+
+        # CRITICAL: Validate AFTER resolving to prevent path traversal
+        if not result.is_relative_to(user_folder.resolve()):
+            raise ValueError(f"Asset path escapes user folder: {result}")
+
+        if not result.exists():
+            raise ValueError(f"Asset path does not exist: {result}")
+
+        return result
+
+    @classmethod
+    def mask_default_assets_folder(cls, asset_path: Path):
+        """Get the masked default assets folder path."""
+
+        default_assets_folder = VideoCreatorPaths.get_default_assets_folder()
+
+        # Resolve to absolute path and validate
+        asset_path = asset_path.resolve()
+
+        if not asset_path.is_relative_to(default_assets_folder):
+            raise ValueError(
+                f"Asset path is not under default assets folder: {asset_path}"
+            )
+
+        # Use relative_to() instead of string replacement
+        relative_path = asset_path.relative_to(default_assets_folder)
+        return Path(cls.DEFAULT_ASSETS_MASK) / relative_path
+
+    @classmethod
+    def unmask_default_assets_folder(cls, asset_path: Path):
+        """Get the unmasked default assets folder path."""
+
+        default_assets_folder = VideoCreatorPaths.get_default_assets_folder()
+
+        # Extract relative path from masked path
+        if not str(asset_path).startswith(cls.DEFAULT_ASSETS_MASK):
+            raise ValueError(f"Asset path does not start with mask: {asset_path}")
+
+        # Get the relative portion after the mask
+        relative_str = str(asset_path)[len(cls.DEFAULT_ASSETS_MASK) :].lstrip("/")
+
+        # Reconstruct and resolve the full path
+        result = (default_assets_folder / relative_str).resolve()
+
+        # CRITICAL: Validate AFTER resolving to prevent path traversal
+        if not result.is_relative_to(default_assets_folder.resolve()):
+            raise ValueError(f"Asset path escapes default folder: {result}")
+
+        if not result.exists():
+            raise ValueError(f"Asset path does not exist: {result}")
+
+        return result
+
+    @classmethod
+    def get_default_assets_folder(cls):
+        """Get the default assets folder path."""
+        return Path(DEFAULT_ASSETS_FOLDER)
+
+    def get_user_assets_folder(self):
+        """Get the user assets folder path for this instance."""
+        return Path(self.user_folder) / "user_assets"

@@ -27,6 +27,7 @@ from ai_video_creator.utils import (
     create_video_segment_from_image_and_audio,
     concatenate_videos_with_fade_in_out,
     concatenate_videos_with_reencoding,
+    blit_outro_video_onto_main_video,
     concatenate_videos_no_reencoding,
     safe_move,
     VideoCreatorPaths,
@@ -43,31 +44,31 @@ class VideoAssembler:
     image generation, audio generation, and video composition.
     """
 
-    def __init__(self, story_folder: Path, chapter_index: int):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """
         Initialize VideoCreator with the required generators.
         """
-        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
+        self._paths = video_creator_paths
 
-        self.__subtitle_generator = SubtitleGenerator()
+        self._subtitle_generator = SubtitleGenerator()
 
         # Load separate narrator and image assets
-        self.narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
-        self.image_assets = ImageAssets(self.__paths.image_asset_file)
+        self.narrator_assets = NarratorAssets(self._paths.narrator_asset_file)
+        self.image_assets = ImageAssets(self._paths.image_asset_file)
 
-        self.video_assets = SubVideoAssets(self.__paths.sub_video_asset_file)
+        self.video_assets = SubVideoAssets(self._paths.sub_video_asset_file)
         if not self.video_assets.is_complete():
             raise ValueError(
                 "Video assets are incomplete. Please ensure all required assets are present."
             )
 
         self.video_assembler_assets = VideoAssemblerAssets(
-            self.__paths.video_assembler_asset_file
+            self._paths.video_assembler_asset_file
         )
 
-        self.effects = MediaEffects(effects_file_path=self.__paths.video_effects_file)
+        self.effects = MediaEffects(self._paths)
 
-        self.output_path = self.__paths.video_output_file
+        self.output_path = self._paths.video_output_file
         self._temp_files = []
 
     def _cleanup(self):
@@ -88,8 +89,7 @@ class VideoAssembler:
         """
         image_path_obj = Path(image_path)
         temp_file = (
-            self.__paths.video_assembler_asset_folder
-            / f"temp_{image_path_obj.stem}.mp4"
+            self._paths.video_assembler_asset_folder / f"temp_{image_path_obj.stem}.mp4"
         )
 
         output_path = create_video_segment_from_image_and_audio(
@@ -105,8 +105,7 @@ class VideoAssembler:
         """
         video_path_obj = Path(video_path)
         temp_file = (
-            self.__paths.video_assembler_asset_folder
-            / f"temp_{video_path_obj.stem}.mp4"
+            self._paths.video_assembler_asset_folder / f"temp_{video_path_obj.stem}.mp4"
         )
 
         output_path = create_video_segment_from_sub_video_and_audio_freeze_last_frame(
@@ -132,7 +131,7 @@ class VideoAssembler:
         # self._temp_files.append(raw_video_path)
 
         # Generate subtitles using SubtitleGenerator
-        str_file = self.__subtitle_generator.generate_subtitles_from_audio(  # pylint:disable=unused-variable
+        str_file = self._subtitle_generator.generate_subtitles_from_audio(  # pylint:disable=unused-variable
             raw_video_path
         )
         # self._temp_files.append(str_file)
@@ -271,7 +270,7 @@ class VideoAssembler:
             processed_videos = requests.comfyui_ensure_send_all_prompts([workflow])
             processed_video_path = Path(processed_videos[0])
             moved_path = self._move_asset_to_output_path(
-                self.__paths.video_assembler_asset_folder, processed_video_path
+                self._paths.video_assembler_asset_folder, processed_video_path
             )
             self.video_assembler_assets.set_final_sub_video_video(index, moved_path)
             processed_videos_paths.append(moved_path)
@@ -351,6 +350,48 @@ class VideoAssembler:
 
         return video_segments
 
+    def _add_intro_video_segment(self, video_segments: list[Path]) -> list[Path]:
+        """
+        Add intro video segment to the list of video segments if defined.
+        """
+        intro_effects = self.effects.intro_effects
+        if not intro_effects:
+            logger.info("No intro effects defined, skipping intro video segment.")
+            return video_segments
+
+        intro_video_path = intro_effects.intro_asset
+        if not intro_video_path or not intro_video_path.exists():
+            logger.warning("Intro video path is invalid or does not exist.")
+            return video_segments
+
+        logger.info(f"Adding intro video segment: {intro_video_path.name}")
+        return [intro_video_path, *video_segments]
+
+    def _post_compose_effects(self):
+        """
+        Apply post-compose effects to the final video.
+        """
+        outro_effects = self.effects.outro_effects
+        if not outro_effects:
+            logger.info("No outro effects defined, skipping post-compose effects.")
+            return
+
+        outro_video_path = outro_effects.outro_asset
+        if not outro_video_path or not outro_video_path.exists():
+            logger.warning("Outro video path is invalid or does not exist.")
+            return
+
+        logger.info(f"Adding outro video segment: {outro_video_path.name}")
+        output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_final")
+
+        self._temp_files.append(self.output_path)
+
+        self.output_path = blit_outro_video_onto_main_video(
+            outro_video=outro_video_path,
+            main_video=self.output_path,
+            output_path=output_video_path,
+        )
+
     def assemble_video(self) -> None:
         """
         Create a video from a video recipe.
@@ -364,12 +405,11 @@ class VideoAssembler:
 
         # video_segments = self._create_video_segments_from_images()
         video_segments = self._create_video_segments_from_sub_videos()
-
-        # intro_video = Path("/home/vitor/projects/DATABASES/AI-Video-Default-Assets/logo/combined.mp4")
-        # if intro_video.exists():
-        #     video_segments = [intro_video, *video_segments]
+        video_segments = self._add_intro_video_segment(video_segments)
 
         self._compose(video_segments)
+
+        self._post_compose_effects()
 
         self._cleanup()
 
@@ -386,7 +426,7 @@ class VideoAssembler:
             if asset is not None
         ]
 
-        for file in self.__paths.video_assembler_asset_folder.glob("*"):
+        for file in self._paths.video_assembler_asset_folder.glob("*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue

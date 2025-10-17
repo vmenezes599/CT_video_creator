@@ -40,6 +40,10 @@ class FlorenceGenerator:
         Generate a description based on the input image.
         """
 
+        if not asset:
+            logger.warning("No asset provided for description generation")
+            return ""
+
         new_asset_path = copy_media_to_comfyui_input_folder(asset)
 
         workflow = None

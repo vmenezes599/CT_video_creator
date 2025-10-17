@@ -214,7 +214,7 @@ class WanGenerator(IVideoGenerator):
 class WanRecipeBase(VideoRecipeBase):
     """Video recipe for creating videos from stories."""
 
-    GENERATOR = WanGenerator
+    GENERATOR_TYPE = WanGenerator
     LORA_SUBFOLDER = ["Wan2.2_General"]
 
     color_media_path: str

@@ -129,9 +129,9 @@ class TestVideoCreationWorkflow:
 
         # Replace generators with fake implementations
         for recipe in asset_manager.narrator_builder.recipe.narrator_data:
-            recipe.GENERATOR = tracking.get_audio_generator
+            recipe.GENERATOR_TYPE = tracking.get_audio_generator
         for recipe in asset_manager.image_builder.recipe.image_data:
-            recipe.GENERATOR = tracking.get_image_generator
+            recipe.GENERATOR_TYPE = tracking.get_image_generator
 
         # Test the complete workflow
         asset_manager.generate_narrator_and_image_assets()
@@ -209,10 +209,23 @@ class TestVideoCreationWorkflow:
             json.dump(image_data, f)
 
         # Test recipe builder
+        # Mock SceneScriptGenerator to avoid AI/LLM calls
+        mock_scene_generator = patch(
+            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+        )
+        
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=5.0,
-        ):
+        ), mock_scene_generator as MockSceneScriptGenerator:
+            # Mock the generate_scenes_script method to return test data
+            mock_instance = MockSceneScriptGenerator.return_value
+            mock_instance.generate_scenes_script.return_value = [
+                "Scene script 1",
+                "Scene script 2",
+                "Scene script 3",
+            ]
+            
             recipe_builder = SubVideoRecipeBuilder(complete_story_setup, 0)
             recipe_builder.create_video_recipe()
 
@@ -233,12 +246,17 @@ class TestVideoCreationWorkflow:
         # Replace video generators with fake implementations
         for scene_data in video_manager.recipe.video_data:
             for recipe in scene_data:
-                recipe.GENERATOR = tracking.get_video_generator
+                recipe.GENERATOR_TYPE = tracking.get_video_generator
 
-        # Mock the concatenation function since it requires real video files
+        # Mock the concatenation function and FFmpeg operations since they require real video files
+        # Mock FlorenceGenerator to avoid AI/LLM calls
         with patch(
             "ai_video_creator.modules.video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
-        ) as mock_concat:
+        ) as mock_concat, patch(
+            "ai_video_creator.modules.video.sub_video_asset_manager.extract_video_last_frame"
+        ) as mock_extract, patch(
+            "ai_video_creator.modules.video.sub_video_asset_manager.FlorenceGenerator"
+        ) as MockFlorenceGenerator:
 
             def fake_concat(input_videos, output_path):
                 output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -247,7 +265,23 @@ class TestVideoCreationWorkflow:
                 )
                 return output_path
 
+            def fake_extract(video_path, last_frame_output_folder):
+                # Create the output folder
+                Path(last_frame_output_folder).mkdir(parents=True, exist_ok=True)
+                # Create the actual output file path
+                video_stem = Path(video_path).stem
+                last_frame_output_path = (
+                    Path(last_frame_output_folder) / f"{video_stem}_last_frame.png"
+                )
+                last_frame_output_path.write_text("fake frame image")
+                return last_frame_output_path
+
             mock_concat.side_effect = fake_concat
+            mock_extract.side_effect = fake_extract
+            
+            # Mock FlorenceGenerator.generate_description to return test data
+            mock_florence_instance = MockFlorenceGenerator.return_value
+            mock_florence_instance.generate_description.return_value = "Generated description from Florence"
 
             # Test the workflow
             video_manager.generate_video_assets()
@@ -325,9 +359,9 @@ class TestVideoCreationWorkflow:
 
         # Replace generators with failing ones
         for recipe in asset_manager.narrator_builder.recipe.narrator_data:
-            recipe.GENERATOR = lambda: FailingAudioGenerator()
+            recipe.GENERATOR_TYPE = lambda: FailingAudioGenerator()
         for recipe in asset_manager.image_builder.recipe.image_data:
-            recipe.GENERATOR = lambda: FailingImageGenerator()
+            recipe.GENERATOR_TYPE = lambda: FailingImageGenerator()
 
         # Test that errors are handled gracefully
         try:
@@ -419,9 +453,9 @@ class TestVideoCreationWorkflow:
 
         # Replace generators for remaining assets
         for i, recipe in enumerate(asset_manager.narrator_builder.recipe.narrator_data):
-            recipe.GENERATOR = tracking.get_audio_generator
+            recipe.GENERATOR_TYPE = tracking.get_audio_generator
         for i, recipe in enumerate(asset_manager.image_builder.recipe.image_data):
-            recipe.GENERATOR = tracking.get_image_generator
+            recipe.GENERATOR_TYPE = tracking.get_image_generator
 
         # Run generation
         asset_manager.generate_narrator_and_image_assets()

@@ -1,7 +1,5 @@
 """This module manages the creation of video assets for a given story chapter."""
 
-from pathlib import Path
-
 from logging_utils import logger
 from ai_video_creator.utils import VideoCreatorPaths
 
@@ -15,22 +13,26 @@ from ai_video_creator.modules.narrator import (
 class NarratorAndImageAssetManager:
     """Class to manage video assets creation using separate narrator and image builders."""
 
-    def __init__(self, story_folder: Path, chapter_index: int):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize VideoAssetManager with story folder and chapter index."""
+        self._paths = video_creator_paths
+
+        story_folder = self._paths.story_folder
 
         logger.info(
-            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index + 1}"
+            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {self._paths.chapter_index + 1}"
         )
 
         self.story_folder = story_folder
-        self.chapter_index = chapter_index
+        self.chapter_index = self._paths.chapter_index
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
         # Initialize separate builders for narrator and image assets
-        self.narrator_builder = NarratorAssetBuilder(story_folder, chapter_index)
-        self.image_builder = ImageAssetBuilder(story_folder, chapter_index)
+        self.narrator_builder = NarratorAssetBuilder(video_creator_paths)
+        self.narrator_recipe_builder = NarratorRecipeBuilder(video_creator_paths)
 
-        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
+        self.image_builder = ImageAssetBuilder(video_creator_paths)
+        self.image_recipe_builder = ImageRecipeBuilder(video_creator_paths)
 
         logger.debug(
             f"VideoAssetManager initialized with narrator scenes: {len(self.narrator_builder.recipe.narrator_data)}, "
@@ -59,7 +61,7 @@ class NarratorAndImageAssetManager:
 
     def generate_narrator_and_image_assets(self):
         """Generate all missing assets from the recipes in interleaved manner: image, then narrator for each scene."""
-        
+
         logger.info(
             "Starting video asset generation process (interleaved: image -> narrator per scene)"
         )
@@ -77,9 +79,7 @@ class NarratorAndImageAssetManager:
 
         # Process scenes in order, generating image first, then narrator for each scene
         for scene_index in sorted(all_missing_scenes):
-            logger.info(
-                f"Processing scene {scene_index + 1} (image -> narrator)..."
-            )
+            logger.info(f"Processing scene {scene_index + 1} (image -> narrator)...")
             self._generate_scene_assets(scene_index)
 
         logger.info("Video asset generation process completed successfully")
@@ -99,14 +99,9 @@ class NarratorAndImageAssetManager:
         """Create both narrator and image recipes from prompts."""
         logger.info("Creating narrator and image recipes from prompts")
 
-        # Create narrator recipes using narrator recipe builder
-        narrator_recipe_builder = NarratorRecipeBuilder(
-            self.story_folder, self.chapter_index
-        )
-        narrator_recipe_builder.create_narrator_recipes()
+        self.narrator_recipe_builder.create_narrator_recipes()
 
         # Create image recipes using image recipe builder
-        image_recipe_builder = ImageRecipeBuilder(self.story_folder, self.chapter_index)
-        image_recipe_builder.create_image_recipes()
+        self.image_recipe_builder.create_image_recipes()
 
         logger.info("Recipe creation completed successfully")

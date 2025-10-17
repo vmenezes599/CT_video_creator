@@ -9,7 +9,7 @@ from pathlib import Path
 
 # ZonosTTSAudioGenerator
 import requests
-from ai_video_creator.environment_variables import TTS_SERVER_URL, DEFAULT_ASSETS_FOLDER
+from ai_video_creator.environment_variables import TTS_SERVER_URL
 
 # Pyttsx3AudioGenerator
 import pyttsx3
@@ -273,7 +273,7 @@ class ZonosTTSAudioGenerator(IAudioGenerator):
 class ZonosTTSRecipe(AudioRecipeBase):
     """Audio recipe for creating audio from text."""
 
-    GENERATOR = ZonosTTSAudioGenerator
+    GENERATOR_TYPE = ZonosTTSAudioGenerator
 
     recipe_type = "ZonosTTSRecipeType"
     clone_voice_path = ""
@@ -297,14 +297,9 @@ class ZonosTTSRecipe(AudioRecipeBase):
         Returns:
             Dictionary representation of the AudioRecipe
         """
-
-        voices_path = Path(DEFAULT_ASSETS_FOLDER) / "voices"
-        available_voices = [str(f) for f in voices_path.glob("*.mp3")]
-
         return {
             "prompt": self.prompt,
             "clone_voice_path": self.clone_voice_path,
-            "available_voices": available_voices,
             "recipe_type": self.recipe_type,
             "seed": self.seed,
         }

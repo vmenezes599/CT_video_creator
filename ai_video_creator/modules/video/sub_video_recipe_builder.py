@@ -21,27 +21,29 @@ from .sub_video_recipe import SubVideoRecipe
 class SubVideoRecipeBuilder:
     """Video recipe for creating videos from stories."""
 
-    def __init__(self, story_folder: Path, chapter_prompt_index: int):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize VideoRecipe with recipe data.
 
         Args:
             video_data: List of video data dictionaries
             seeds: List of seeds for each generation (None elements use default behavior)
         """
+        self._paths = video_creator_paths
+        story_folder = self._paths.story_folder
+
         logger.info(
             "Initializing VideoRecipeBuilder for story:"
-            f" {story_folder.name}, chapter: {chapter_prompt_index}"
+            f" {story_folder.name}, chapter: {self._paths.chapter_index + 1}"
         )
 
-        self.__paths = VideoCreatorPaths(story_folder, chapter_prompt_index)
-        self.__chapter_prompt_path = self.__paths.chapter_prompt_path
+        self.__chapter_prompt_path = self._paths.chapter_prompt_path
 
         # Load video prompt
         self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
 
         # Load separate narrator and image assets
-        self.__narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
-        self.__image_assets = ImageAssets(self.__paths.image_asset_file)
+        self.__narrator_assets = NarratorAssets(self._paths.narrator_asset_file)
+        self.__image_assets = ImageAssets(self._paths.image_asset_file)
         self._recipe = None
 
         self._min_sub_videos = 1
@@ -63,6 +65,14 @@ class SubVideoRecipeBuilder:
 
     def _calculate_sub_videos_count(self, sub_video_index: int) -> int:
         """Calculate the number of sub-videos to generate per prompt."""
+
+        # Check if narrator asset exists and is not None
+        if (
+            sub_video_index >= len(self.__narrator_assets.narrator_assets)
+            or self.__narrator_assets.narrator_assets[sub_video_index] is None
+        ):
+            # Return default count if no narrator asset is available
+            return self._min_sub_videos
 
         audio_duration = get_audio_duration(
             str(self.__narrator_assets.narrator_assets[sub_video_index])
@@ -100,7 +110,7 @@ class SubVideoRecipeBuilder:
         results_dict = {}
         with begin_file_logging(
             "run_script_generator_parallel",
-            self.__paths.video_chapter_folder,
+            self._paths.video_chapter_folder,
             log_level="TRACE",
         ):
 
@@ -195,7 +205,7 @@ class SubVideoRecipeBuilder:
 
         logger.info("Starting video recipe creation process")
 
-        self._recipe = SubVideoRecipe(self.__paths.sub_video_recipe_file)
+        self._recipe = SubVideoRecipe(self._paths.sub_video_recipe_file)
 
         if not self._verify_recipe_against_prompt():
             self._recipe.clean()

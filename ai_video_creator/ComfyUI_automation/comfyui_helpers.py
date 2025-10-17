@@ -26,11 +26,11 @@ def comfyui_get_history_output_name(history_entry_dict: dict) -> list[str]:
 def copy_media_to_comfyui_input_folder(media_path: Path) -> Path:
     """Copy media file to ComfyUI input folder and return the new path."""
 
-    media_path = Path(media_path)
-
     if not media_path:
         logger.debug("No media path provided, skipping copy.")
-        return media_path
+        return None
+
+    media_path = Path(media_path)
 
     if not media_path.exists():
         logger.error(f"Media file does not exist: {media_path}")
@@ -46,11 +46,11 @@ def copy_media_to_comfyui_input_folder(media_path: Path) -> Path:
 def delete_media_from_comfyui_input_folder(media_path: Path) -> None:
     """Delete asset from the ComfyUI input folder."""
 
-    media_path = Path(media_path)
-
     if not media_path:
         logger.debug("No media path provided, skipping deletion.")
         return
+
+    media_path = Path(media_path)
 
     if not media_path.exists():
         logger.error(f"Media file does not exist, cannot delete: {media_path}")

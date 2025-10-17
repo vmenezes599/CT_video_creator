@@ -20,24 +20,24 @@ from .sub_video_assets import SubVideoAssets
 class SubVideoAssetManager:
     """Class to manage video assets creation."""
 
-    def __init__(self, story_folder: Path, chapter_index: int):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize VideoAssetManager with story folder and chapter index."""
+        self._paths = video_creator_paths
+        story_folder = self._paths.story_folder
 
         logger.info(
-            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {chapter_index}"
+            f"Initializing VideoAssetManager for story: {story_folder.name}, chapter: {self._paths.chapter_index + 1}"
         )
 
         self.story_folder = story_folder
-        self.chapter_index = chapter_index
+        self.chapter_index = self._paths.chapter_index
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
-        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
-
         # Load separate narrator and image assets
-        self.__narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
-        self.__image_assets = ImageAssets(self.__paths.image_asset_file)
-        self.recipe = SubVideoRecipe(self.__paths.sub_video_recipe_file)
-        self.video_assets = SubVideoAssets(self.__paths.sub_video_asset_file)
+        self.__narrator_assets = NarratorAssets(self._paths.narrator_asset_file)
+        self.__image_assets = ImageAssets(self._paths.image_asset_file)
+        self.recipe = SubVideoRecipe(self._paths.sub_video_recipe_file)
+        self.video_assets = SubVideoAssets(self._paths.sub_video_asset_file)
 
         # Ensure video_assets lists have the same size as recipe
         self._synchronize_assets_with_image_assets()
@@ -101,7 +101,7 @@ class SubVideoAssetManager:
     ) -> Path:
         """Generate a unique sub-video file path for a specific scene and recipe index."""
         return (
-            self.__paths.sub_videos_asset_folder
+            self._paths.sub_videos_asset_folder
             / f"{self.output_file_prefix}_sub_video_{scene_index+1:03}_{recipe_index+1:02}.mp4"
         )
 
@@ -121,7 +121,7 @@ class SubVideoAssetManager:
                     f"Generating sub video asset for scene {scene_index + 1}({recipe_index+1}/{len(video_recipe_list)})"
                 )
 
-                video_generator: IVideoGenerator = recipe.GENERATOR()
+                video_generator: IVideoGenerator = recipe.GENERATOR_TYPE()
                 sub_video_file_path = self._generate_sub_video_file_path(
                     scene_index, recipe_index
                 )
@@ -135,7 +135,7 @@ class SubVideoAssetManager:
                 )
 
                 video_last_frame = extract_video_last_frame(
-                    output_sub_video, self.__paths.image_asset_folder
+                    output_sub_video, self._paths.image_asset_folder
                 )
 
                 self._set_next_recipe_media_path_and_color_match(
@@ -162,7 +162,7 @@ class SubVideoAssetManager:
     def _generate_video_file_path(self, scene_index: int) -> Path:
         """Generate a unique video file path for a specific scene."""
         return (
-            self.__paths.sub_videos_asset_folder
+            self._paths.sub_videos_asset_folder
             / f"{self.output_file_prefix}_video_{scene_index+1:03}.mp4"
         )
 
@@ -236,14 +236,14 @@ class SubVideoAssetManager:
             valid_video_assets + valid_sub_video_assets + valid_sub_video_last_frames
         )
 
-        for file in self.__paths.sub_videos_asset_folder.glob("*"):
+        for file in self._paths.sub_videos_asset_folder.glob("*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue
                 file.unlink()
                 logger.info(f"Deleted asset file: {file}")
 
-        for file in self.__paths.image_asset_folder.glob("*last_frame*"):
+        for file in self._paths.image_asset_folder.glob("*last_frame*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue

@@ -62,10 +62,23 @@ class TestVideoRecipeBuilder:
     def test_recipe_builder_creates_correct_file(self, story_setup):
         """Test that VideoRecipeBuilder creates the correct JSON file structure."""
         # Mock only external dependencies - get_audio_duration is external
+        # Mock SceneScriptGenerator to avoid AI/LLM calls
+        mock_scene_generator = patch(
+            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+        )
+        
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
-        ):
+        ), mock_scene_generator as MockSceneScriptGenerator:
+            # Mock the generate_scenes_script method to return test data
+            mock_instance = MockSceneScriptGenerator.return_value
+            mock_instance.generate_scenes_script.return_value = [
+                "Scene script 1",
+                "Scene script 2",
+                "Scene script 3",
+            ]
+            
             builder = SubVideoRecipeBuilder(story_setup, 0)
             builder.create_video_recipe()
 
@@ -81,31 +94,37 @@ class TestVideoRecipeBuilder:
             assert "video_data" in saved_recipe
             assert len(saved_recipe["video_data"]) == 2  # Two scenes
 
-            # Verify each scene has 3 sub-videos
+            # Verify each scene has sub-videos (1 by default when no narrator assets)
             for scene_index in range(2):
                 scene_data = saved_recipe["video_data"][scene_index]
                 assert scene_data["index"] == scene_index + 1
-                assert len(scene_data["recipe_list"]) == 3
+                assert len(scene_data["recipe_list"]) == 1  # 1 because no narrator assets
 
-                # First sub-video should have image path, others should not
+                # First sub-video should have the mocked scene script
                 first_recipe = scene_data["recipe_list"][0]
                 assert first_recipe["recipe_type"] == "WanI2VRecipeType"
-                assert (
-                    first_recipe["prompt"] == f"First visual description"
-                    if scene_index == 0
-                    else "Second visual description"
-                )
-
-                for sub_video_index in range(1, 3):
-                    sub_recipe = scene_data["recipe_list"][sub_video_index]
-                    assert sub_recipe["media_path"] is None
+                # Prompt comes from the mocked SceneScriptGenerator
+                assert first_recipe["prompt"] == "Scene script 1"
 
     def test_recipe_builder_with_existing_valid_recipe(self, story_setup):
         """Test that builder doesn't recreate valid existing recipes."""
+        # Mock SceneScriptGenerator to avoid AI/LLM calls
+        mock_scene_generator = patch(
+            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+        )
+        
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
-        ):
+        ), mock_scene_generator as MockSceneScriptGenerator:
+            # Mock the generate_scenes_script method to return test data
+            mock_instance = MockSceneScriptGenerator.return_value
+            mock_instance.generate_scenes_script.return_value = [
+                "Scene script 1",
+                "Scene script 2",
+                "Scene script 3",
+            ]
+            
             # Create first recipe
             builder1 = SubVideoRecipeBuilder(story_setup, 0)
             builder1.create_video_recipe()
@@ -184,10 +203,23 @@ class TestVideoRecipeBuilder:
         with open(narrator_image_asset_file, "w", encoding="utf-8") as f:
             json.dump(empty_assets, f)
 
+        # Mock SceneScriptGenerator to avoid AI/LLM calls
+        mock_scene_generator = patch(
+            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+        )
+        
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
-        ):
+        ), mock_scene_generator as MockSceneScriptGenerator:
+            # Mock the generate_scenes_script method to return test data
+            mock_instance = MockSceneScriptGenerator.return_value
+            mock_instance.generate_scenes_script.return_value = [
+                "Scene script 1",
+                "Scene script 2",
+                "Scene script 3",
+            ]
+            
             builder = SubVideoRecipeBuilder(story_folder, 0)
             builder.create_video_recipe()
 
@@ -202,12 +234,8 @@ class TestVideoRecipeBuilder:
             for i in range(3):
                 scene_data = saved_recipe["video_data"][i]
                 assert (
-                    len(scene_data["recipe_list"]) == 3
-                )  # Changed from 4 to 3 based on audio duration calculation
-                # All recipes in a scene should have the same prompt (visual description)
-                expected_prompt = f"Visual {i+1}"
-                for recipe in scene_data["recipe_list"]:
-                    assert recipe["prompt"] == expected_prompt
+                    len(scene_data["recipe_list"]) == 1
+                )  # 1 because no narrator assets (uses _min_sub_videos)
 
     def test_recipe_builder_handles_missing_assets(self, tmp_path):
         """Test recipe builder handles missing narrator and image assets gracefully."""
@@ -231,10 +259,23 @@ class TestVideoRecipeBuilder:
 
         # Don't create narrator and image assets file
 
+        # Mock SceneScriptGenerator to avoid AI/LLM calls
+        mock_scene_generator = patch(
+            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+        )
+        
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
-        ):
+        ), mock_scene_generator as MockSceneScriptGenerator:
+            # Mock the generate_scenes_script method to return test data
+            mock_instance = MockSceneScriptGenerator.return_value
+            mock_instance.generate_scenes_script.return_value = [
+                "Scene script 1",
+                "Scene script 2",
+                "Scene script 3",
+            ]
+            
             builder = SubVideoRecipeBuilder(story_folder, 0)
             # Should not crash, should handle missing assets gracefully
             builder.create_video_recipe()
@@ -248,16 +289,29 @@ class TestVideoRecipeBuilder:
             # Should still create video data
             assert len(saved_recipe["video_data"]) == 1
             assert (
-                len(saved_recipe["video_data"][0]["recipe_list"]) == 3
-            )  # Changed from 2 to 3 based on audio duration calculation
+                len(saved_recipe["video_data"][0]["recipe_list"]) == 1
+            )  # 1 because no narrator assets (uses _min_sub_videos)
 
     def test_recipe_builder_handles_audio_duration_errors(self, story_setup):
         """Test recipe builder handles audio duration errors gracefully."""
         # Mock get_audio_duration to raise an exception
+        # Mock SceneScriptGenerator to avoid AI/LLM calls
+        mock_scene_generator = patch(
+            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+        )
+        
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             side_effect=Exception("Audio file not found"),
-        ):
+        ), mock_scene_generator as MockSceneScriptGenerator:
+            # Mock the generate_scenes_script method to return test data
+            mock_instance = MockSceneScriptGenerator.return_value
+            mock_instance.generate_scenes_script.return_value = [
+                "Scene script 1",
+                "Scene script 2",
+                "Scene script 3",
+            ]
+            
             builder = SubVideoRecipeBuilder(story_setup, 0)
             # Should handle audio duration errors and continue with default values
             builder.create_video_recipe()

@@ -436,10 +436,10 @@ class TestNarratorAndImageAssetManager:
 
         # Replace only the generator classes, not the core business logic
         for recipe in video_asset_manager.narrator_builder.recipe.narrator_data:
-            recipe.GENERATOR = lambda: FakeAudioGenerator()
+            recipe.GENERATOR_TYPE = lambda: FakeAudioGenerator()
 
         for recipe in video_asset_manager.image_builder.recipe.image_data:
-            recipe.GENERATOR = lambda: FakeImageGenerator()
+            recipe.GENERATOR_TYPE = lambda: FakeImageGenerator()
 
         # Test the actual generation logic without mocking core methods
         video_asset_manager.generate_narrator_and_image_assets()
@@ -570,9 +570,9 @@ class TestNarratorAndImageAssetManager:
 
         # Replace generators with tracking versions
         for recipe in video_asset_manager.narrator_builder.recipe.narrator_data:
-            recipe.GENERATOR = lambda: TrackingFakeGenerator()
+            recipe.GENERATOR_TYPE = lambda: TrackingFakeGenerator()
         for recipe in video_asset_manager.image_builder.recipe.image_data:
-            recipe.GENERATOR = lambda: TrackingFakeGenerator()
+            recipe.GENERATOR_TYPE = lambda: TrackingFakeGenerator()
 
         # Run the actual generation logic
         video_asset_manager.generate_narrator_and_image_assets()
@@ -626,19 +626,19 @@ class TestNarratorAndImageAssetManager:
 
         with patch.object(
             video_asset_manager.narrator_builder.recipe.narrator_data[0],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=mock_audio_gen,
         ), patch.object(
             video_asset_manager.narrator_builder.recipe.narrator_data[1],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=mock_audio_gen,
         ), patch.object(
             video_asset_manager.image_builder.recipe.image_data[0],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=mock_image_gen,
         ), patch.object(
             video_asset_manager.image_builder.recipe.image_data[1],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=mock_image_gen,
         ):
 
@@ -720,19 +720,19 @@ class TestNarratorAndImageAssetManager:
 
         with patch.object(
             video_asset_manager.narrator_builder.recipe.narrator_data[0],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=failing_audio_gen,
         ), patch.object(
             video_asset_manager.narrator_builder.recipe.narrator_data[1],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=failing_audio_gen,
         ), patch.object(
             video_asset_manager.image_builder.recipe.image_data[0],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=failing_image_gen,
         ), patch.object(
             video_asset_manager.image_builder.recipe.image_data[1],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=failing_image_gen,
         ):
 
@@ -852,13 +852,13 @@ class TestNarratorAndImageAssetManager:
         # Create asset manager
         video_asset_manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-        # Mock the recipe's GENERATOR method to return a failing generator
+        # Mock the recipe's GENERATOR_TYPE method to return a failing generator
         mock_audio_gen = Mock()
         mock_audio_gen.clone_text_to_speech.side_effect = IOError("Generator failed")
 
         with patch.object(
             video_asset_manager.narrator_builder.recipe.narrator_data[0],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=mock_audio_gen,
         ):
             # The method should handle the error gracefully and not crash
@@ -877,13 +877,13 @@ class TestNarratorAndImageAssetManager:
         # Create asset manager
         video_asset_manager = NarratorAndImageAssetManager(story_setup_with_recipe, 0)
 
-        # Mock the recipe's GENERATOR method to return a failing generator
+        # Mock the recipe's GENERATOR_TYPE method to return a failing generator
         mock_image_gen = Mock()
         mock_image_gen.text_to_image.side_effect = IOError("Generator failed")
 
         with patch.object(
             video_asset_manager.image_builder.recipe.image_data[0],
-            "GENERATOR",
+            "GENERATOR_TYPE",
             return_value=mock_image_gen,
         ):
             # The method should handle the error gracefully and not crash

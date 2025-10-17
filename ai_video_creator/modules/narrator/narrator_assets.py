@@ -16,6 +16,7 @@ class NarratorAssets:
         self.asset_file_parent = asset_file_path.parent.resolve()
         self.asset_file_path = asset_file_path
         self.narrator_assets: list[Path] = []
+
         self._load_assets_from_file()
 
     def __validate_asset_path(self, asset_path: Path) -> Path:

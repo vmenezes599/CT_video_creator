@@ -7,10 +7,11 @@ from pathlib import Path
 
 from logging_utils import logger
 
-from ai_video_creator.utils import VideoCreatorPaths
+from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
+from ai_video_creator.utils import VideoCreatorPaths, ensure_collection_index_exists
 from ai_video_creator.media_effects.effect_base import EffectBase
 from ai_video_creator.media_effects.effects_map import (
-    EFFECTS_MAP,
+    create_effect_from_data,
     AudioExtender,
 )
 
@@ -18,63 +19,205 @@ from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
 
 
+class AssetsEffects:
+    """Class to hold both assets and effects for a media type."""
+
+    def __init__(self):
+        """Initialize AssetsEffects with empty lists."""
+        self.narrator_effects: list[list[EffectBase | None]] = []
+        self.image_effects: list[list[EffectBase | None]] = []
+
+    def add_narrator_effect(self, scene_index: int, effect: EffectBase) -> None:
+        """Add an effect to narrator effects for a specific scene."""
+        ensure_collection_index_exists(self.narrator_effects, scene_index)
+        self.narrator_effects[scene_index].append(effect)
+
+    def add_image_effect(self, scene_index: int, effect: EffectBase) -> None:
+        """Add an effect to image effects for a specific scene."""
+        ensure_collection_index_exists(self.image_effects, scene_index)
+        self.image_effects[scene_index].append(effect)
+
+    def get_narrator_effects(self, scene_index: int) -> list[EffectBase | None]:
+        """Get narrator effects for a specific scene."""
+        ensure_collection_index_exists(self.narrator_effects, scene_index)
+        return self.narrator_effects[scene_index]
+
+    def get_image_effects(self, scene_index: int) -> list[EffectBase | None]:
+        """Get image effects for a specific scene."""
+        ensure_collection_index_exists(self.image_effects, scene_index)
+        return self.image_effects[scene_index]
+
+    def has_any_assets_effects(self) -> bool:
+        """Check if there are any effects for either narrator or image assets."""
+        return any(
+            len(effects_list) > 0
+            for effects_list in self.narrator_effects + self.image_effects
+        )
+
+    def clear_assets_effects(self, scene_index: int) -> None:
+        """Clear all effects for a specific scene."""
+        ensure_collection_index_exists(self.narrator_effects, scene_index)
+        ensure_collection_index_exists(self.image_effects, scene_index)
+        self.narrator_effects[scene_index].clear()
+        self.image_effects[scene_index].clear()
+
+    def from_dict(self, data: dict) -> None:
+        """Load effects from a dictionary."""
+        narrator_effects = data.get("narrator_effects", [])
+        for effects_list in narrator_effects:
+            effect_instances = []
+            for effect_data in effects_list:
+                effect_instance = create_effect_from_data(effect_data)
+                effect_instances.append(effect_instance)
+            self.narrator_effects.append(effect_instances)
+
+        image_effects = data.get("image_effects", [])
+        for effects_list in image_effects:
+            effect_instances = []
+            for effect_data in effects_list:
+                effect_instance = create_effect_from_data(effect_data)
+                effect_instances.append(effect_instance)
+            self.image_effects.append(effect_instances)
+
+    def to_dict(self) -> dict:
+        """Serialize effects to a dictionary."""
+        return {
+            "narrator_effects": [
+                [effect.to_dict() if effect else None for effect in effects_list]
+                for effects_list in self.narrator_effects
+            ],
+            "image_effects": [
+                [effect.to_dict() if effect else None for effect in effects_list]
+                for effects_list in self.image_effects
+            ],
+        }
+
+
+class IntroEffects:
+    """
+    Intro effects class.
+    """
+
+    DEFAULT_INTRO_ASSET = Path(f"{DEFAULT_ASSETS_FOLDER}/intros/intro_video.mp4")
+
+    def __init__(self, paths: VideoCreatorPaths):
+        """Initialize IntroEffects with empty lists."""
+        self._paths = paths
+        self.intro_asset: Path | None = None
+        self.intro_effects: list[EffectBase | None] = []
+
+    def from_dict(self, data: dict) -> None:
+        """Load effects from a dictionary."""
+        intro_asset_masked = data.get("intro_asset", Path())
+
+        self.intro_effects = data.get("intro_effects", [])
+        self.intro_asset = self._paths.unmask_asset_path(intro_asset_masked)
+
+    def to_dict(self) -> dict:
+        """Serialize effects to a dictionary."""
+
+        available_intro_folders = [
+            self._paths.get_default_assets_folder() / "intros",
+            self._paths.get_user_assets_folder() / "intros",
+        ]
+        available_intros = []
+        for path in available_intro_folders:
+            available_intros.extend(
+                [str(self._paths.mask_asset_path(f)) for f in path.glob("*.mp4")]
+            )
+
+        if self.intro_asset:
+            intro_asset_masked = str(self._paths.mask_asset_path(self.intro_asset))
+        else:
+            intro_asset_masked = None
+
+        result = {
+            "intro_asset": intro_asset_masked,
+            "available_intros": available_intros,
+            "intro_effects": [
+                effect.to_dict() if effect else None for effect in self.intro_effects
+            ],
+        }
+
+        return result
+
+
+class OutroEffects:
+    """
+    Outro effects class.
+    """
+
+    DEFAULT_OUTRO_ASSET = Path(f"{DEFAULT_ASSETS_FOLDER}/outros/CTA_YOUTUBE_INGLES.mov")
+
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
+        """Initialize OutroEffects with empty lists."""
+        self._paths = video_creator_paths
+        self.outro_asset: Path | None = None
+        self.outro_effects: list[EffectBase] = []
+
+    def from_dict(self, data: dict) -> None:
+        """Load effects from a dictionary."""
+        outro_asset_masked = data.get("outro_asset", Path())
+
+        self.outro_effects = data.get("outro_effects", [])
+        self.outro_asset = self._paths.unmask_asset_path(outro_asset_masked)
+
+    def to_dict(self) -> dict:
+        """Serialize effects to a dictionary."""
+
+        available_outro_folders = [
+            self._paths.get_default_assets_folder() / "outros",
+            self._paths.get_user_assets_folder() / "outros",
+        ]
+        available_outros = []
+        for path in available_outro_folders:
+            available_outros.extend(
+                [str(self._paths.mask_asset_path(f)) for f in path.glob("*")]
+            )
+
+        if self.outro_asset:
+            masked_outro_asset = str(self._paths.mask_asset_path(self.outro_asset))
+        else:
+            masked_outro_asset = None
+
+        return {
+            "outro_asset": masked_outro_asset,
+            "available_outros": available_outros,
+            "outro_effects": [
+                effect.to_dict() if effect else None for effect in self.outro_effects
+            ],
+        }
+
+
 class MediaEffects:
     """Class to manage video effects data and persistence only."""
 
-    def __init__(self, effects_file_path: Path):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize VideoEffects with file path."""
-        self.effects_file_path = effects_file_path
-        self.narrator_effects: list[list[EffectBase | None]] = []
-        self.image_effects: list[list[EffectBase | None]] = []
+        self.effects_file_path = video_creator_paths.video_effects_file
+        self.assets_effects = AssetsEffects()
+        self.intro_effects = IntroEffects(video_creator_paths)
+        self.outro_effects = OutroEffects(video_creator_paths)
+
         self._load_effects_from_file()
-
-    def _create_effect_from_data(self, effect_data: dict) -> EffectBase | None:
-        """Create an effect instance from serialized data."""
-        if effect_data is None:
-            return None
-
-        effect_type = effect_data.get("type")
-        if effect_type not in EFFECTS_MAP:
-            logger.warning(f"Unknown effect type: {effect_type}")
-            return None
-
-        effect_instance = EFFECTS_MAP[effect_type].__new__(EFFECTS_MAP[effect_type])
-        effect_instance.from_dict(effect_data)
-        return effect_instance
 
     def _load_effects_from_file(self):
         """Load effects from the video effects file."""
         try:
             logger.debug(f"Loading video effects from: {self.effects_file_path.name}")
             with open(self.effects_file_path, "r", encoding="utf-8") as file_handler:
-                data = json.load(file_handler)
+                data: dict = json.load(file_handler)
 
-            # Load effects from the saved data
-            media_effects = data.get("media_effects", [])
+            required_fields = ["intro_effects", "outro_effects", "assets_effects"]
+            missing_fields = set(data.keys()) - set(required_fields)
+            if missing_fields:
+                raise KeyError(f"Missing required fields: {missing_fields}")
 
-            self.narrator_effects.clear()
-            self.image_effects.clear()
+            self.assets_effects.from_dict(data["assets_effects"])
+            self.intro_effects.from_dict(data["intro_effects"])
+            self.outro_effects.from_dict(data["outro_effects"])
 
-            for effect_group in media_effects:
-                narrator_effects_list = []
-                video_effects_list = []
-
-                # Load narrator effects
-                for effect_data in effect_group.get("narrator_effects", []):
-                    effect = self._create_effect_from_data(effect_data)
-                    narrator_effects_list.append(effect)
-
-                # Load video effects
-                for effect_data in effect_group.get("video_effects", []):
-                    effect = self._create_effect_from_data(effect_data)
-                    video_effects_list.append(effect)
-
-                self.narrator_effects.append(narrator_effects_list)
-                self.image_effects.append(video_effects_list)
-
-            logger.info(
-                f"Successfully loaded {len(self.narrator_effects)} narrator effect groups and {len(self.image_effects)} image effect groups"
-            )
+            logger.info("Successfully loaded media effects.")
 
         except FileNotFoundError:
             logger.debug(
@@ -98,100 +241,62 @@ class MediaEffects:
     def save_effects_to_file(self) -> None:
         """Save the current state of the video effects to a file."""
         try:
-            media_effects = []
-
-            for narrator_effect, video_effect in zip(
-                self.narrator_effects, self.image_effects
-            ):
-                narrator_effects = []
-                video_effects = []
-                for effect in narrator_effect:
-                    narrator_effects.append(effect.to_dict() if effect else None)
-                for effect in video_effect:
-                    video_effects.append(effect.to_dict() if effect else None)
-                media_effects.append(
-                    {
-                        "narrator_effects": narrator_effects,
-                        "video_effects": video_effects,
-                    }
-                )
-
             result = {
-                "media_effects": media_effects,
+                "intro_effects": self.intro_effects.to_dict(),
+                "outro_effects": self.outro_effects.to_dict(),
+                "assets_effects": self.assets_effects.to_dict(),
             }
             with open(self.effects_file_path, "w", encoding="utf-8") as file_handler:
                 json.dump(result, file_handler, indent=4)
-            logger.trace(f"Effects saved with {len(media_effects)} effect groups")
+            logger.trace("Effects saved.")
 
         except IOError as e:
             logger.error(
                 f"Error saving video effects to {self.effects_file_path.name}: {e}"
             )
 
-    def _ensure_index_exists(self, scene_index: int) -> None:
-        """Extend lists to ensure the scene_index exists."""
-        # Extend narrator_effects if needed
-        while len(self.narrator_effects) <= scene_index:
-            self.narrator_effects.append([])
+    def ensure_effects_size(self, target_size: int) -> None:
+        """Ensure video_effects lists have the specified target size."""
+        logger.debug(f"Ensuring effects size - target size: {target_size}")
 
-        # Extend image_effects if needed
-        while len(self.image_effects) <= scene_index:
-            self.image_effects.append([])
+        # Extend or truncate narrator_effects to match target size
+        while len(self.assets_effects.narrator_effects) < target_size:
+            self.assets_effects.narrator_effects.append([])
+        self.assets_effects.narrator_effects = self.assets_effects.narrator_effects[
+            :target_size
+        ]
 
-    def add_narrator_effect(self, scene_index: int, effect: EffectBase) -> None:
-        """Add an effect to narrator effects for a specific scene."""
-        self._ensure_index_exists(scene_index)
-        self.narrator_effects[scene_index].append(effect)
+        # Extend or truncate image_effects to match target size
+        while len(self.assets_effects.image_effects) < target_size:
+            self.assets_effects.image_effects.append([])
+        self.assets_effects.image_effects = self.assets_effects.image_effects[
+            :target_size
+        ]
+
         logger.debug(
-            f"Added narrator effect for scene {scene_index}: {type(effect).__name__}"
+            f"Effect size ensured - narrator effects: {len(self.assets_effects.narrator_effects)},"
+            f" image effects: {len(self.assets_effects.image_effects)}"
         )
-
-    def add_image_effect(self, scene_index: int, effect: EffectBase) -> None:
-        """Add an effect to image effects for a specific scene."""
-        self._ensure_index_exists(scene_index)
-        self.image_effects[scene_index].append(effect)
-        logger.debug(
-            f"Added image effect for scene {scene_index}: {type(effect).__name__}"
-        )
-
-    def clear_scene_effects(self, scene_index: int) -> None:
-        """Clear all effects for a specific scene."""
-        self._ensure_index_exists(scene_index)
-        self.narrator_effects[scene_index].clear()
-        self.image_effects[scene_index].clear()
-        logger.debug(f"Cleared all effects for scene {scene_index}")
-
-    def has_any_effects(self) -> bool:
-        """Check if there are any effects loaded."""
-        return any(effects for effects in self.narrator_effects) or any(
-            effects for effects in self.image_effects
-        )
-
-    def get_narrator_effects(self, scene_index: int) -> list[EffectBase | None]:
-        """Get narrator effects for a specific scene."""
-        self._ensure_index_exists(scene_index)
-        return self.narrator_effects[scene_index]
-
-    def get_image_effects(self, scene_index: int) -> list[EffectBase | None]:
-        """Get image effects for a specific scene."""
-        self._ensure_index_exists(scene_index)
-        return self.image_effects[scene_index]
 
 
 class MediaEffectsManager:
     """Class to manage video effects creation and business logic."""
 
-    def __init__(self, story_folder: Path, chapter_index: int):
+    def __init__(
+        self,
+        video_creator_paths: VideoCreatorPaths,
+    ):
         """Initialize MediaEffectsManager with story folder and chapter index."""
-        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
+
+        self._paths = video_creator_paths
 
         logger.info(
-            f"Initializing MediaEffectsManager for story: {story_folder.name}, chapter: {chapter_index}"
+            f"Initializing MediaEffectsManager for story: {video_creator_paths.story_folder.name}, chapter: {video_creator_paths.chapter_index + 1}"
         )
 
         # Load separate narrator and image assets
-        self.narrator_assets = NarratorAssets(self.__paths.narrator_asset_file)
-        self.image_assets = ImageAssets(self.__paths.image_asset_file)
+        self.narrator_assets = NarratorAssets(video_creator_paths.narrator_asset_file)
+        self.image_assets = ImageAssets(video_creator_paths.image_asset_file)
 
         if (
             not self.narrator_assets.is_complete()
@@ -201,42 +306,29 @@ class MediaEffectsManager:
                 "Video assets are incomplete. Please ensure all required assets are present."
             )
 
-        self.video_effects = MediaEffects(self.__paths.video_effects_file)
+        self.media_effects = MediaEffects(video_creator_paths)
 
         # Ensure video_effects lists have the same size as assets
         self._synchronize_effects_with_assets()
 
         # Only add default values if no effects were loaded
-        if not self.video_effects.has_any_effects():
+        if not self.media_effects.assets_effects.has_any_assets_effects():
             self._add_default_values()
 
-        self.video_effects.save_effects_to_file()
+        self.media_effects.save_effects_to_file()
 
-        logger.debug(
-            f"MediaEffectsManager initialized with {len(self.video_effects.narrator_effects)} effect groups"
-        )
+        logger.debug("MediaEffectsManager initialized.")
 
     def _synchronize_effects_with_assets(self):
         """Ensure video_effects lists have the same size as assets."""
         assets_size = len(self.narrator_assets.narrator_assets)
         logger.debug(f"Synchronizing effects with assets - target size: {assets_size}")
 
-        # Extend or truncate narrator_effects to match assets size
-        while len(self.video_effects.narrator_effects) < assets_size:
-            self.video_effects.narrator_effects.append([])
-        self.video_effects.narrator_effects = self.video_effects.narrator_effects[
-            :assets_size
-        ]
-
-        # Extend or truncate image_effects to match assets size
-        while len(self.video_effects.image_effects) < assets_size:
-            self.video_effects.image_effects.append([])
-        self.video_effects.image_effects = self.video_effects.image_effects[
-            :assets_size
-        ]
+        self.media_effects.ensure_effects_size(assets_size)
 
         logger.debug(
-            f"Effect synchronization completed - narrator effects: {len(self.video_effects.narrator_effects)}, image effects: {len(self.video_effects.image_effects)}"
+            f"Effect synchronization completed - narrator effects: {len(self.media_effects.assets_effects.narrator_effects)},"
+            f" image effects: {len(self.media_effects.assets_effects.image_effects)}"
         )
 
     def _add_default_values(self):
@@ -244,16 +336,22 @@ class MediaEffectsManager:
 
         logger.info("Adding default effect values")
 
-        if len(self.video_effects.narrator_effects) > 0:
-            self.video_effects.add_narrator_effect(
+        if len(self.media_effects.narrator_effects) > 0:
+            self.media_effects.assets_effects.add_narrator_effect(
                 0,
-                AudioExtender(seconds_to_extend_front=1.5, seconds_to_extend_back=1.5),
+                AudioExtender(seconds_to_extend_front=0.5, seconds_to_extend_back=1.5),
             )
 
-        for index in range(1, len(self.video_effects.narrator_effects)):
-            self.video_effects.add_narrator_effect(
+        for index in range(1, len(self.media_effects.narrator_effects)):
+            self.media_effects.assets_effects.add_narrator_effect(
                 index,
                 AudioExtender(seconds_to_extend_front=0, seconds_to_extend_back=1),
             )
+
+        self.media_effects.intro_effects = IntroEffects(self._paths)
+        self.media_effects.intro_effects.intro_asset = IntroEffects.DEFAULT_INTRO_ASSET
+
+        self.media_effects.outro_effects = OutroEffects(self._paths)
+        self.media_effects.outro_effects.outro_asset = OutroEffects.DEFAULT_OUTRO_ASSET
 
         logger.debug("Default effect values added successfully")

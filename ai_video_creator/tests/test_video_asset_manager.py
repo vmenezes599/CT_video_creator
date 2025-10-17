@@ -464,14 +464,17 @@ class TestVideoAssetManager:
         # Mock only the generator creation, not the core business logic
         for scene_data in manager.recipe.video_data:
             for recipe in scene_data:
-                recipe.GENERATOR = lambda: FakeVideoGenerator()
+                recipe.GENERATOR_TYPE = lambda: FakeVideoGenerator()
 
         # Also mock the concatenation function and FFmpeg operations since they require real video files
+        # Mock FlorenceGenerator to avoid AI/LLM calls
         with patch(
             "ai_video_creator.modules.video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
         ) as mock_concat, patch(
             "ai_video_creator.modules.video.sub_video_asset_manager.extract_video_last_frame"
-        ) as mock_extract:
+        ) as mock_extract, patch(
+            "ai_video_creator.modules.video.sub_video_asset_manager.FlorenceGenerator"
+        ) as MockFlorenceGenerator:
 
             def fake_concat(input_videos, output_path):
                 output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -491,6 +494,10 @@ class TestVideoAssetManager:
 
             mock_concat.side_effect = fake_concat
             mock_extract.side_effect = fake_extract
+            
+            # Mock FlorenceGenerator.generate_description to return test data
+            mock_florence_instance = MockFlorenceGenerator.return_value
+            mock_florence_instance.generate_description.return_value = "Generated description from Florence"
 
             # Test the actual workflow
             manager.generate_video_assets()
@@ -589,7 +596,7 @@ class TestVideoAssetManager:
         # Set up generator tracking without mocking core business logic
         for scene_data in manager.recipe.video_data:
             for recipe in scene_data:
-                recipe.GENERATOR = lambda: TrackingFakeGenerator()
+                recipe.GENERATOR_TYPE = lambda: TrackingFakeGenerator()
 
         # Test the actual business logic - should skip due to incomplete assets
         manager.generate_video_assets()

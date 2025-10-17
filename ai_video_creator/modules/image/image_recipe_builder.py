@@ -17,14 +17,16 @@ from .image_recipe import ImageRecipe
 class ImageRecipeBuilder:
     """Image recipe builder for creating image recipes from stories."""
 
-    def __init__(self, story_folder: Path, chapter_prompt_index: int):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize ImageRecipeBuilder with recipe data."""
+        self._paths = video_creator_paths
+        story_folder = self._paths.story_folder
+
         logger.info(
             "Initializing ImageRecipeBuilder for story:"
-            f" {story_folder.name}, chapter: {chapter_prompt_index + 1}"
+            f" {story_folder.name}, chapter: {self._paths.chapter_index + 1}"
         )
 
-        self._paths = VideoCreatorPaths(story_folder, chapter_prompt_index)
         self.__chapter_prompt_path = self._paths.chapter_prompt_path
 
         # Load video prompt
@@ -64,7 +66,6 @@ class ImageRecipeBuilder:
     def create_image_recipes(self) -> None:
         """Create image recipe from story folder and chapter prompt index."""
 
-        
         logger.info("Starting image recipe creation process")
 
         # Create image recipe file path

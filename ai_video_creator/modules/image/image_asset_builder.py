@@ -15,22 +15,22 @@ from .image_recipe import ImageRecipe
 class ImageAssetBuilder:
     """Class to build image assets from recipes."""
 
-    def __init__(self, story_folder: Path, chapter_index: int):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize ImageAssetBuilder with story folder and chapter index."""
+        self._paths = video_creator_paths
+        story_folder = self._paths.story_folder
 
         logger.info(
-            f"Initializing ImageAssetBuilder for story: {story_folder.name}, chapter: {chapter_index + 1}"
+            f"Initializing ImageAssetBuilder for story: {story_folder.name}, chapter: {self._paths.chapter_index + 1}"
         )
 
         self.story_folder = story_folder
-        self.chapter_index = chapter_index
+        self.chapter_index = self._paths.chapter_index
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
-        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
-
         # Create paths for separate image files
-        self.image_recipe_file = self.__paths.image_recipe_file
-        self.image_asset_file = self.__paths.image_asset_file
+        self.image_recipe_file = self._paths.image_recipe_file
+        self.image_asset_file = self._paths.image_asset_file
 
         self.recipe = ImageRecipe(self.image_recipe_file)
         self.image_assets = ImageAssets(self.image_asset_file)
@@ -63,9 +63,9 @@ class ImageAssetBuilder:
         try:
             logger.info(f"Generating image asset for scene {scene_index + 1}")
             image = self.recipe.image_data[scene_index]
-            image_generator: IImageGenerator = image.GENERATOR()
+            image_generator: IImageGenerator = image.GENERATOR_TYPE()
             output_image_file_path = (
-                self.__paths.image_asset_folder
+                self._paths.image_asset_folder
                 / f"{self.output_file_prefix}_image_{scene_index+1:03}.png"
             )
             logger.debug(
@@ -91,7 +91,7 @@ class ImageAssetBuilder:
 
     def generate_image_assets(self):
         """Generate all missing image assets from the recipe."""
-        
+
         logger.info("Starting image asset generation process")
 
         missing = self.image_assets.get_missing_image_assets()
@@ -115,7 +115,7 @@ class ImageAssetBuilder:
         ]
         assets_to_keep = set(valid_image_assets)
 
-        for file in self.__paths.image_asset_folder.glob("*image*"):
+        for file in self._paths.image_asset_folder.glob("*image*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue

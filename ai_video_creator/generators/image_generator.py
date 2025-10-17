@@ -94,7 +94,7 @@ class FluxAIImageGenerator(IImageGenerator):
 class FluxImageRecipe(ImageRecipeBase):
     """Image recipe for creating images from stories."""
 
-    GENERATOR = FluxAIImageGenerator
+    GENERATOR_TYPE = FluxAIImageGenerator
     LORA_SUBFOLDER = ["Flux"]
 
     recipe_type = "FluxImageRecipeType"

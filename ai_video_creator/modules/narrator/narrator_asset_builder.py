@@ -2,8 +2,6 @@
 Narrator asset builder for creating narrator assets from recipes.
 """
 
-from pathlib import Path
-
 from logging_utils import logger
 from ai_video_creator.generators import IAudioGenerator
 from ai_video_creator.utils import VideoCreatorPaths
@@ -15,24 +13,24 @@ from .narrator_recipe import NarratorRecipe
 class NarratorAssetBuilder:
     """Class to build narrator assets from recipes."""
 
-    def __init__(self, story_folder: Path, chapter_index: int):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize NarratorAssetBuilder with story folder and chapter index."""
+        self._paths = video_creator_paths
+        story_folder = self._paths.story_folder
 
         logger.info(
-            f"Initializing NarratorAssetBuilder for story: {story_folder.name}, chapter: {chapter_index + 1}"
+            f"Initializing NarratorAssetBuilder for story: {story_folder.name}, chapter: {self._paths.chapter_index + 1}"
         )
 
         self.story_folder = story_folder
-        self.chapter_index = chapter_index
+        self.chapter_index = self._paths.chapter_index
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
-        self.__paths = VideoCreatorPaths(story_folder, chapter_index)
-
         # Create paths for separate narrator files
-        self.narrator_recipe_file = self.__paths.narrator_recipe_file
-        self.narrator_asset_file = self.__paths.narrator_asset_file
+        self.narrator_recipe_file = self._paths.narrator_recipe_file
+        self.narrator_asset_file = self._paths.narrator_asset_file
 
-        self.recipe = NarratorRecipe(self.narrator_recipe_file)
+        self.recipe = NarratorRecipe(video_creator_paths)
         self.narrator_assets = NarratorAssets(self.narrator_asset_file)
 
         # Ensure narrator_assets list has the same size as recipe
@@ -65,9 +63,9 @@ class NarratorAssetBuilder:
         try:
             logger.info(f"Generating narrator asset for scene {scene_index + 1}")
             audio = self.recipe.narrator_data[scene_index]
-            audio_generator: IAudioGenerator = audio.GENERATOR()
+            audio_generator: IAudioGenerator = audio.GENERATOR_TYPE()
             output_audio_file_path = (
-                self.__paths.narrator_asset_folder
+                self._paths.narrator_asset_folder
                 / f"{self.output_file_prefix}_narrator_{scene_index+1:03}.mp3"
             )
             logger.debug(
@@ -92,7 +90,7 @@ class NarratorAssetBuilder:
 
     def generate_narrator_assets(self):
         """Generate all missing narrator assets from the recipe."""
-        
+
         logger.info("Starting narrator asset generation process")
 
         missing = self.narrator_assets.get_missing_narrator_assets()
@@ -116,7 +114,7 @@ class NarratorAssetBuilder:
         ]
         assets_to_keep = set(valid_narrator_assets)
 
-        for file in self.__paths.narrator_asset_folder.glob("*narrator*"):
+        for file in self._paths.narrator_asset_folder.glob("*narrator*"):
             if file.is_file():
                 if file in assets_to_keep:
                     continue

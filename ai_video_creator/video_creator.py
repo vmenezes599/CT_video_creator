@@ -16,7 +16,7 @@ from .utils import VideoCreatorPaths
 
 
 def create_narrator_and_image_recipe_from_prompt(
-    story_path: Path, chapter_index: int
+    user_folder: Path, story_name: str, chapter_index: int
 ) -> None:
     """
     Create a video from a video prompt file.
@@ -33,7 +33,9 @@ def create_narrator_and_image_recipe_from_prompt(
     )
 
     paths = VideoCreatorPaths(
-        story_folder=story_path, chapter_prompt_index=chapter_index
+        user_folder=user_folder,
+        story_name=story_name,
+        chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
         "create_narrator_and_image_recipes_from_prompt",
@@ -41,9 +43,7 @@ def create_narrator_and_image_recipe_from_prompt(
         base_folder=paths.video_chapter_folder,
     )
 
-    asset_manager = NarratorAndImageAssetManager(
-        story_folder=story_path, chapter_index=chapter_index
-    )
+    asset_manager = NarratorAndImageAssetManager(paths)
     asset_manager.create_narrator_and_image_recipes()
 
     cleanup_logging(log_id)
@@ -51,7 +51,7 @@ def create_narrator_and_image_recipe_from_prompt(
 
 
 def create_narrators_and_images_from_recipe(
-    story_path: Path, chapter_index: int
+    user_folder: Path, story_name: str, chapter_index: int
 ) -> None:
     """
     Create video assets from the recipe.
@@ -61,7 +61,9 @@ def create_narrators_and_images_from_recipe(
     )
 
     paths = VideoCreatorPaths(
-        story_folder=story_path, chapter_prompt_index=chapter_index
+        user_folder=user_folder,
+        story_name=story_name,
+        chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
         "create_narrator_and_images_from_recipe",
@@ -69,29 +71,26 @@ def create_narrators_and_images_from_recipe(
         base_folder=paths.video_chapter_folder,
     )
 
-    narrator_img_asset_manager = NarratorAndImageAssetManager(
-        story_folder=story_path, chapter_index=chapter_index
-    )
+    narrator_img_asset_manager = NarratorAndImageAssetManager(paths)
     narrator_img_asset_manager.generate_narrator_and_image_assets()
-
-    video_effect_manager = MediaEffectsManager(
-        story_folder=story_path, chapter_index=chapter_index
-    )
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)
 
 
-def create_sub_video_recipes_from_images(story_path: Path, chapter_index: int) -> None:
+def create_sub_video_recipes_from_images(
+    user_folder: Path, story_name: str, chapter_index: int
+) -> None:
     """
     Create a video recipe from existing images and narrator audio files.
     """
     log_id = setup_console_logging(
         "create_sub_video_recipes_from_images", log_level="TRACE"
     )
-
     paths = VideoCreatorPaths(
-        story_folder=story_path, chapter_prompt_index=chapter_index
+        user_folder=user_folder,
+        story_name=story_name,
+        chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
         "create_sub_video_recipes_from_images",
@@ -99,9 +98,7 @@ def create_sub_video_recipes_from_images(story_path: Path, chapter_index: int) -
         base_folder=paths.video_chapter_folder,
     )
 
-    video_recipe_builder = SubVideoRecipeBuilder(
-        story_folder=story_path, chapter_prompt_index=chapter_index
-    )
+    video_recipe_builder = SubVideoRecipeBuilder(paths)
     video_recipe_builder.create_video_recipe()
 
     cleanup_logging(log_id)
@@ -109,7 +106,7 @@ def create_sub_video_recipes_from_images(story_path: Path, chapter_index: int) -
 
 
 def create_sub_videos_from_sub_video_recipes(
-    story_path: Path, chapter_index: int
+    user_folder: Path, story_name: str, chapter_index: int
 ) -> None:
     """
     Create videos from the images in the recipe.
@@ -119,7 +116,9 @@ def create_sub_videos_from_sub_video_recipes(
     )
 
     paths = VideoCreatorPaths(
-        story_folder=story_path, chapter_prompt_index=chapter_index
+        user_folder=user_folder,
+        story_name=story_name,
+        chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
         "create_sub_videos_from_sub_video_recipes",
@@ -127,16 +126,18 @@ def create_sub_videos_from_sub_video_recipes(
         base_folder=paths.video_chapter_folder,
     )
 
-    video_asset_manager = SubVideoAssetManager(
-        story_folder=story_path, chapter_index=chapter_index
-    )
+    _ = MediaEffectsManager(paths)
+
+    video_asset_manager = SubVideoAssetManager(paths)
     video_asset_manager.generate_video_assets()
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)
 
 
-def assemble_final_video(story_path: Path, chapter_index: int) -> None:
+def assemble_final_video(
+    user_folder: Path, story_name: str, chapter_index: int
+) -> None:
     """
     Assemble a chapter video from the recipe.
 
@@ -150,7 +151,9 @@ def assemble_final_video(story_path: Path, chapter_index: int) -> None:
     log_id = setup_console_logging("assemble_final_video", log_level="TRACE")
 
     paths = VideoCreatorPaths(
-        story_folder=story_path, chapter_prompt_index=chapter_index
+        user_folder=user_folder,
+        story_name=story_name,
+        chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
         "assemble_final_video",
@@ -158,31 +161,27 @@ def assemble_final_video(story_path: Path, chapter_index: int) -> None:
         base_folder=paths.video_chapter_folder,
     )
 
-    video_assembler = VideoAssembler(
-        story_folder=story_path,
-        chapter_index=chapter_index,
-    )
+    video_assembler = VideoAssembler(paths)
     video_assembler.assemble_video()
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)
 
 
-def clean_unused_assets(story_path: Path, chapter_index: int) -> None:
+def clean_unused_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """Clean up video assets for a specific story folder."""
 
-    narrator_and_image_asset_manager = NarratorAndImageAssetManager(
-        story_folder=story_path, chapter_index=chapter_index
-    )
-    narrator_and_image_asset_manager.clean_unused_assets()
-
-    video_asset_manager = SubVideoAssetManager(
-        story_folder=story_path, chapter_index=chapter_index
-    )
-    video_asset_manager.clean_unused_assets()
-
-    video_assembler = VideoAssembler(
-        story_folder=story_path,
+    paths = VideoCreatorPaths(
+        user_folder=user_folder,
+        story_name=story_name,
         chapter_index=chapter_index,
     )
+
+    narrator_and_image_asset_manager = NarratorAndImageAssetManager(paths)
+    narrator_and_image_asset_manager.clean_unused_assets()
+
+    video_asset_manager = SubVideoAssetManager(paths)
+    video_asset_manager.clean_unused_assets()
+
+    video_assembler = VideoAssembler(paths)
     video_assembler.clean_unused_assets()

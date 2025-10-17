@@ -7,6 +7,7 @@ from pathlib import Path
 
 from logging_utils import logger
 
+from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.generators import ZonosTTSRecipe
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 
@@ -20,18 +21,22 @@ class NarratorRecipeDefaultSettings:
 class NarratorRecipe:
     """Narrator recipe for creating audio from text."""
 
-    def __init__(self, recipe_path: Path):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize NarratorRecipe with default settings."""
-        self.recipe_path = recipe_path
+        self.video_creator_paths = video_creator_paths
+
+        self.recipe_path = self.video_creator_paths.narrator_recipe_file
         self.narrator_data: list[ZonosTTSRecipe] = []
-        self.__load_from_file(recipe_path)
+
+        self._load_from_file(self.recipe_path)
 
     def add_narrator_data(self, narrator_data: ZonosTTSRecipe) -> None:
         """Add narrator data to the recipe."""
         self.narrator_data.append(narrator_data)
+
         self.save_current_state()
 
-    def __load_from_file(self, file_path: Path) -> None:
+    def _load_from_file(self, file_path: Path) -> None:
         """Load narrator recipe from a JSON file."""
         try:
             with open(file_path, "r", encoding="utf-8") as file:
@@ -68,6 +73,13 @@ class NarratorRecipe:
         """Create the appropriate recipe object from dictionary data."""
         recipe_type = data.get("recipe_type")
 
+        if "clone_voice_path" in data:
+            data["clone_voice_path"] = str(
+                self.video_creator_paths.unmask_asset_path(
+                    Path(data["clone_voice_path"])
+                )
+            )
+
         if recipe_type == "ZonosTTSRecipeType":
             return ZonosTTSRecipe.from_dict(data)
         else:
@@ -84,11 +96,28 @@ class NarratorRecipe:
         Returns:
             Dictionary representation of the NarratorRecipe
         """
-        narrator_data = [item.to_dict() for item in self.narrator_data]
-        for i, item in enumerate(narrator_data, 1):
-            item["index"] = i
+        available_voices_paths = [
+            self.video_creator_paths.get_default_assets_folder() / "voices",
+            self.video_creator_paths.get_user_assets_folder() / "voices",
+        ]
+        available_voices = []
+        for path in available_voices_paths:
+            available_voices.extend(
+                [
+                    str(self.video_creator_paths.mask_asset_path(f))
+                    for f in path.glob("*.mp3")
+                ]
+            )
 
-        return {"narrator_data": narrator_data}
+        narrator_data = [item.to_dict() for item in self.narrator_data]
+        result = []
+        for i, item in enumerate(narrator_data, 1):
+            item["clone_voice_path"] = str(
+                self.video_creator_paths.mask_asset_path(Path(item["clone_voice_path"]))
+            )
+            result.append({"index": i, **item, "available_voices": available_voices})
+
+        return {"narrator_data": result}
 
     def save_current_state(self) -> None:
         """Save the current state of the narrator recipe to a file."""

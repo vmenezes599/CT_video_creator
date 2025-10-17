@@ -16,6 +16,7 @@ class SubVideoAssets:
         self.asset_file_path = asset_file_path
         self.assembled_sub_video: list[Path] = []
         self.sub_video_assets: list[list[Path]] = []
+
         self._load_assets_from_file()
 
     def __validate_asset_path(self, asset_path: Path) -> Path:

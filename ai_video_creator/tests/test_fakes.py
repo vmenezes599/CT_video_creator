@@ -154,21 +154,21 @@ def setup_fake_generators_for_recipes(recipes, generator_type="all"):
     """
 
     def replace_generator(recipe_obj):
-        if hasattr(recipe_obj, "GENERATOR"):
+        if hasattr(recipe_obj, "GENERATOR_TYPE"):
             if generator_type in ["audio", "all"] and hasattr(
                 recipe_obj, "clone_voice_path"
             ):
-                recipe_obj.GENERATOR = lambda: FakeAudioGenerator()
+                recipe_obj.GENERATOR_TYPE = lambda: FakeAudioGenerator()
             elif (
                 generator_type in ["image", "all"]
                 and hasattr(recipe_obj, "prompt")
                 and hasattr(recipe_obj, "seed")
             ):
-                recipe_obj.GENERATOR = lambda: FakeImageGenerator()
+                recipe_obj.GENERATOR_TYPE = lambda: FakeImageGenerator()
             elif generator_type in ["video", "all"] and hasattr(
                 recipe_obj, "media_path"
             ):
-                recipe_obj.GENERATOR = lambda: FakeVideoGenerator()
+                recipe_obj.GENERATOR_TYPE = lambda: FakeVideoGenerator()
 
     # Handle nested structures
     if isinstance(recipes, list):
