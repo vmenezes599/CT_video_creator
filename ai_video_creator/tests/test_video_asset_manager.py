@@ -21,11 +21,11 @@ class TestVideoAssetManager:
         user_folder = tmp_path
         story_name = "test_story"
         chapter_index = 0
-        
+
         # Create the necessary directory structure
         story_folder = user_folder / "stories" / story_name
         story_folder.mkdir(parents=True)
-        
+
         # Create prompts folder and file
         prompts_folder = story_folder / "prompts"
         prompts_folder.mkdir()
@@ -52,7 +52,7 @@ class TestVideoAssetManager:
 
         # Create VideoCreatorPaths object
         paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
-        
+
         # Create the required recipe and asset files for sub video tests
         sub_video_recipe = {
             "video_data": [
@@ -63,18 +63,18 @@ class TestVideoAssetManager:
                             "generator_id": "florence_model",
                             "recipe_type": "WanI2VRecipeType",
                             "media_path": "assets/images/image1.jpg",
-                            "color_match_media_path": "assets/images/color_match1.jpg"
+                            "color_match_media_path": "assets/images/color_match1.jpg",
                         }
                     ]
                 },
                 {
                     "recipe_list": [
                         {
-                            "prompt": "Test prompt 2", 
+                            "prompt": "Test prompt 2",
                             "generator_id": "florence_model",
                             "recipe_type": "WanI2VRecipeType",
                             "media_path": "assets/images/image2.jpg",
-                            "color_match_media_path": "assets/images/color_match2.jpg"
+                            "color_match_media_path": "assets/images/color_match2.jpg",
                         }
                     ]
                 },
@@ -119,7 +119,6 @@ class TestVideoAssetManager:
     @pytest.fixture
     def story_setup_with_recipe(self, video_creator_paths):
         """Create a story folder with recipe file."""
-        return video_creator_paths.story_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir()
 
@@ -406,9 +405,7 @@ class TestVideoAssetManager:
         assert not old_sub.exists()
         assert not temp_file.exists()
 
-    def test_cleanup_assets_handles_none_values_in_assets(
-        self, video_creator_paths
-    ):
+    def test_cleanup_assets_handles_none_values_in_assets(self, video_creator_paths):
         """Test that cleanup_assets properly handles None values in asset lists."""
         video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
@@ -567,10 +564,12 @@ class TestVideoAssetManager:
 
             mock_concat.side_effect = fake_concat
             mock_extract.side_effect = fake_extract
-            
+
             # Mock FlorenceGenerator.generate_description to return test data
             mock_florence_instance = MockFlorenceGenerator.return_value
-            mock_florence_instance.generate_description.return_value = "Generated description from Florence"
+            mock_florence_instance.generate_description.return_value = (
+                "Generated description from Florence"
+            )
 
             # Test the actual workflow
             manager.generate_video_assets()
@@ -617,9 +616,7 @@ class TestVideoAssetManager:
                     assembled_video is not None
                 ), f"Scene {scene_idx} should have assembled video"
 
-    def test_generate_video_assets_skips_when_assets_missing(
-        self, video_creator_paths
-    ):
+    def test_generate_video_assets_skips_when_assets_missing(self, video_creator_paths):
         """Test that video generation is skipped when narrator or image assets are missing."""
         video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
