@@ -269,7 +269,7 @@ class TestVideoAssetsFile:
         # Valid absolute paths within the asset directory should work
         valid_video = tmp_path / "valid_video.mp4"
         valid_sub = tmp_path / "valid_sub.mp4"
-        valid_video.write_text("video")
+        valid_video.write_text("videos")
         valid_sub.write_text("sub video")
 
         assets.set_scene_video(0, valid_video)
@@ -282,7 +282,7 @@ class TestVideoAssetsFile:
         subdir.mkdir()
         subdir_video = subdir / "subdir_video.mp4"
         subdir_sub = subdir / "subdir_sub.mp4"
-        subdir_video.write_text("video")
+        subdir_video.write_text("videos")
         subdir_sub.write_text("sub video")
 
         assets.set_scene_video(1, subdir_video)
@@ -293,7 +293,7 @@ class TestVideoAssetsFile:
         # Absolute paths outside the asset directory should raise ValueError
         outside_video = tmp_path.parent / "outside_video.mp4"
         outside_sub = tmp_path.parent / "outside_sub.mp4"
-        outside_video.write_text("video")
+        outside_video.write_text("videos")
         outside_sub.write_text("sub video")
 
         with pytest.raises(ValueError, match="is not in the subpath of"):

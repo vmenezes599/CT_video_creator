@@ -9,17 +9,23 @@ from unittest.mock import patch
 import pytest
 
 from ai_video_creator.modules.video import SubVideoAssetManager
+from ai_video_creator.utils import VideoCreatorPaths
 
 
 class TestVideoAssetManager:
     """Test VideoAssetManager class - focuses on asset generation coordination."""
 
     @pytest.fixture
-    def story_setup_with_recipe(self, tmp_path):
-        """Create a story folder with recipe file."""
-        story_folder = tmp_path / "test_story"
-        story_folder.mkdir()
-
+    def video_creator_paths(self, tmp_path):
+        """Create VideoCreatorPaths object for testing."""
+        user_folder = tmp_path
+        story_name = "test_story"
+        chapter_index = 0
+        
+        # Create the necessary directory structure
+        story_folder = user_folder / "stories" / story_name
+        story_folder.mkdir(parents=True)
+        
         # Create prompts folder and file
         prompts_folder = story_folder / "prompts"
         prompts_folder.mkdir()
@@ -44,9 +50,76 @@ class TestVideoAssetManager:
         with open(prompt_file, "w", encoding="utf-8") as f:
             json.dump(chapter_prompt, f)
 
-        # Create video folder and necessary files
-        video_folder = story_folder / "video"
-        video_folder.mkdir()
+        # Create VideoCreatorPaths object
+        paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
+        
+        # Create the required recipe and asset files for sub video tests
+        sub_video_recipe = {
+            "video_data": [
+                {
+                    "recipe_list": [
+                        {
+                            "prompt": "Test prompt 1",
+                            "generator_id": "florence_model",
+                            "recipe_type": "WanI2VRecipeType",
+                            "media_path": "assets/images/image1.jpg",
+                            "color_match_media_path": "assets/images/color_match1.jpg"
+                        }
+                    ]
+                },
+                {
+                    "recipe_list": [
+                        {
+                            "prompt": "Test prompt 2", 
+                            "generator_id": "florence_model",
+                            "recipe_type": "WanI2VRecipeType",
+                            "media_path": "assets/images/image2.jpg",
+                            "color_match_media_path": "assets/images/color_match2.jpg"
+                        }
+                    ]
+                },
+            ],
+        }
+
+        # Create narrator and image asset files that SubVideoAssetManager expects
+        narrator_assets = {
+            "assets": [
+                {"index": 1, "narrator": "assets/narrators/narrator_001.mp3"},
+                {"index": 2, "narrator": "assets/narrators/narrator_002.mp3"},
+            ]
+        }
+
+        image_assets = {
+            "assets": [
+                {"index": 1, "image": "assets/images/image_001.jpg"},
+                {"index": 2, "image": "assets/images/image_002.jpg"},
+            ]
+        }
+
+        with open(paths.sub_video_recipe_file, "w", encoding="utf-8") as f:
+            json.dump(sub_video_recipe, f)
+
+        with open(paths.narrator_asset_file, "w", encoding="utf-8") as f:
+            json.dump(narrator_assets, f)
+
+        with open(paths.image_asset_file, "w", encoding="utf-8") as f:
+            json.dump(image_assets, f)
+
+        # Create some actual asset files that the SubVideoAssetManager might reference
+        narrator_file_1 = paths.narrator_asset_folder / "narrator_001.mp3"
+        narrator_file_2 = paths.narrator_asset_folder / "narrator_002.mp3"
+        image_file_1 = paths.image_asset_folder / "image_001.jpg"
+        image_file_2 = paths.image_asset_folder / "image_002.jpg"
+
+        for file in [narrator_file_1, narrator_file_2, image_file_1, image_file_2]:
+            file.touch()
+
+        return paths
+
+    @pytest.fixture
+    def story_setup_with_recipe(self, video_creator_paths):
+        """Create a story folder with recipe file."""
+        return video_creator_paths.story_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir()
 
@@ -133,9 +206,9 @@ class TestVideoAssetManager:
 
         return story_folder
 
-    def test_asset_manager_initialization(self, story_setup_with_recipe):
+    def test_asset_manager_initialization(self, video_creator_paths):
         """Test VideoAssetManager initialization with recipe synchronization."""
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         assert len(manager.recipe.video_data) == 2
         assert len(manager.video_assets.assembled_sub_video) == 2
@@ -145,13 +218,13 @@ class TestVideoAssetManager:
         missing = manager.video_assets.get_missing_videos()
         assert missing == [0, 1]
 
-    def test_asset_manager_creates_asset_file(self, story_setup_with_recipe):
+    def test_asset_manager_creates_asset_file(self, video_creator_paths):
         """Test that VideoAssetManager creates and manages asset files properly."""
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         # Create assets folder and test files within the allowed directory
         assets_folder = (
-            story_setup_with_recipe / "video" / "chapter_001" / "assets" / "sub_videos"
+            video_creator_paths.video_chapter_folder / "assets" / "sub_videos"
         )
         assets_folder.mkdir(parents=True, exist_ok=True)
 
@@ -190,9 +263,9 @@ class TestVideoAssetManager:
         assert saved_data["assets"][1]["video_asset"] is None
         assert saved_data["assets"][1]["sub_video_assets"] == []
 
-    def test_asset_manager_with_existing_assets(self, story_setup_with_recipe):
+    def test_asset_manager_with_existing_assets(self, video_creator_paths):
         """Test VideoAssetManager loading existing asset files."""
-        video_folder = story_setup_with_recipe / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
         asset_file = chapter_folder / "sub_video_assets.json"
@@ -231,7 +304,7 @@ class TestVideoAssetManager:
         with open(asset_file, "w", encoding="utf-8") as f:
             json.dump(existing_data, f)
 
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         assert manager.video_assets.assembled_sub_video[0] == video1
         assert manager.video_assets.assembled_sub_video[1] == video2
@@ -241,9 +314,9 @@ class TestVideoAssetManager:
         assert len(manager.video_assets.sub_video_assets[1]) == 1
         assert manager.video_assets.sub_video_assets[1][0] == sub3
 
-    def test_asset_synchronization_different_sizes(self, story_setup_with_recipe):
+    def test_asset_synchronization_different_sizes(self, video_creator_paths):
         """Test asset synchronization when asset file has different size than recipe."""
-        video_folder = story_setup_with_recipe / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
         asset_file = chapter_folder / "sub_video_assets.json"
@@ -271,7 +344,7 @@ class TestVideoAssetManager:
         with open(asset_file, "w", encoding="utf-8") as f:
             json.dump(existing_data, f)
 
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         assert len(manager.video_assets.assembled_sub_video) == 2
         assert len(manager.video_assets.sub_video_assets) == 2
@@ -283,9 +356,9 @@ class TestVideoAssetManager:
         assert manager.video_assets.assembled_sub_video[1] is None
         assert manager.video_assets.sub_video_assets[1] == []
 
-    def test_cleanup_assets_removes_unused_files(self, story_setup_with_recipe):
+    def test_cleanup_assets_removes_unused_files(self, video_creator_paths):
         """Test that cleanup_assets removes files not referenced in assets."""
-        video_folder = story_setup_with_recipe / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
         assets_folder = chapter_folder / "assets" / "sub_videos"
@@ -312,7 +385,7 @@ class TestVideoAssetManager:
         ]:
             file_path.touch()
 
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         # Set up some assets to be kept
         manager.video_assets.set_scene_video(0, valid_video1)
@@ -334,10 +407,10 @@ class TestVideoAssetManager:
         assert not temp_file.exists()
 
     def test_cleanup_assets_handles_none_values_in_assets(
-        self, story_setup_with_recipe
+        self, video_creator_paths
     ):
         """Test that cleanup_assets properly handles None values in asset lists."""
-        video_folder = story_setup_with_recipe / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
         assets_folder = chapter_folder / "assets" / "sub_videos"
@@ -350,7 +423,7 @@ class TestVideoAssetManager:
         valid_file.touch()
         invalid_file.touch()
 
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         # Set only one asset, leaving others as None
         manager.video_assets.set_scene_video(0, valid_file)
@@ -366,9 +439,9 @@ class TestVideoAssetManager:
         # Verify that the unused file is deleted
         assert not invalid_file.exists()
 
-    def test_cleanup_assets_preserves_directories(self, story_setup_with_recipe):
+    def test_cleanup_assets_preserves_directories(self, video_creator_paths):
         """Test that cleanup_assets only removes files, not directories."""
-        video_folder = story_setup_with_recipe / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
         assets_folder = chapter_folder / "assets" / "sub_videos"
@@ -386,7 +459,7 @@ class TestVideoAssetManager:
         main_file = assets_folder / "main_file.txt"
         main_file.touch()
 
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         # Run cleanup with no assets set (all should be deleted except directories)
         manager.clean_unused_assets()
@@ -400,10 +473,10 @@ class TestVideoAssetManager:
         # Note: file_in_subdir should still exist because cleanup only processes
         # files directly in assets_folder, not in subdirectories
 
-    def test_generate_video_assets_workflow(self, story_setup_with_recipe):
+    def test_generate_video_assets_workflow(self, video_creator_paths):
         """Test the video asset generation workflow with minimal mocking."""
         # Create valid narrator and image assets first
-        video_folder = story_setup_with_recipe / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
 
@@ -412,15 +485,15 @@ class TestVideoAssetManager:
         image_asset_file = chapter_folder / "image_assets.json"
 
         # Create actual asset files within the allowed directory
-        narrator_image_folder = chapter_folder / "assets" / "narrator_and_image"
-        narrator_image_folder.mkdir(parents=True, exist_ok=True)
+        narrator_assets_folder = video_creator_paths.narrator_asset_folder
+        image_assets_folder = video_creator_paths.image_asset_folder
 
-        narrator1 = narrator_image_folder / "narrator1.mp3"
-        narrator2 = narrator_image_folder / "narrator2.mp3"
-        image1 = narrator_image_folder / "image1.jpg"
-        image2 = narrator_image_folder / "image2.jpg"
-        color_match1 = narrator_image_folder / "color_match1.jpg"
-        color_match2 = narrator_image_folder / "color_match2.jpg"
+        narrator1 = narrator_assets_folder / "narrator1.mp3"
+        narrator2 = narrator_assets_folder / "narrator2.mp3"
+        image1 = image_assets_folder / "image1.jpg"
+        image2 = image_assets_folder / "image2.jpg"
+        color_match1 = image_assets_folder / "color_match1.jpg"
+        color_match2 = image_assets_folder / "color_match2.jpg"
 
         for temp_file in [
             narrator1,
@@ -435,14 +508,14 @@ class TestVideoAssetManager:
         # Create separate asset files using the paths that match the recipe
         narrator_data = {
             "assets": [
-                {"index": 1, "narrator": "assets/narrator_and_image/narrator1.mp3"},
-                {"index": 2, "narrator": "assets/narrator_and_image/narrator2.mp3"},
+                {"index": 1, "narrator": "assets/narrators/narrator1.mp3"},
+                {"index": 2, "narrator": "assets/narrators/narrator2.mp3"},
             ]
         }
         image_data = {
             "assets": [
-                {"index": 1, "image": "assets/narrator_and_image/image1.jpg"},
-                {"index": 2, "image": "assets/narrator_and_image/image2.jpg"},
+                {"index": 1, "image": "assets/images/image1.jpg"},
+                {"index": 2, "image": "assets/images/image2.jpg"},
             ]
         }
 
@@ -451,7 +524,7 @@ class TestVideoAssetManager:
         with open(image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_data, f)
 
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         # Create a fake video generator that creates real files
         class FakeVideoGenerator:
@@ -545,10 +618,10 @@ class TestVideoAssetManager:
                 ), f"Scene {scene_idx} should have assembled video"
 
     def test_generate_video_assets_skips_when_assets_missing(
-        self, story_setup_with_recipe
+        self, video_creator_paths
     ):
         """Test that video generation is skipped when narrator or image assets are missing."""
-        video_folder = story_setup_with_recipe / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
 
@@ -581,7 +654,7 @@ class TestVideoAssetManager:
         with open(image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_data, f)
 
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         # Track if any video generation attempts were made
         generation_attempts = []
@@ -612,9 +685,9 @@ class TestVideoAssetManager:
         missing_videos = manager.video_assets.get_missing_videos()
         assert len(missing_videos) == 2  # Both scenes should still be missing
 
-    def test_sub_video_file_path_generation(self, story_setup_with_recipe):
+    def test_sub_video_file_path_generation(self, video_creator_paths):
         """Test sub-video file path generation."""
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         # Test path generation
         path1 = manager._generate_sub_video_file_path(0, 0)
@@ -623,9 +696,9 @@ class TestVideoAssetManager:
         assert "chapter_001_sub_video_001_01.mp4" in str(path1)
         assert "chapter_001_sub_video_002_03.mp4" in str(path2)
 
-    def test_video_file_path_generation(self, story_setup_with_recipe):
+    def test_video_file_path_generation(self, video_creator_paths):
         """Test main video file path generation."""
-        manager = SubVideoAssetManager(story_setup_with_recipe, 0)
+        manager = SubVideoAssetManager(video_creator_paths)
 
         # Test path generation
         path1 = manager._generate_video_file_path(0)

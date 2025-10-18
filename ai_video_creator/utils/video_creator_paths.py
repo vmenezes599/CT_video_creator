@@ -29,7 +29,7 @@ class VideoCreatorPaths:
         )
 
         # Initialize paths
-        self.video_folder = self.story_folder / "video"
+        self.video_folder = self.story_folder / "videos"
         self.video_chapter_folder = self.video_folder / f"chapter_{chapter_index+1:03}"
         self.asset_folder = self.video_chapter_folder / "assets"
 

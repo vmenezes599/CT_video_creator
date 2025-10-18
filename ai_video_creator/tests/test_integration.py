@@ -13,6 +13,7 @@ import pytest
 
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssetManager
 from ai_video_creator.modules.video import SubVideoAssetManager, SubVideoRecipeBuilder
+from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.video_creator import (
     create_narrator_and_image_recipe_from_prompt,
     create_narrators_and_images_from_recipe,
@@ -31,11 +32,19 @@ class TestVideoCreationWorkflow:
     """Integration tests for complete video creation workflows."""
 
     @pytest.fixture
-    def complete_story_setup(self, tmp_path):
-        """Create a complete story structure for integration testing."""
-        story_folder = tmp_path / "integration_story"
+    def video_creator_paths(self, tmp_path):
+        """Create VideoCreatorPaths object for integration testing."""
+        user_folder = tmp_path
+        story_name = "integration_story"
+        chapter_index = 0
+        
+        # Create the necessary directory structure
+        story_folder = user_folder / "stories" / story_name
+        story_folder.mkdir(parents=True)
+        
+        # Create prompts folder and chapter prompt file
         prompts_folder = story_folder / "prompts"
-        prompts_folder.mkdir(parents=True)
+        prompts_folder.mkdir()
 
         # Create a realistic chapter prompt
         chapter_prompt = {
@@ -48,29 +57,37 @@ class TestVideoCreationWorkflow:
                 {
                     "narrator": "The explorer discovered a mysterious planet with strange creatures.",
                     "visual_description": "An alien planet with bizarre flora and fauna",
-                    "visual_prompt": "alien planet strange creatures exotic plants",
+                    "visual_prompt": "alien planet creatures bizarre flora fauna",
                 },
                 {
-                    "narrator": "Together, they embarked on an incredible adventure through time and space.",
-                    "visual_description": "Time portal with swirling energy and cosmic effects",
-                    "visual_prompt": "time portal energy swirling cosmic adventure",
+                    "narrator": "With courage and determination, the explorer ventured into the unknown.",
+                    "visual_description": "A heroic figure walking into mysterious terrain",
+                    "visual_prompt": "heroic explorer courage determination unknown terrain",
                 },
             ]
         }
 
-        prompt_file = prompts_folder / "chapter_001.json"
-        with open(prompt_file, "w", encoding="utf-8") as f:
+        chapter_prompt_file = prompts_folder / "chapter_001.json"
+        with open(chapter_prompt_file, "w", encoding="utf-8") as f:
             json.dump(chapter_prompt, f)
 
-        return story_folder
+        # Create VideoCreatorPaths object
+        paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
+        
+        return paths
+    
+    @pytest.fixture
+    def complete_story_setup(self, video_creator_paths):
+        """Create a complete story structure for integration testing."""
+        return video_creator_paths.story_folder
 
-    def test_complete_narrator_and_image_workflow(self, complete_story_setup):
+    def test_complete_narrator_and_image_workflow(self, video_creator_paths):
         """Test the complete narrator and image generation workflow."""
         # Use tracking generators to verify the workflow
         tracking = TrackingFakeGenerators()
 
         # Create and test recipe building
-        video_folder = complete_story_setup / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
 
@@ -83,17 +100,17 @@ class TestVideoCreationWorkflow:
             "narrator_data": [
                 {
                     "prompt": "Once upon a time, in a distant galaxy, there was a brave explorer.",
-                    "clone_voice_path": "/fake/voice.mp3",
+                    "clone_voice_path": "default_assets/voices/voice_002.mp3",
                     "recipe_type": "ZonosTTSRecipeType",
                 },
                 {
                     "prompt": "The explorer discovered a mysterious planet with strange creatures.",
-                    "clone_voice_path": "/fake/voice.mp3",
+                    "clone_voice_path": "default_assets/voices/voice_002.mp3",
                     "recipe_type": "ZonosTTSRecipeType",
                 },
                 {
                     "prompt": "Together, they embarked on an incredible adventure through time and space.",
-                    "clone_voice_path": "/fake/voice.mp3",
+                    "clone_voice_path": "default_assets/voices/voice_002.mp3",
                     "recipe_type": "ZonosTTSRecipeType",
                 },
             ]
@@ -125,7 +142,7 @@ class TestVideoCreationWorkflow:
             json.dump(image_recipe, f)
 
         # Test the asset manager workflow
-        asset_manager = NarratorAndImageAssetManager(complete_story_setup, 0)
+        asset_manager = NarratorAndImageAssetManager(video_creator_paths)
 
         # Replace generators with fake implementations
         for recipe in asset_manager.narrator_builder.recipe.narrator_data:
@@ -168,10 +185,10 @@ class TestVideoCreationWorkflow:
         assert asset_manager.narrator_builder.narrator_assets.is_complete()
         assert asset_manager.image_builder.image_assets.is_complete()
 
-    def test_complete_video_generation_workflow(self, complete_story_setup):
+    def test_complete_video_generation_workflow(self, video_creator_paths):
         """Test the complete video generation workflow."""
         # Setup prerequisite assets first
-        video_folder = complete_story_setup / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
 
@@ -193,13 +210,13 @@ class TestVideoCreationWorkflow:
         image_asset_file = chapter_folder / "image_assets.json"
 
         narrator_data = {
-            "narrator_assets": [
-                f"assets/narrator/chapter_001_narrator_{i+1:03}.mp3" for i in range(3)
+            "assets": [
+                {"index": i+1, "narrator": f"assets/narrator/chapter_001_narrator_{i+1:03}.mp3"} for i in range(3)
             ]
         }
         image_data = {
-            "image_assets": [
-                f"assets/image/chapter_001_image_{i+1:03}.png" for i in range(3)
+            "assets": [
+                {"index": i+1, "image": f"assets/image/chapter_001_image_{i+1:03}.png"} for i in range(3)
             ]
         }
 
@@ -226,7 +243,7 @@ class TestVideoCreationWorkflow:
                 "Scene script 3",
             ]
             
-            recipe_builder = SubVideoRecipeBuilder(complete_story_setup, 0)
+            recipe_builder = SubVideoRecipeBuilder(video_creator_paths)
             recipe_builder.create_video_recipe()
 
         # Verify recipe was created
@@ -241,12 +258,16 @@ class TestVideoCreationWorkflow:
 
         # Test video asset manager
         tracking = TrackingFakeGenerators()
-        video_manager = SubVideoAssetManager(complete_story_setup, 0)
+        video_manager = SubVideoAssetManager(video_creator_paths)
 
         # Replace video generators with fake implementations
+        class TrackingVideoGenerator:
+            def __init__(self):
+                return tracking.get_video_generator()
+                
         for scene_data in video_manager.recipe.video_data:
             for recipe in scene_data:
-                recipe.GENERATOR_TYPE = tracking.get_video_generator
+                recipe.GENERATOR_TYPE = lambda: tracking.get_video_generator()
 
         # Mock the concatenation function and FFmpeg operations since they require real video files
         # Mock FlorenceGenerator to avoid AI/LLM calls
@@ -299,10 +320,10 @@ class TestVideoCreationWorkflow:
         missing_videos = video_manager.video_assets.get_missing_videos()
         assert len(missing_videos) == 0
 
-    def test_error_handling_in_workflow(self, complete_story_setup):
+    def test_error_handling_in_workflow(self, video_creator_paths):
         """Test error handling in the video creation workflow."""
         # Create recipe files first so we have scenes to process
-        video_folder = complete_story_setup / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
 
@@ -314,12 +335,12 @@ class TestVideoCreationWorkflow:
             "narrator_data": [
                 {
                     "prompt": "Test narrator 1",
-                    "clone_voice_path": "/fake/voice.mp3",
+                    "clone_voice_path": "default_assets/voices/voice_002.mp3",
                     "recipe_type": "ZonosTTSRecipeType",
                 },
                 {
                     "prompt": "Test narrator 2",
-                    "clone_voice_path": "/fake/voice.mp3",
+                    "clone_voice_path": "default_assets/voices/voice_002.mp3",
                     "recipe_type": "ZonosTTSRecipeType",
                 },
             ]
@@ -346,7 +367,7 @@ class TestVideoCreationWorkflow:
             json.dump(image_recipe, f)
 
         # Now create asset manager with recipes
-        asset_manager = NarratorAndImageAssetManager(complete_story_setup, 0)
+        asset_manager = NarratorAndImageAssetManager(video_creator_paths)
 
         # Create broken generators that simulate failures
         class FailingAudioGenerator:
@@ -374,9 +395,9 @@ class TestVideoCreationWorkflow:
         assert not asset_manager.narrator_builder.narrator_assets.is_complete()
         assert not asset_manager.image_builder.image_assets.is_complete()
 
-    def test_workflow_with_existing_partial_assets(self, complete_story_setup):
+    def test_workflow_with_existing_partial_assets(self, video_creator_paths):
         """Test workflow behavior when some assets already exist."""
-        video_folder = complete_story_setup / "video"
+        video_folder = video_creator_paths.video_folder
         chapter_folder = video_folder / "chapter_001"
         chapter_folder.mkdir(parents=True, exist_ok=True)
 
@@ -388,17 +409,17 @@ class TestVideoCreationWorkflow:
             "narrator_data": [
                 {
                     "prompt": "Test narrator 1",
-                    "clone_voice_path": "/fake/voice.mp3",
+                    "clone_voice_path": "default_assets/voices/voice_002.mp3",
                     "recipe_type": "ZonosTTSRecipeType",
                 },
                 {
                     "prompt": "Test narrator 2",
-                    "clone_voice_path": "/fake/voice.mp3",
+                    "clone_voice_path": "default_assets/voices/voice_002.mp3",
                     "recipe_type": "ZonosTTSRecipeType",
                 },
                 {
                     "prompt": "Test narrator 3",
-                    "clone_voice_path": "/fake/voice.mp3",
+                    "clone_voice_path": "default_assets/voices/voice_002.mp3",
                     "recipe_type": "ZonosTTSRecipeType",
                 },
             ]
@@ -442,7 +463,7 @@ class TestVideoCreationWorkflow:
         existing_image.write_text("Existing image content")
 
         # Create asset manager and set existing assets
-        asset_manager = NarratorAndImageAssetManager(complete_story_setup, 0)
+        asset_manager = NarratorAndImageAssetManager(video_creator_paths)
         asset_manager.narrator_builder.narrator_assets.set_scene_narrator(
             0, existing_narrator
         )
