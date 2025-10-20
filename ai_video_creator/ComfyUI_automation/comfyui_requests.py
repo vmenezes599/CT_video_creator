@@ -197,9 +197,6 @@ class ComfyUIRequests:
                     self._check_for_output_success(history_entry)
                     output_paths = self._get_output_paths(history_entry)
 
-                    self._send_clean_memory_request()
-                    time.sleep(self.delay_seconds)
-
                     return output_paths
                 else:
                     tries += 1
@@ -212,8 +209,6 @@ class ComfyUIRequests:
                     self.max_retries_per_request,
                     display_summary,
                 )
-                if tries < self.max_retries_per_request:
-                    time.sleep(self.delay_seconds)
             except RequestException as e:
                 tries += 1
                 logger.error(
@@ -223,6 +218,9 @@ class ComfyUIRequests:
                     self.max_retries_per_request,
                     e,
                 )
+
+            finally:
+                self._send_clean_memory_request()
                 if tries < self.max_retries_per_request:
                     time.sleep(self.delay_seconds)
 
