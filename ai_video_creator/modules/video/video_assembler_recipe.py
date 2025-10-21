@@ -55,7 +55,7 @@ class NarratorAssetEffects:
 
     def is_empty(self) -> bool:
         """Check if narrator asset effects are empty."""
-        return any(effects for effects in self.narrator_effects)
+        return all(effects_list for effects_list in self.narrator_effects)
 
     def clear(self) -> None:
         """Clear all narrator effects."""
@@ -67,7 +67,7 @@ class VideoIntroRecipe:
     Intro video recipe class.
     """
 
-    DEFAULT_INTRO_ASSET = Path(f"{DEFAULT_ASSETS_FOLDER}/intros/intro_video.mp4")
+    DEFAULT_INTRO_ASSET = Path(f"{DEFAULT_ASSETS_FOLDER}/intros/intro_20s.mp4")
 
     def __init__(self, paths: VideoCreatorPaths):
         """Initialize IntroEffects with empty lists."""
@@ -132,7 +132,8 @@ class VideoEndingRecipe:
     def __init__(self):
         """Initialize EndingEffects with empty lists."""
         self.narrator_text_list: list[str] = []
-        self.seed: int = random.randint(0, 1**64 - 1)
+        self.narrator_clone_voice: Path | None = None
+        self.seed: int = random.randint(0, (2**64) - 1)
         self.ending_overlay_start_narrator_index: int | None = None
         self.ending_start_delay_seconds: float | None = None
         self.ending_overlay_asset: Path | None = None
@@ -141,35 +142,52 @@ class VideoEndingRecipe:
     def from_dict(self, data: dict) -> None:
         """Load effects from a dictionary."""
         self.narrator_text_list = data.get("narrator_list", [])
+        self.narrator_clone_voice = data.get("narrator_clone_voice", None)
+        if self.narrator_clone_voice:
+            self.narrator_clone_voice = Path(self.narrator_clone_voice)
         self.seed = data.get("seed", random.randint(0, 1**64 - 1))
         self.ending_overlay_start_narrator_index = data.get(
             "ending_overlay_start_narrator_index", None
         )
         self.ending_start_delay_seconds = data.get("ending_start_delay_seconds", None)
         self.ending_overlay_asset = data.get("ending_overlay_asset", None)
+        if self.ending_overlay_asset:
+            self.ending_overlay_asset = Path(self.ending_overlay_asset)
         self.subvideo = data.get("subvideo", None)
+        if self.subvideo:
+            self.subvideo = Path(self.subvideo)
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
 
         result = {
             "narrator_list": self.narrator_text_list,
+            "narrator_clone_voice": (
+                str(self.narrator_clone_voice) if self.narrator_clone_voice else None
+            ),
             "seed": self.seed,
             "ending_overlay_start_narrator_index": self.ending_overlay_start_narrator_index,
             "ending_start_delay_seconds": self.ending_start_delay_seconds,
-            "ending_overlay_asset": self.ending_overlay_asset,
-            "subvideo": self.subvideo,
+            "ending_overlay_asset": (
+                str(self.ending_overlay_asset) if self.ending_overlay_asset else None
+            ),
+            "subvideo": str(self.subvideo) if self.subvideo else None,
         }
 
         return result
 
     def is_empty(self) -> bool:
         """Check if ending effects are empty."""
-        return not self.narrator_text_list and self.ending_overlay_asset is None
+        return (
+            not self.narrator_text_list
+            and self.ending_overlay_asset is None
+            and self.narrator_clone_voice is None
+        )
 
     def clear(self) -> None:
         """Clear ending asset and effects."""
         self.ending_overlay_asset = None
+        self.narrator_clone_voice = None
         self.seed = random.randint(0, 1**64 - 1)
         self.narrator_text_list = []
         self.ending_overlay_start_narrator_index = None
@@ -259,6 +277,7 @@ class VideoAssemblerRecipe:
 
             required_fields = [
                 "narrator_asset_effects",
+                "video_ending_recipe",
                 "video_overlay_recipe",
                 "video_intro_recipe",
             ]
@@ -267,35 +286,35 @@ class VideoAssemblerRecipe:
                 raise KeyError(f"Missing required fields: {missing_fields}")
 
             self._narrator_asset_effects.from_dict(data["narrator_asset_effects"])
+            self._video_ending_recipe.from_dict(data["video_ending_recipe"])
             self._video_intro_recipe.from_dict(data["video_intro_recipe"])
             self._video_overlay_recipe.from_dict(data["video_overlay_recipe"])
 
             logger.info("Successfully loaded video assembler recipe.")
-
         except FileNotFoundError:
-            logger.debug("Video assembler recipe file not found. Creating new recipe.")
-            self.narrator_effects = []
-            self.image_effects = []
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse video assembler recipe file: {e}")
-            self.narrator_effects = []
-            self.image_effects = []
-        except (PermissionError, OSError) as e:
-            logger.error(f"Failed to read video assembler recipe file: {e}")
-            self.narrator_effects = []
-            self.image_effects = []
-        except (KeyError, ValueError, TypeError) as e:
+            logger.warning(
+                f"Video assembler recipe file not found: {self.effects_file_path.name}"
+            )
+        except (
+            json.JSONDecodeError,
+            PermissionError,
+            OSError,
+            KeyError,
+            ValueError,
+            TypeError,
+        ) as e:
             logger.error(
                 f"Failed to load video assembler recipe - invalid data format: {e}"
             )
-            self.narrator_effects = []
-            self.image_effects = []
+        finally:
+            self.save_to_file()
 
     def save_to_file(self) -> None:
         """Save the current state of the video assembler recipe to a file."""
         try:
             result = {
                 "video_intro_recipe": self._video_intro_recipe.to_dict(),
+                "video_ending_recipe": self._video_ending_recipe.to_dict(),
                 "video_overlay_recipe": self._video_overlay_recipe.to_dict(),
                 "narrator_asset_effects": self._narrator_asset_effects.to_dict(),
             }
@@ -324,7 +343,7 @@ class VideoAssemblerRecipe:
         )
 
     def is_complete(self) -> bool:
-        """Check if the MediaEffectsManager is properly initialized."""
+        """Check if the VideoAssemblerRecipe is properly initialized."""
         return (
             not self._narrator_asset_effects.is_empty()
             and not self._video_intro_recipe.is_empty()
@@ -376,7 +395,8 @@ class VideoAssemblerRecipe:
         self._video_ending_recipe = ending_recipe
         self.save_to_file()
 
-    def set_video_ending_subvideo(self, subvideo: Path) -> None:
+    def set_video_ending_subvideo(self, subvideo: Path) -> Path:
         """Set video ending subvideo."""
         self._video_ending_recipe.subvideo = subvideo
         self.save_to_file()
+        return subvideo

@@ -207,7 +207,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_single_tr.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_chromakey,
+            overlay_video=intro_chromakey,
             main_video=main_video,
             output_path=output,
             start_time_seconds=1,
@@ -237,7 +237,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_repeated.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_chromakey,
+            overlay_video=intro_chromakey,
             main_video=main_video,
             output_path=output,
             start_time_seconds=1,
@@ -266,7 +266,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_alpha.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_alpha,
+            overlay_video=intro_alpha,
             main_video=main_video,
             output_path=output,
             start_time_seconds=1,
@@ -292,7 +292,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_fps_match.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_24fps,
+            overlay_video=intro_24fps,
             main_video=main_video,
             output_path=output,
             start_time_seconds=1,
@@ -313,7 +313,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_audio_mix.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_with_audio,
+            overlay_video=intro_with_audio,
             main_video=main_video,
             output_path=output,
             start_time_seconds=1,
@@ -340,7 +340,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_audio_main_only.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_chromakey,  # No audio
+            overlay_video=intro_chromakey,  # No audio
             main_video=main_video,  # Has audio
             output_path=output,
             start_time_seconds=1,
@@ -366,7 +366,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_no_audio.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_chromakey,
+            overlay_video=intro_chromakey,
             main_video=main_no_audio,
             output_path=output,
             start_time_seconds=1,
@@ -392,7 +392,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_center_clamped.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=large_intro,
+            overlay_video=large_intro,
             main_video=main_video,  # 640x360
             output_path=output,
             start_time_seconds=1,
@@ -418,7 +418,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_max_repeats.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_chromakey,
+            overlay_video=intro_chromakey,
             main_video=main_video,
             output_path=output,
             start_time_seconds=0,
@@ -458,7 +458,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_blue_chroma.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=blue_intro,
+            overlay_video=blue_intro,
             main_video=main_video,
             output_path=output,
             start_time_seconds=1,
@@ -476,13 +476,13 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_corner_20pct.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_chromakey,
+            overlay_video=intro_chromakey,
             main_video=main_video,
             output_path=output,
             start_time_seconds=1,
             repeat_every_seconds=-1,
             position=VideoBlitPosition.BOTTOM_LEFT,
-            corner_scale_percent=0.20,  # 20% instead of default 10%
+            scale_percent=0.20,  # 20% instead of default 10%
         )
 
         assert result.exists()
@@ -494,7 +494,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_no_show.mp4"
 
         result = blit_overlay_video_onto_main_video(
-            outro_video=intro_chromakey,
+            overlay_video=intro_chromakey,
             main_video=main_video,  # 6s duration
             output_path=output,
             start_time_seconds=10,  # Beyond duration
@@ -516,7 +516,7 @@ class TestBlitIntroVideo:
 
         with pytest.raises(FileNotFoundError, match="Intro video not found"):
             blit_overlay_video_onto_main_video(
-                outro_video=fake_intro,
+                overlay_video=fake_intro,
                 main_video=main_video,
                 output_path=output,
                 start_time_seconds=1,
@@ -531,7 +531,7 @@ class TestBlitIntroVideo:
 
         with pytest.raises(FileNotFoundError, match="Main video not found"):
             blit_overlay_video_onto_main_video(
-                outro_video=intro_chromakey,
+                overlay_video=intro_chromakey,
                 main_video=fake_main,
                 output_path=output,
                 start_time_seconds=1,

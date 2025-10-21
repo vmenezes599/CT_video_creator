@@ -32,8 +32,10 @@ from ai_video_creator.utils import (  # pylint: disable=unused-import
     blit_overlay_video_onto_main_video,
     concatenate_videos_no_reencoding,
     reencode_to_reference_basic,
+    get_audio_duration,
     safe_move,
     VideoCreatorPaths,
+    VideoBlitPosition,
 )
 
 from .sub_video_assets import SubVideoAssets
@@ -107,9 +109,12 @@ class VideoAssembler:
         Generate a video segment from a video and audio file.
         """
         video_path_obj = Path(video_path)
-        temp_file = (
-            self._paths.video_assembler_asset_folder / f"temp_{video_path_obj.stem}.mp4"
-        )
+        temp_file_base = f"temp_{video_path_obj.stem}"
+        temp_file = self._paths.video_assembler_asset_folder / f"{temp_file_base}.mp4"
+        index = 1
+        while temp_file.exists():
+            temp_file = temp_file.with_stem(f"{temp_file_base}_{index}")
+            index += 1
 
         output_path = create_video_segment_from_sub_video_and_audio_freeze_last_frame(
             sub_video_path=video_path, audio_path=audio_path, output_path=temp_file
@@ -268,6 +273,7 @@ class VideoAssembler:
         # self._temp_files.append(reencoded_intro)
 
         logger.info(f"Adding intro video segment: {intro_video_path.name}")
+
         return [reencoded_intro, *video_segments]
 
     def _generate_ending_narrators(
@@ -279,10 +285,10 @@ class VideoAssembler:
         logger.info("Generating ending narrators")
 
         narrator_text_list = ending_recipe.narrator_text_list
-        clone_voice_path = None
+        clone_voice_path = ending_recipe.narrator_clone_voice
         seed = ending_recipe.seed
 
-        base_name = "ending_narrator"
+        base_name = "video_assembler_ending_narrator"
         output_path_base = self._paths.narrator_asset_folder / f"{base_name}.mp3"
 
         generated_audio_paths = []
@@ -290,11 +296,13 @@ class VideoAssembler:
             recipe = ZonosTTSRecipe(
                 prompt=narrator_text, seed=seed, clone_voice_path=clone_voice_path
             )
-            output_name = output_path_base.with_stem(f"base_name_{index + 1}")
+            output_name = output_path_base.with_stem(f"{base_name}_{index + 1}")
             tts_generator = ZonosTTSRecipe.GENERATOR_TYPE()
             generated_audio = tts_generator.clone_text_to_speech(
                 recipe=recipe, output_file_path=output_name
             )
+
+            self._temp_files.append(generated_audio)
             generated_audio_paths.append(generated_audio)
 
         logger.info("Finished generating ending narrators")
@@ -319,10 +327,17 @@ class VideoAssembler:
         logger.info("Finished concatenating ending narrators")
         return concatenated_narrator_path
 
-    def _add_ending_video_segment(self, video_segments: list[Path]) -> list[Path]:
+    def _add_ending_video_segment(
+        self, video_segments: list[Path], video_segments_without_audio: list[Path]
+    ) -> list[Path]:
         """
         Add ending video segment to the list of video segments if defined.
         """
+        ending_sub_video = self.video_assembler_assets.video_ending
+        if ending_sub_video and ending_sub_video.exists():
+            logger.info(f"Using existing ending video segment: {ending_sub_video.name}")
+            return [*video_segments, ending_sub_video]
+
         ending_recipe = self.video_assembler_recipe.get_video_ending_recipe()
         if not ending_recipe:
             logger.info("No ending recipe defined, skipping ending video segment.")
@@ -338,11 +353,11 @@ class VideoAssembler:
         ending_video_path = ending_recipe.subvideo
         if not ending_video_path or not ending_video_path.exists():
             logger.warning("Ending video path 'None'. Setting to first video segment.")
-            ending_recipe.subvideo = video_segments[0]
+            ending_video_path = self.video_assembler_recipe.set_video_ending_subvideo(
+                video_segments_without_audio[0]
+            )
 
-        ending_narrator_paths = self.video_assembler_assets.video_ending_narrators
-        if not ending_narrator_paths:
-            ending_narrator_paths = self._generate_ending_narrators(ending_recipe)
+        ending_narrator_paths = self._generate_ending_narrators(ending_recipe)
 
         concatenated_narrator_path = self._concatenate_ending_narrators(
             ending_narrator_paths
@@ -352,7 +367,28 @@ class VideoAssembler:
             ending_video_path, concatenated_narrator_path
         )
 
-        logger.info("Adding ending video segment.")
+        start_time_seconds = (
+            get_audio_duration(
+                ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index]
+            )
+            + 1.5
+        )
+
+        ending_sub_video = blit_overlay_video_onto_main_video(
+            overlay_video=ending_recipe.ending_overlay_asset,
+            main_video=ending_sub_video,
+            output_path=ending_sub_video.with_stem(
+                f"{ending_sub_video.stem}_overlayed"
+            ),
+            position=VideoBlitPosition.CENTER,
+            scale_percent=1.0,
+            start_time_seconds=start_time_seconds,
+        )
+
+        self.video_assembler_assets.set_video_ending(ending_sub_video)
+
+        logger.info("Created ending video segment.")
+
         return [*video_segments, ending_sub_video]
 
     def _pre_process(self) -> list[Path]:
@@ -366,11 +402,14 @@ class VideoAssembler:
         audio_segments: list[Path] = self.narrator_assets.narrator_assets
 
         video_segments = self._upscale_and_frame_interp_video_list(video_segments)
+        video_segments_without_audio = video_segments.copy()
         video_segments = self._combine_video_with_audio(video_segments, audio_segments)
 
         # Intro and ending are already in the right format
+        video_segments = self._add_ending_video_segment(
+            video_segments, video_segments_without_audio
+        )
         video_segments = self._add_intro_video_segment(video_segments)
-        video_segments = self._add_ending_video_segment(video_segments)
 
         return video_segments
 
@@ -394,7 +433,7 @@ class VideoAssembler:
         self._temp_files.append(main_video_path)
 
         output_path = blit_overlay_video_onto_main_video(
-            outro_video=outro_video_path,
+            overlay_video=outro_video_path,
             main_video=main_video_path,
             output_path=output_video_path,
         )
@@ -441,31 +480,11 @@ class VideoAssembler:
                 file.unlink()
                 logger.info(f"Deleted asset file: {file}")
 
-    def _clean_assembler_narrator_assets(self) -> None:
-        """
-        Clean up video assembler narrator assets.
-        """
-        assets_to_keep = [
-            asset
-            for asset in self.video_assembler_assets.video_ending_narrators
-            if asset is not None
-        ] + [
-            asset for asset in self.narrator_assets.narrator_assets if asset is not None
-        ]
-
-        for file in self._paths.narrator_asset_folder.glob("*"):
-            if file.is_file():
-                if file in assets_to_keep:
-                    continue
-                file.unlink()
-                logger.info(f"Deleted asset file: {file}")
-
     def clean_unused_assets(self):
         """Clean up video assets for a specific story folder."""
 
         logger.info("Starting video asset cleanup process")
 
         self._clean_assembler_assets()
-        self._clean_assembler_narrator_assets()
 
         logger.info("Video asset cleanup process completed successfully")

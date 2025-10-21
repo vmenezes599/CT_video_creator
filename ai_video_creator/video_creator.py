@@ -7,10 +7,12 @@ from pathlib import Path
 from logging_utils import setup_console_logging, setup_file_logging, cleanup_logging
 
 from .modules.narrator_and_image import NarratorAndImageAssetManager
-from .modules.video import SubVideoRecipeBuilder
-from .modules.video import SubVideoAssetManager
-from .modules.video import MediaEffectsManager
-from .modules.video import VideoAssembler
+from .modules.video import (
+    VideoAssemblerRecipeBuilder,
+    SubVideoRecipeBuilder,
+    SubVideoAssetManager,
+    VideoAssembler,
+)
 
 from .utils import VideoCreatorPaths
 
@@ -126,10 +128,10 @@ def create_sub_videos_from_sub_video_recipes(
         base_folder=paths.video_chapter_folder,
     )
 
-    _ = MediaEffectsManager(paths)
-
     video_asset_manager = SubVideoAssetManager(paths)
     video_asset_manager.generate_video_assets()
+
+    _ = VideoAssemblerRecipeBuilder(paths)
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)

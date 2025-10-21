@@ -15,11 +15,11 @@ class VideoAssemblerAssets:
         self.asset_file_parent = asset_file_path.parent
         self.asset_file_path = asset_file_path
         self.final_sub_videos: list[Path] = []
-        self.video_ending_narrators: list[Path] = []
+        self.video_ending: Path = None
 
         self._load_assets_from_file()
 
-    def __validate_asset_path(self, asset_path: Path) -> Path:
+    def _validate_asset_path(self, asset_path: Path) -> Path:
         """
         Validate and resolve asset path, ensuring it's absolute.
         Returns the validated path or raises ValueError for invalid paths.
@@ -46,7 +46,7 @@ class VideoAssemblerAssets:
             path = (self.asset_file_parent / path).resolve(strict=False)
 
         # Now validate as absolute path
-        validated_path = self.__validate_asset_path(path)
+        validated_path = self._validate_asset_path(path)
         return validated_path
 
     def _convert_from_absolute_to_relative(self, path: Path) -> Path:
@@ -73,6 +73,12 @@ class VideoAssemblerAssets:
                         self._convert_from_relative_to_absolute(video_value_path)
                         if video_value_path
                         else None
+                    )
+
+                video_ending_value = data.get("video_ending")
+                if video_ending_value:
+                    self.video_ending = self._convert_from_relative_to_absolute(
+                        Path(video_ending_value)
                     )
 
                 self.save_assets_to_file()
@@ -132,7 +138,12 @@ class VideoAssemblerAssets:
 
                     assets.append(videos)
 
-                data = {"assets": assets}
+                data = {
+                    "video_ending": (
+                        str(self.video_ending) if self.video_ending else None
+                    ),
+                    "assets": assets,
+                }
                 json.dump(data, file, indent=4)
             logger.trace(f"Assets saved with {len(assets)} scene assets")
         except IOError as e:
@@ -146,7 +157,7 @@ class VideoAssemblerAssets:
         """Set video file path for a specific scene with security validation."""
         try:
             # Validate the path for security
-            validated_path = self.__validate_asset_path(video_file_path)
+            validated_path = self._validate_asset_path(video_file_path)
 
             ensure_collection_index_exists(self.final_sub_videos, scene_index)
             self.final_sub_videos[scene_index] = validated_path
@@ -156,6 +167,19 @@ class VideoAssemblerAssets:
             self.save_assets_to_file()
         except ValueError as e:
             logger.error(f"Failed to set video for scene {scene_index + 1}: {e}")
+            raise
+
+    def set_video_ending(self, video_file_path: Path) -> None:
+        """Set the video ending asset with security validation."""
+        try:
+            # Validate the path for security
+            validated_path = self._validate_asset_path(video_file_path)
+
+            self.video_ending = validated_path
+            logger.debug(f"Set video ending: {validated_path.name}")
+            self.save_assets_to_file()
+        except ValueError as e:
+            logger.error(f"Failed to set video ending: {e}")
             raise
 
     def clear_scene_assets(self, scene_index: int) -> None:

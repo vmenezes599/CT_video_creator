@@ -129,10 +129,6 @@ class NarratorRecipe:
                 f"Error saving narrator recipe to {self.recipe_path.name}: {e}"
             )
 
-    def __len__(self) -> int:
-        """Return the number of narrator recipes."""
-        return len(self.narrator_data)
-
-    def __getitem__(self, index: int) -> ZonosTTSRecipe:
-        """Get narrator recipe by index."""
-        return self.narrator_data[index]
+    def is_complete(self) -> bool:
+        """Check if the narrator recipe is complete."""
+        return len(self.narrator_data) > 0

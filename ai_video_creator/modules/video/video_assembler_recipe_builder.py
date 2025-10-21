@@ -8,6 +8,7 @@ from ai_video_creator.media_effects.effects_map import (
 )
 
 from ai_video_creator.modules.narrator import NarratorAssets
+from ai_video_creator.modules.narrator import NarratorRecipe
 from ai_video_creator.modules.image import ImageAssets
 
 from .video_assembler_recipe import (
@@ -25,16 +26,17 @@ class VideoAssemblerRecipeBuilder:
         self,
         video_creator_paths: VideoCreatorPaths,
     ):
-        """Initialize MediaEffectsManager with story folder and chapter index."""
+        """Initialize VideoAssemblerRecipeBuilder with story folder and chapter index."""
 
         self._paths = video_creator_paths
 
         logger.info(
-            f"Initializing MediaEffectsManager for story: {video_creator_paths.story_folder.name},"
+            f"Initializing VideoAssemblerRecipeBuilder for story: {video_creator_paths.story_folder.name},"
             f" chapter: {video_creator_paths.chapter_index + 1}"
         )
 
         # Load separate narrator and image assets
+        self.narrator_recipe = NarratorRecipe(video_creator_paths)
         self.narrator_assets = NarratorAssets(video_creator_paths.narrator_asset_file)
         self.image_assets = ImageAssets(video_creator_paths.image_asset_file)
 
@@ -46,10 +48,12 @@ class VideoAssemblerRecipeBuilder:
                 "Video assets are incomplete. Please ensure all required assets are present."
             )
 
-        self.video_assembler_recipe = VideoAssemblerRecipe(video_creator_paths)
+        if not self.narrator_recipe.is_complete():
+            raise ValueError(
+                "Narrator recipe is incomplete. Please ensure narrator data is present."
+            )
 
-        # Ensure video_effects lists have the same size as assets
-        self._synchronize_effects_with_assets()
+        self.video_assembler_recipe = VideoAssemblerRecipe(video_creator_paths)
 
         # Only add default values if no effects were loaded
         if not self.video_assembler_recipe.is_complete():
@@ -57,7 +61,7 @@ class VideoAssemblerRecipeBuilder:
 
         self.video_assembler_recipe.save_to_file()
 
-        logger.debug("MediaEffectsManager initialized.")
+        logger.debug("VideoAssemblerRecipeBuilder initialized.")
 
     def _synchronize_effects_with_assets(self):
         """Ensure video_effects lists have the same size as assets."""
@@ -76,6 +80,7 @@ class VideoAssemblerRecipeBuilder:
         logger.info("Adding default effect values")
 
         self.video_assembler_recipe.clear()
+        self._synchronize_effects_with_assets()
 
         if self.video_assembler_recipe.len_narrator_effects() > 0:
             self.video_assembler_recipe.add_narrator_effect(
@@ -102,6 +107,9 @@ class VideoAssemblerRecipeBuilder:
             "Thank you so much for watching! We hope to see you in the next episode.",
             "If you enjoyed this video, please like and subscribe for more content. Leave a comment below to let us know your thoughts.",
         ]
+        ending.narrator_clone_voice = self.narrator_recipe.narrator_data[
+            0
+        ].clone_voice_path
         ending.ending_overlay_start_narrator_index = 1
         ending.ending_overlay_asset = VideoEndingRecipe.DEFAULT_ENDING_OVERLAY_ASSET
         ending.ending_start_delay_seconds = 1.0

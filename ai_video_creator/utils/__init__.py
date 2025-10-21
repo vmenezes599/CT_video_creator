@@ -21,6 +21,7 @@ from .ffmpeg_wrapper import (
     extend_audio_to_duration,
     burn_subtitles_to_video,
     get_audio_duration,
+    VideoBlitPosition
 )
 from .video_creator_paths import VideoCreatorPaths
 
@@ -41,6 +42,7 @@ __all__ = [
     "burn_subtitles_to_video",
     "get_audio_duration",
     "VideoCreatorPaths",
+    "VideoBlitPosition",
     "safe_copy",
     "safe_move",
 ]

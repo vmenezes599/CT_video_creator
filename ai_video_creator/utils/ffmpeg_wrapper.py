@@ -1164,7 +1164,7 @@ class VideoBlitPosition(str, Enum):
 
 
 def blit_overlay_video_onto_main_video(
-    outro_video: Path,
+    overlay_video: Path,
     main_video: Path,
     output_path: Path,
     start_time_seconds: int = 10,
@@ -1173,7 +1173,7 @@ def blit_overlay_video_onto_main_video(
     chroma_color: str = "0x00FF00",
     similarity: float = 0.25,
     blend: float = 0.05,
-    corner_scale_percent: float = 0.30,
+    scale_percent: float = 0.30,
     max_repeats: int | None = None,
     match_fps: bool = True,
     outro_gain: float = 1.0,
@@ -1218,18 +1218,18 @@ def blit_overlay_video_onto_main_video(
     CORNER_MARGIN_X = 20  # pixels from edge
     CORNER_MARGIN_Y = 20  # pixels from edge
 
-    outro_video = Path(outro_video)
+    overlay_video = Path(overlay_video)
     main_video = Path(main_video)
     output_path = Path(output_path)
 
     # Validate inputs exist
-    if not outro_video.exists():
-        raise FileNotFoundError(f"Intro video not found: {outro_video}")
+    if not overlay_video.exists():
+        raise FileNotFoundError(f"Intro video not found: {overlay_video}")
     if not main_video.exists():
         raise FileNotFoundError(f"Main video not found: {main_video}")
 
     logger.info(f"Blitting intro video onto main video at position: {position}")
-    logger.debug(f"Intro: {outro_video.name}, Main: {main_video.name}")
+    logger.debug(f"Intro: {overlay_video.name}, Main: {main_video.name}")
 
     # Probe main video
     try:
@@ -1273,10 +1273,10 @@ def blit_overlay_video_onto_main_video(
 
     # Probe intro video
     try:
-        intro_probe = _probe(outro_video)
+        intro_probe = _probe(overlay_video)
     except Exception as e:
         logger.error(f"Failed to probe intro video: {e}")
-        raise RuntimeError(f"Cannot probe intro video: {outro_video}") from e
+        raise RuntimeError(f"Cannot probe intro video: {overlay_video}") from e
 
     intro_fps, intro_duration = _fps_and_duration(intro_probe)
 
@@ -1284,7 +1284,7 @@ def blit_overlay_video_onto_main_video(
         (s for s in intro_probe["streams"] if s["codec_type"] == "video"), None
     )
     if not intro_video_stream:
-        raise RuntimeError(f"No video stream found in intro video: {outro_video}")
+        raise RuntimeError(f"No video stream found in intro video: {overlay_video}")
 
     intro_width = int(intro_video_stream["width"])
     intro_height = int(intro_video_stream["height"])
@@ -1330,7 +1330,7 @@ def blit_overlay_video_onto_main_video(
         # Corner: scale to corner_scale_percent of smallest main dimension
         # This preserves aspect ratio and ensures intro fits
         min_main_dim = min(main_display_width, main_height)
-        target_size = int(min_main_dim * corner_scale_percent)
+        target_size = int(min_main_dim * scale_percent)
 
         intro_aspect = intro_width / intro_height
         if intro_aspect > 1.0:
@@ -1358,7 +1358,7 @@ def blit_overlay_video_onto_main_video(
 
         logger.debug(
             f"Corner {position}: scaled to {target_width}x{target_height} "
-            f"({corner_scale_percent*100:.0f}% of min dimension, AR preserved)"
+            f"({scale_percent*100:.0f}% of min dimension, AR preserved)"
         )
 
     # Build list of start times for repeated overlays
@@ -1501,7 +1501,7 @@ def blit_overlay_video_onto_main_video(
 
     # Input files
     cmd.extend(["-i", str(main_video)])
-    cmd.extend(["-i", str(outro_video)])
+    cmd.extend(["-i", str(overlay_video)])
 
     # Filter complex with audio handling
     if intro_has_audio and main_has_audio:
