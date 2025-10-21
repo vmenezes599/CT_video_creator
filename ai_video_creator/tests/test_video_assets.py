@@ -19,7 +19,7 @@ class TestVideoAssetsFile:
         assets = SubVideoAssets(asset_file)
 
         assert assets.asset_file_path == asset_file
-        assert assets.assembled_sub_video == []
+        assert assets.assembled_sub_videos == []
         assert assets.sub_video_assets == []
 
     def test_assets_with_data(self, tmp_path):
@@ -40,10 +40,10 @@ class TestVideoAssetsFile:
         assets.set_scene_video(1, video2_path)
         assets.set_scene_sub_video(1, 0, sub_video2_0_path)
 
-        assert len(assets.assembled_sub_video) == 2
+        assert len(assets.assembled_sub_videos) == 2
         assert len(assets.sub_video_assets) == 2
-        assert assets.assembled_sub_video[0] == video1_path.resolve()
-        assert assets.assembled_sub_video[1] == video2_path.resolve()
+        assert assets.assembled_sub_videos[0] == video1_path.resolve()
+        assert assets.assembled_sub_videos[1] == video2_path.resolve()
         assert len(assets.sub_video_assets[0]) == 2
         assert len(assets.sub_video_assets[1]) == 1
         assert assets.sub_video_assets[0][0] == sub_video1_0_path.resolve()
@@ -99,14 +99,14 @@ class TestVideoAssetsFile:
 
         assets = SubVideoAssets(asset_file)
 
-        assert len(assets.assembled_sub_video) == 2
+        assert len(assets.assembled_sub_videos) == 2
         assert len(assets.sub_video_assets) == 2
         # Paths should be resolved relative to tmp_path
         assert (
-            assets.assembled_sub_video[0] == (tmp_path / "loaded/video1.mp4").resolve()
+            assets.assembled_sub_videos[0] == (tmp_path / "loaded/video1.mp4").resolve()
         )
         assert (
-            assets.assembled_sub_video[1] == (tmp_path / "loaded/video2.mp4").resolve()
+            assets.assembled_sub_videos[1] == (tmp_path / "loaded/video2.mp4").resolve()
         )
         assert len(assets.sub_video_assets[0]) == 2
         assert len(assets.sub_video_assets[1]) == 1
@@ -128,7 +128,7 @@ class TestVideoAssetsFile:
         assets = SubVideoAssets(asset_file)
 
         # Should start with empty data
-        assert assets.assembled_sub_video == []
+        assert assets.assembled_sub_videos == []
         assert assets.sub_video_assets == []
 
         # The original corrupted file should be renamed to .old
@@ -187,15 +187,15 @@ class TestVideoAssetsFile:
         assets.set_scene_sub_video(3, 2, sub_video_path)
 
         # Both lists extend to max index + 1
-        assert len(assets.assembled_sub_video) == 6
+        assert len(assets.assembled_sub_videos) == 6
         assert len(assets.sub_video_assets) == 6
 
-        assert assets.assembled_sub_video[5] == video5_path.resolve()
+        assert assets.assembled_sub_videos[5] == video5_path.resolve()
         assert len(assets.sub_video_assets[3]) == 3
         assert assets.sub_video_assets[3][2] == sub_video_path.resolve()
 
-        assert assets.assembled_sub_video[0] is None
-        assert assets.assembled_sub_video[1] is None
+        assert assets.assembled_sub_videos[0] is None
+        assert assets.assembled_sub_videos[1] is None
         assert assets.sub_video_assets[0] == []
 
     def test_clear_scene_assets(self, tmp_path):
@@ -214,14 +214,14 @@ class TestVideoAssetsFile:
         assets.set_scene_sub_video(0, 1, sub2_path)
 
         # Verify they exist
-        assert assets.assembled_sub_video[0] == video_path.resolve()
+        assert assets.assembled_sub_videos[0] == video_path.resolve()
         assert len(assets.sub_video_assets[0]) == 2
 
         # Clear the scene
         assets.clear_scene_assets(0)
 
         # Video should be None, but sub_video_assets should remain
-        assert assets.assembled_sub_video[0] is None
+        assert assets.assembled_sub_videos[0] is None
         assert (
             len(assets.sub_video_assets[0]) == 2
         )  # Sub-videos not cleared by clear_scene_assets
@@ -257,7 +257,7 @@ class TestVideoAssetsFile:
 
         # Load fresh assets instance to test loading
         new_assets = SubVideoAssets(asset_file)
-        assert new_assets.assembled_sub_video[0] == video_file.resolve()
+        assert new_assets.assembled_sub_videos[0] == video_file.resolve()
         assert new_assets.sub_video_assets[0][0] == sub_video1_file.resolve()
         assert new_assets.sub_video_assets[0][1] == sub_video2_file.resolve()
 
@@ -274,7 +274,7 @@ class TestVideoAssetsFile:
 
         assets.set_scene_video(0, valid_video)
         assets.set_scene_sub_video(0, 0, valid_sub)
-        assert assets.assembled_sub_video[0] == valid_video.resolve()
+        assert assets.assembled_sub_videos[0] == valid_video.resolve()
         assert assets.sub_video_assets[0][0] == valid_sub.resolve()
 
         # Valid absolute paths within subdirectories should work
@@ -287,7 +287,7 @@ class TestVideoAssetsFile:
 
         assets.set_scene_video(1, subdir_video)
         assets.set_scene_sub_video(1, 0, subdir_sub)
-        assert assets.assembled_sub_video[1] == subdir_video.resolve()
+        assert assets.assembled_sub_videos[1] == subdir_video.resolve()
         assert assets.sub_video_assets[1][0] == subdir_sub.resolve()
 
         # Absolute paths outside the asset directory should raise ValueError

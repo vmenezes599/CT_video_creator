@@ -15,6 +15,7 @@ class VideoAssemblerAssets:
         self.asset_file_parent = asset_file_path.parent
         self.asset_file_path = asset_file_path
         self.final_sub_videos: list[Path] = []
+        self.video_ending_narrators: list[Path] = []
 
         self._load_assets_from_file()
 

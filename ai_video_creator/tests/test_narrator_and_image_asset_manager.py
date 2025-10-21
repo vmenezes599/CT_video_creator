@@ -137,7 +137,7 @@ class TestNarratorAndImageAssetManager:
         manager.narrator_builder.narrator_assets.save_assets_to_file()
         manager.image_builder.image_assets.save_assets_to_file()
 
-        narrator_asset_file = manager.narrator_builder.narrator_assets.asset_file_path
+        narrator_asset_file = manager.narrator_builder.narrator_assets._asset_file_path
         image_asset_file = manager.image_builder.image_assets.asset_file_path
         assert narrator_asset_file.exists()
         assert image_asset_file.exists()

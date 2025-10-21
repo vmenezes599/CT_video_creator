@@ -13,8 +13,9 @@ class NarratorAssets:
 
     def __init__(self, asset_file_path: Path):
         """Initialize NarratorAssets with file path."""
-        self.asset_file_parent = asset_file_path.parent.resolve()
-        self.asset_file_path = asset_file_path
+        self._asset_file_parent = asset_file_path.parent.resolve()
+        self._asset_file_path = asset_file_path
+
         self.narrator_assets: list[Path] = []
 
         self._load_assets_from_file()
@@ -43,7 +44,7 @@ class NarratorAssets:
     def convert_from_relative_to_absolute(self, path: Path) -> Path:
         """Convert a possibly relative path to an absolute path based on the asset file parent directory."""
         if not path.is_absolute():
-            path = (self.asset_file_parent / path).resolve(strict=False)
+            path = (self._asset_file_parent / path).resolve(strict=False)
 
         # Now validate as absolute path
         validated_path = self.__validate_asset_path(path)
@@ -51,13 +52,13 @@ class NarratorAssets:
 
     def _convert_from_absolute_to_relative(self, path: Path) -> Path:
         """Convert an absolute path to a relative path based on the asset file parent directory."""
-        return path.relative_to(self.asset_file_parent)
+        return path.relative_to(self._asset_file_parent)
 
     def _load_assets_from_file(self):
         """Load assets from JSON file with security validation."""
         try:
-            logger.debug(f"Loading narrator assets from: {self.asset_file_path.name}")
-            with open(self.asset_file_path, "r", encoding="utf-8") as file:
+            logger.debug(f"Loading narrator assets from: {self._asset_file_path.name}")
+            with open(self._asset_file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
 
             self.narrator_assets = []
@@ -79,19 +80,19 @@ class NarratorAssets:
 
         except json.JSONDecodeError:
             logger.error(
-                f"Error decoding JSON from {self.asset_file_path.name} - renaming to .old and starting with empty assets"
+                f"Error decoding JSON from {self._asset_file_path.name} - renaming to .old and starting with empty assets"
             )
             # Rename corrupted file to .old for backup
-            old_file_path = Path(str(self.asset_file_path) + ".old")
-            if self.asset_file_path.exists():
-                self.asset_file_path.rename(old_file_path)
+            old_file_path = Path(str(self._asset_file_path) + ".old")
+            if self._asset_file_path.exists():
+                self._asset_file_path.rename(old_file_path)
             self.narrator_assets = []
             # Create a new empty file
             self.save_assets_to_file()
 
         except FileNotFoundError:
             logger.debug(
-                f"Narrator asset file not found: {self.asset_file_path.name} - starting with empty assets"
+                f"Narrator asset file not found: {self._asset_file_path.name} - starting with empty assets"
             )
             self.narrator_assets = []
 
@@ -111,14 +112,14 @@ class NarratorAssets:
                     )
 
             data = {"assets": narrator_assets_data}
-            with open(self.asset_file_path, "w", encoding="utf-8") as file:
+            with open(self._asset_file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
             logger.trace(
                 f"Narrator assets saved with {len(narrator_assets_data)} items"
             )
         except IOError as e:
             logger.error(
-                f"Error saving narrator assets to {self.asset_file_path.name}: {e}"
+                f"Error saving narrator assets to {self._asset_file_path.name}: {e}"
             )
 
     def ensure_index_exists(self, scene_index: int) -> None:

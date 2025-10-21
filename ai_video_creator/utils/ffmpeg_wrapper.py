@@ -1061,6 +1061,100 @@ def concatenate_videos_remove_last_frame_except_last(
     raise RuntimeError("Concatenation failed after all retries")
 
 
+def concatenate_audio_with_silence_inbetween(
+    audio_chunks: list[str | Path],
+    output_path: str | Path,
+    silence_duration_seconds: float = 1.0,
+) -> Path:
+    """
+    Concatenate audio chunks with silence between them.
+
+    Args:
+        audio_chunks: List of paths to audio files (must have same format/sample rate)
+        output_path: Path for the output concatenated audio file
+        silence_duration_seconds: Duration of silence to insert between chunks (default: 1.0)
+
+    Returns:
+        Path to the concatenated audio file
+
+    Raises:
+        ValueError: If audio_chunks is empty
+        FileNotFoundError: If any input audio file doesn't exist
+    """
+    if not audio_chunks:
+        raise ValueError("audio_chunks cannot be empty")
+
+    audio_chunks = [Path(chunk) for chunk in audio_chunks]
+    output_path = Path(output_path)
+
+    # Validate all input files exist
+    for i, chunk in enumerate(audio_chunks):
+        if not chunk.exists():
+            raise FileNotFoundError(f"Audio chunk {i+1} not found: {chunk}")
+
+    # If only one chunk, just copy it
+    if len(audio_chunks) == 1:
+        logger.info("Only one audio chunk, copying to output")
+        shutil.copy2(audio_chunks[0], output_path)
+        return output_path
+
+    logger.info(
+        f"Concatenating {len(audio_chunks)} audio chunks with {silence_duration_seconds}s silence"
+    )
+
+    # Build filter_complex for concatenation with silence
+    # Strategy: Use adelay to add silence after each chunk (except the last)
+    filter_parts = []
+
+    # Process each audio input: for all but last, add silence at the end
+    for i in range(len(audio_chunks)):
+        if i < len(audio_chunks) - 1:
+            # Add padding (silence) at the end of this chunk
+            filter_parts.append(f"[{i}:a]apad=pad_dur={silence_duration_seconds}[a{i}]")
+        else:
+            # Last chunk doesn't need padding
+            filter_parts.append(f"[{i}:a]anull[a{i}]")
+
+    # Concatenate all processed chunks
+    concat_inputs = "".join([f"[a{i}]" for i in range(len(audio_chunks))])
+    filter_parts.append(f"{concat_inputs}concat=n={len(audio_chunks)}:v=0:a=1[outa]")
+
+    filter_complex = ";".join(filter_parts)
+
+    # Build FFmpeg command
+    cmd = ["ffmpeg", "-y"]
+
+    # Add all input files
+    for chunk in audio_chunks:
+        cmd.extend(["-i", str(chunk)])
+
+    # Add filter_complex
+    cmd.extend(["-filter_complex", filter_complex])
+
+    # Map output and encode
+    cmd.extend(
+        [
+            "-map",
+            "[outa]",
+            "-c:a",
+            "libmp3lame",
+            "-b:a",
+            "192k",
+            "-ar",
+            "48000",
+            "-ac",
+            "2",
+            str(output_path),
+        ]
+    )
+
+    logger.debug(f"Running audio concatenation: {' '.join(cmd)}")
+    _run_ffmpeg_trace(cmd)
+
+    logger.info(f"Audio concatenation completed: {output_path.name}")
+    return output_path
+
+
 class VideoBlitPosition(str, Enum):
     TOP_LEFT = "top-left"
     TOP_RIGHT = "top-right"
@@ -1069,7 +1163,7 @@ class VideoBlitPosition(str, Enum):
     CENTER = "center"
 
 
-def blit_outro_video_onto_main_video(
+def blit_overlay_video_onto_main_video(
     outro_video: Path,
     main_video: Path,
     output_path: Path,

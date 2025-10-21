@@ -56,7 +56,9 @@ class VideoCreatorPaths:
         self.video_assembler_asset_file = (
             self.video_chapter_folder / "video_assembler_assets.json"
         )
-        self.video_effects_file = self.video_chapter_folder / "video_effects.json"
+        self.video_assembler_recipe_file = (
+            self.video_chapter_folder / "video_assembler_recipe.json"
+        )
         self.video_output_file = self.video_chapter_folder / "output.mp4"
 
     def mask_asset_path(self, asset_path: Path):

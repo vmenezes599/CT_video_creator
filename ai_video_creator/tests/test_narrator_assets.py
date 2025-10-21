@@ -20,7 +20,7 @@ class TestNarratorAssets:
         asset_file = tmp_path / "test_narrator_assets.json"
         assets = NarratorAssets(asset_file)
 
-        assert assets.asset_file_path == asset_file
+        assert assets._asset_file_path == asset_file
         assert len(assets.narrator_assets) == 0
 
     def test_narrator_assets_load_existing_file(self, tmp_path):

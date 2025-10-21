@@ -52,14 +52,14 @@ class SubVideoAssetManager:
         logger.debug(f"Synchronizing assets with recipe - target size: {recipe_size}")
 
         ensure_collection_index_exists(
-            self.video_assets.assembled_sub_video, recipe_size - 1
+            self.video_assets.assembled_sub_videos, recipe_size - 1
         )
         ensure_collection_index_exists(
             self.video_assets.sub_video_assets, recipe_size - 1, []
         )
 
         logger.debug(
-            f"Asset synchronization completed - video assets: {len(self.video_assets.assembled_sub_video)}"
+            f"Asset synchronization completed - video assets: {len(self.video_assets.assembled_sub_videos)}"
         )
 
     def _set_next_recipe_media_path_and_color_match(
@@ -218,7 +218,7 @@ class SubVideoAssetManager:
 
         valid_video_assets = [
             asset
-            for asset in self.video_assets.assembled_sub_video
+            for asset in self.video_assets.assembled_sub_videos
             if asset is not None
         ]
         valid_sub_video_assets = [

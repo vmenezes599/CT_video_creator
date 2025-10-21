@@ -46,8 +46,8 @@ class SubVideoRecipeBuilder:
         self.__image_assets = ImageAssets(self._paths.image_asset_file)
         self._recipe = None
 
-        self._min_sub_videos = 1
-        self._max_sub_videos = 5
+        self._min_sub_videos = 2
+        self._max_sub_videos = 8
         self._default_sub_video_duration_seconds = 5
 
     def _verify_recipe_against_prompt(self) -> None:
@@ -82,7 +82,7 @@ class SubVideoRecipeBuilder:
             audio_duration / self._default_sub_video_duration_seconds
         )
 
-        return min(sub_video_count, self._max_sub_videos)
+        return max(self._min_sub_videos, min(sub_video_count, self._max_sub_videos))
 
     def _run_script_generator_parallel(self):
         """Run the scene script generator in parallel for all prompts."""

@@ -121,7 +121,7 @@ class TestVideoAssetManager:
         manager = SubVideoAssetManager(video_creator_paths)
 
         assert len(manager.recipe.video_data) == 2
-        assert len(manager.video_assets.assembled_sub_video) == 2
+        assert len(manager.video_assets.assembled_sub_videos) == 2
         assert len(manager.video_assets.sub_video_assets) == 2
 
         # Initially, no videos should exist
@@ -216,8 +216,8 @@ class TestVideoAssetManager:
 
         manager = SubVideoAssetManager(video_creator_paths)
 
-        assert manager.video_assets.assembled_sub_video[0] == video1
-        assert manager.video_assets.assembled_sub_video[1] == video2
+        assert manager.video_assets.assembled_sub_videos[0] == video1
+        assert manager.video_assets.assembled_sub_videos[1] == video2
         assert len(manager.video_assets.sub_video_assets[0]) == 2
         assert manager.video_assets.sub_video_assets[0][0] == sub1
         assert manager.video_assets.sub_video_assets[0][1] == sub2
@@ -256,14 +256,14 @@ class TestVideoAssetManager:
 
         manager = SubVideoAssetManager(video_creator_paths)
 
-        assert len(manager.video_assets.assembled_sub_video) == 2
+        assert len(manager.video_assets.assembled_sub_videos) == 2
         assert len(manager.video_assets.sub_video_assets) == 2
 
-        assert manager.video_assets.assembled_sub_video[0] == video1
+        assert manager.video_assets.assembled_sub_videos[0] == video1
         assert len(manager.video_assets.sub_video_assets[0]) == 1
         assert manager.video_assets.sub_video_assets[0][0] == sub1
 
-        assert manager.video_assets.assembled_sub_video[1] is None
+        assert manager.video_assets.assembled_sub_videos[1] is None
         assert manager.video_assets.sub_video_assets[1] == []
 
     def test_cleanup_assets_removes_unused_files(self, video_creator_paths):
@@ -490,7 +490,7 @@ class TestVideoAssetManager:
             assert len(missing_videos) == 0  # All videos should be generated
 
             # Verify files were actually created through the business logic
-            assert len(manager.video_assets.assembled_sub_video) == 2
+            assert len(manager.video_assets.assembled_sub_videos) == 2
             assert len(manager.video_assets.sub_video_assets) == 2
             assert len(manager.video_assets.sub_video_assets[0]) > 0
             assert len(manager.video_assets.sub_video_assets[1]) > 0
@@ -522,7 +522,7 @@ class TestVideoAssetManager:
 
             # Test that assembled videos were created
             for scene_idx in range(2):
-                assembled_video = manager.video_assets.assembled_sub_video[scene_idx]
+                assembled_video = manager.video_assets.assembled_sub_videos[scene_idx]
                 assert (
                     assembled_video is not None
                 ), f"Scene {scene_idx} should have assembled video"

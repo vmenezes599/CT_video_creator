@@ -16,6 +16,7 @@ from ai_video_creator.ComfyUI_automation import (
 )
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
+from ai_video_creator.generators import ZonosTTSRecipe
 from ai_video_creator.generators.ComfyUI_automation import (
     VideoUpscaleFrameInterpWorkflow,
 )
@@ -25,9 +26,10 @@ from ai_video_creator.utils import (  # pylint: disable=unused-import
     create_video_segment_from_sub_video_and_audio_freeze_last_frame,
     create_video_segment_from_sub_video_and_audio_reverse_video,
     create_video_segment_from_image_and_audio,
+    concatenate_audio_with_silence_inbetween,
     concatenate_videos_with_fade_in_out,
     concatenate_videos_with_reencoding,
-    blit_outro_video_onto_main_video,
+    blit_overlay_video_onto_main_video,
     concatenate_videos_no_reencoding,
     reencode_to_reference_basic,
     safe_move,
@@ -35,7 +37,7 @@ from ai_video_creator.utils import (  # pylint: disable=unused-import
 )
 
 from .sub_video_assets import SubVideoAssets
-from .video_effect_manager import MediaEffects
+from .video_assembler_recipe import VideoAssemblerRecipe, VideoEndingRecipe
 from .video_assembler_assets import VideoAssemblerAssets
 
 
@@ -67,7 +69,7 @@ class VideoAssembler:
             self._paths.video_assembler_asset_file
         )
 
-        self.effects = MediaEffects(self._paths)
+        self.video_assembler_recipe = VideoAssemblerRecipe(self._paths)
 
         self.output_path = self._paths.video_output_file
         self._temp_files = []
@@ -142,48 +144,13 @@ class VideoAssembler:
 
         return raw_video_path
 
-    def _apply_image_effects(self, image_file_paths: list[Path]) -> list[Path]:
-        """
-        Apply media effects to the image files.
-        """
-        processed_images: list[Path] = []
-        for image_path, image_effects in zip(
-            image_file_paths, self.effects.assets_effects.image_effects
-        ):
-            processed_image_path = image_path
-            for effect in image_effects:
-                if effect:
-                    processed_image_path = effect.apply(processed_image_path)
-                    self._temp_files.append(processed_image_path)
-            processed_images.append(processed_image_path)
-
-        return processed_images
-
-    def _apply_video_effects(self, video_file_paths: list[Path]) -> list[Path]:
-        """
-        Apply media effects to the video files.
-        """
-        processed_videos: list[Path] = []
-        for image_path, image_effects in zip(
-            video_file_paths, self.effects.assets_effects.image_effects
-        ):
-            processed_video_path = image_path
-            for effect in image_effects:
-                if effect:
-                    processed_video_path = effect.apply(processed_video_path)
-                    self._temp_files.append(processed_video_path)
-            processed_videos.append(processed_video_path)
-
-        return processed_videos
-
     def _apply_narrator_effects(self, narrator_file_paths: list[Path]) -> list[Path]:
         """
         Apply media effects to the audio files.
         """
         processed_narrators: list[Path] = []
-        for audio_path, audio_effects in zip(
-            narrator_file_paths, self.effects.assets_effects.narrator_effects
-        ):
+        for index, audio_path in enumerate(narrator_file_paths):
+            audio_effects = self.video_assembler_recipe.get_narrator_effects(index)
             processed_narrator_path = audio_path
             for effect in audio_effects:
                 if effect:
@@ -192,37 +159,6 @@ class VideoAssembler:
             processed_narrators.append(processed_narrator_path)
 
         return processed_narrators
-
-    def _create_video_segments_from_images(self) -> list[Path]:
-        """
-        Create video segments from the assets defined in the video recipe.
-        """
-
-        # Extract data from video recipe
-        narrator_file_paths = self.narrator_assets.narrator_assets
-        image_file_paths = self.image_assets.image_assets
-
-        logger.info(
-            f"Processing {len(narrator_file_paths)} audio files and {len(image_file_paths)} image files"
-        )
-
-        processed_narrators = self._apply_narrator_effects(narrator_file_paths)
-        processed_images = self._apply_image_effects(image_file_paths)
-
-        video_segments = []
-        for i, (image_path, audio_path) in enumerate(
-            zip(processed_images, processed_narrators), 1
-        ):
-            logger.info(
-                f"Processing segment {i}/{len(narrator_file_paths)}: {Path(image_path).name}"
-            )
-
-            video_segment = self._combine_image_with_audio(image_path, audio_path)
-            video_segments.append(video_segment)
-
-        logger.info(f"Created {len(video_segments)} video segments")
-
-        return video_segments
 
     def _move_asset_to_output_path(self, target_path: Path, asset_path: Path) -> Path:
         """Move asset to the database folder and return the new path."""
@@ -284,83 +220,40 @@ class VideoAssembler:
 
         return processed_videos_paths
 
-    def _upscale_and_frame_interp_sub_videos(
-        self, sub_video_file_paths: list[list[Path]]
+    def _combine_video_with_audio(
+        self, video_segments: list[Path], audio_segments: list[Path]
     ) -> list[Path]:
-        """
-        Upscale and apply frame interpolation to the video files if needed.
-        """
-        logger.info(
-            f"Upscaling and frame interpolating {len(sub_video_file_paths)} videos"
-        )
-
-        scalled_fragments: list[Path] = []
-
-        for sublist in sub_video_file_paths:
-            logger.info(f"Sublist with {len(sublist)} videos")
-
-            scalled_sub_videos = self._upscale_and_frame_interp_video_list(sublist)
-
-            first_in_sublist = scalled_sub_videos[0]
-            output_file_path = first_in_sublist.with_stem(
-                f"{first_in_sublist.stem}_upscaled_and_concatenated"
-            )
-            contatenated_scalled_sub_videos = concatenate_videos_no_reencoding(
-                video_segments=scalled_sub_videos,
-                output_path=output_file_path,
-            )
-            scalled_fragments.append(contatenated_scalled_sub_videos)
-            self._temp_files.append(contatenated_scalled_sub_videos)
-
-        return scalled_fragments
-
-    def _create_video_segments_from_sub_videos(self):
         """
         Create video segments from the sub-videos defined in the video recipe.
         """
 
-        # Extract data from video recipe
-        narrator_file_paths = self.narrator_assets.narrator_assets
-        sub_video_file_paths = self.video_assets.sub_video_assets
-        video_file_paths = self.video_assets.assembled_sub_video
+        processed_narrators = self._apply_narrator_effects(audio_segments)
 
-        logger.info(
-            f"Processing {len(narrator_file_paths)} audio files and {len(sub_video_file_paths)} video files"
-        )
-
-        # processed_videos = self._upscale_and_frame_interp_sub_videos(
-        #    sub_video_file_paths
-        # )
-        processed_videos = self._upscale_and_frame_interp_video_list(video_file_paths)
-
-        processed_videos = self._apply_video_effects(processed_videos)
-        processed_narrators = self._apply_narrator_effects(narrator_file_paths)
-
-        video_segments = []
+        results = []
         for i, (video_path, audio_path) in enumerate(
-            zip(processed_videos, processed_narrators), 1
+            zip(video_segments, processed_narrators), 1
         ):
             logger.info(
-                f"Processing segment {i}/{len(narrator_file_paths)}: {Path(video_path).name}"
+                f"Processing segment {i}/{len(audio_segments)}: {Path(video_path).name}"
             )
 
             video_segment = self._combine_sub_video_with_audio(video_path, audio_path)
-            video_segments.append(video_segment)
+            results.append(video_segment)
 
-        logger.info(f"Created {len(video_segments)} video segments")
+        logger.info(f"Created {len(results)} video segments")
 
-        return video_segments
+        return results
 
     def _add_intro_video_segment(self, video_segments: list[Path]) -> list[Path]:
         """
         Add intro video segment to the list of video segments if defined.
         """
-        intro_effects = self.effects.intro_effects
-        if not intro_effects:
-            logger.info("No intro effects defined, skipping intro video segment.")
+        intro_recipe = self.video_assembler_recipe.get_video_intro_recipe()
+        if not intro_recipe:
+            logger.info("No intro recipe defined, skipping intro video segment.")
             return video_segments
 
-        intro_video_path = intro_effects.intro_asset
+        intro_video_path = intro_recipe.intro_asset
         if not intro_video_path or not intro_video_path.exists():
             logger.warning("Intro video path is invalid or does not exist.")
             return video_segments
@@ -377,16 +270,120 @@ class VideoAssembler:
         logger.info(f"Adding intro video segment: {intro_video_path.name}")
         return [reencoded_intro, *video_segments]
 
-    def _post_compose_effects(self, main_video_path: Path):
+    def _generate_ending_narrators(
+        self, ending_recipe: VideoEndingRecipe
+    ) -> list[Path]:
+        """
+        Generate ending narrators if they are missing.
+        """
+        logger.info("Generating ending narrators")
+
+        narrator_text_list = ending_recipe.narrator_text_list
+        clone_voice_path = None
+        seed = ending_recipe.seed
+
+        base_name = "ending_narrator"
+        output_path_base = self._paths.narrator_asset_folder / f"{base_name}.mp3"
+
+        generated_audio_paths = []
+        for index, narrator_text in enumerate(narrator_text_list):
+            recipe = ZonosTTSRecipe(
+                prompt=narrator_text, seed=seed, clone_voice_path=clone_voice_path
+            )
+            output_name = output_path_base.with_stem(f"base_name_{index + 1}")
+            tts_generator = ZonosTTSRecipe.GENERATOR_TYPE()
+            generated_audio = tts_generator.clone_text_to_speech(
+                recipe=recipe, output_file_path=output_name
+            )
+            generated_audio_paths.append(generated_audio)
+
+        logger.info("Finished generating ending narrators")
+
+        return generated_audio_paths
+
+    def _concatenate_ending_narrators(self, narrator_path_list: list[Path]) -> Path:
+        """
+        Concatenate ending narrators into a single audio file.
+        """
+        logger.info("Concatenating ending narrators")
+
+        concatenated_narrator_path = (
+            self._paths.narrator_asset_folder / "ending_narrator_concatenated.mp3"
+        )
+
+        concatenated_narrator_path = concatenate_audio_with_silence_inbetween(
+            narrator_path_list, concatenated_narrator_path
+        )
+
+        self._temp_files.append(concatenated_narrator_path)
+        logger.info("Finished concatenating ending narrators")
+        return concatenated_narrator_path
+
+    def _add_ending_video_segment(self, video_segments: list[Path]) -> list[Path]:
+        """
+        Add ending video segment to the list of video segments if defined.
+        """
+        ending_recipe = self.video_assembler_recipe.get_video_ending_recipe()
+        if not ending_recipe:
+            logger.info("No ending recipe defined, skipping ending video segment.")
+            return video_segments
+
+        if (
+            not ending_recipe.narrator_text_list
+            or len(ending_recipe.narrator_text_list) == 0
+        ):
+            logger.info("No ending narrator defined, skipping ending video segment.")
+            return video_segments
+
+        ending_video_path = ending_recipe.subvideo
+        if not ending_video_path or not ending_video_path.exists():
+            logger.warning("Ending video path 'None'. Setting to first video segment.")
+            ending_recipe.subvideo = video_segments[0]
+
+        ending_narrator_paths = self.video_assembler_assets.video_ending_narrators
+        if not ending_narrator_paths:
+            ending_narrator_paths = self._generate_ending_narrators(ending_recipe)
+
+        concatenated_narrator_path = self._concatenate_ending_narrators(
+            ending_narrator_paths
+        )
+
+        ending_sub_video = self._combine_sub_video_with_audio(
+            ending_video_path, concatenated_narrator_path
+        )
+
+        logger.info("Adding ending video segment.")
+        return [*video_segments, ending_sub_video]
+
+    def _pre_process(self) -> list[Path]:
+        """
+        Pre-process video segments before composition.
+        """
+        # Currently a placeholder for any pre-processing steps needed
+        logger.info("Pre-processing video segments before composition")
+
+        video_segments: list[Path] = self.video_assets.assembled_sub_videos
+        audio_segments: list[Path] = self.narrator_assets.narrator_assets
+
+        video_segments = self._upscale_and_frame_interp_video_list(video_segments)
+        video_segments = self._combine_video_with_audio(video_segments, audio_segments)
+
+        # Intro and ending are already in the right format
+        video_segments = self._add_intro_video_segment(video_segments)
+        video_segments = self._add_ending_video_segment(video_segments)
+
+        return video_segments
+
+    def _post_process(self, main_video_path: Path):
         """
         Apply post-compose effects to the final video.
         """
-        outro_effects = self.effects.outro_effects
-        if not outro_effects:
+        overlay_recipe = self.video_assembler_recipe.get_video_overlay_recipe()
+        if not overlay_recipe:
             logger.info("No outro effects defined, skipping post-compose effects.")
             return
 
-        outro_video_path = outro_effects.outro_asset
+        outro_video_path = overlay_recipe.overlay_asset
         if not outro_video_path or not outro_video_path.exists():
             logger.warning("Outro video path is invalid or does not exist.")
             return
@@ -396,7 +393,7 @@ class VideoAssembler:
 
         self._temp_files.append(main_video_path)
 
-        output_path = blit_outro_video_onto_main_video(
+        output_path = blit_overlay_video_onto_main_video(
             outro_video=outro_video_path,
             main_video=main_video_path,
             output_path=output_video_path,
@@ -415,13 +412,11 @@ class VideoAssembler:
 
         logger.info("Starting video assembly process")
 
-        # video_segments = self._create_video_segments_from_images()
-        video_segments = self._create_video_segments_from_sub_videos()
-        video_segments = self._add_intro_video_segment(video_segments)
+        video_segments = self._pre_process()
 
         output_file = self._compose(video_segments)
 
-        output_file = self._post_compose_effects(output_file)
+        output_file = self._post_process(output_file)
 
         _ = self._subtitle_generator.generate_subtitles_from_audio(output_file)
 
@@ -429,11 +424,10 @@ class VideoAssembler:
 
         logger.info(f"Video assembly completed successfully: {output_file.name}")
 
-    def clean_unused_assets(self):
-        """Clean up video assets for a specific story folder."""
-
-        logger.info("Starting video asset cleanup process")
-
+    def _clean_assembler_assets(self) -> None:
+        """
+        Clean up video assembler assets.
+        """
         assets_to_keep = [
             asset
             for asset in self.video_assembler_assets.final_sub_videos
@@ -446,5 +440,32 @@ class VideoAssembler:
                     continue
                 file.unlink()
                 logger.info(f"Deleted asset file: {file}")
+
+    def _clean_assembler_narrator_assets(self) -> None:
+        """
+        Clean up video assembler narrator assets.
+        """
+        assets_to_keep = [
+            asset
+            for asset in self.video_assembler_assets.video_ending_narrators
+            if asset is not None
+        ] + [
+            asset for asset in self.narrator_assets.narrator_assets if asset is not None
+        ]
+
+        for file in self._paths.narrator_asset_folder.glob("*"):
+            if file.is_file():
+                if file in assets_to_keep:
+                    continue
+                file.unlink()
+                logger.info(f"Deleted asset file: {file}")
+
+    def clean_unused_assets(self):
+        """Clean up video assets for a specific story folder."""
+
+        logger.info("Starting video asset cleanup process")
+
+        self._clean_assembler_assets()
+        self._clean_assembler_narrator_assets()
 
         logger.info("Video asset cleanup process completed successfully")

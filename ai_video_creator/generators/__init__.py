@@ -24,6 +24,7 @@ from .description_generator import SceneScriptGenerator, FlorenceGenerator
 from .subtitle_generator import SubtitleGenerator
 
 __all__ = [
+    "ZonosTTSAudioGenerator",
     "FluxAIImageGenerator",
     "SceneScriptGenerator",
     "SubtitleGenerator",
@@ -35,6 +36,7 @@ __all__ = [
     "VideoRecipeBase",
     "ImageRecipeBase",
     "AudioRecipeBase",
+    "ZonosTTSRecipe",
     "WanRecipeBase",
     "WanI2VRecipe",
     "WanT2VRecipe",

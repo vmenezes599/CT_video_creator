@@ -4,7 +4,7 @@ from pathlib import Path
 from ai_video_creator.utils import (
     create_video_segment_from_sub_video_and_audio_freeze_last_frame,
     concatenate_videos_with_fade_in_out,
-    blit_outro_video_onto_main_video,
+    blit_overlay_video_onto_main_video,
 )
 
 
@@ -52,7 +52,7 @@ def run_blit_intro_video_onto_main_video():
     output_path = Path(
         "/home/vitor/projects/DATABASES/AI-Video-Default-Assets/logo/blitted_test.mp4"
     )
-    blit_outro_video_onto_main_video(outro_video_path, main_video_path, output_path)
+    blit_overlay_video_onto_main_video(outro_video_path, main_video_path, output_path)
 
 
 def main():
