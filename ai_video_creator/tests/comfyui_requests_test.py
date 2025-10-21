@@ -543,8 +543,8 @@ class TestComfyUIRequests:
             assert mock_submit.call_count == 2  # Should retry once
             assert mock_check_success.call_count == 2
             assert (
-                mock_sleep.call_count == 3
-            )  # Sleep between retries + sleep in _send_clean_memory_request + sleep after success
+                mock_sleep.call_count == 4
+            )  # Each attempt: sleep in _send_clean_memory_request (3s) + sleep delay_seconds
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     def test_process_single_workflow_request_exception_retry(
@@ -586,8 +586,8 @@ class TestComfyUIRequests:
             assert result == ["/output/retry_result.png"]
             assert mock_submit.call_count == 2
             assert (
-                mock_sleep.call_count == 3
-            )  # Sleep between retries + sleep in _send_clean_memory_request + sleep after success
+                mock_sleep.call_count == 4
+            )  # Each attempt: sleep in _send_clean_memory_request (3s) + sleep delay_seconds
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     def test_process_single_workflow_max_retries_exceeded(
@@ -611,8 +611,8 @@ class TestComfyUIRequests:
                 mock_submit.call_count == 2
             )  # Should try exactly max_retries_per_request times
             assert (
-                mock_sleep.call_count == 1
-            )  # Sleep between retries (not after last attempt)
+                mock_sleep.call_count == 3
+            )  # Attempt 1: _send_clean_memory_request (3s) + delay_seconds; Attempt 2: _send_clean_memory_request (3s) only
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     def test_process_single_workflow_no_history_entry(
@@ -649,5 +649,6 @@ class TestComfyUIRequests:
             assert (
                 mock_get_history.call_count == comfyui_requests.max_retries_per_request
             )
-            # When no history entry is found, it increments tries but does NOT sleep (sleep only happens in exception handlers)
-            assert mock_sleep.call_count == 0
+            # Each attempt: _send_clean_memory_request sleeps, plus delay_seconds for all but last attempt
+            # With max_retries=3: 3 sleeps from _send_clean_memory_request + 2 sleeps from delay_seconds = 5 total
+            assert mock_sleep.call_count == comfyui_requests.max_retries_per_request + (comfyui_requests.max_retries_per_request - 1)

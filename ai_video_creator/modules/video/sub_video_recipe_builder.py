@@ -46,7 +46,7 @@ class SubVideoRecipeBuilder:
         self.__image_assets = ImageAssets(self._paths.image_asset_file)
         self._recipe = None
 
-        self._min_sub_videos = 2
+        self._min_sub_videos = 3
         self._max_sub_videos = 8
         self._default_sub_video_duration_seconds = 5
 

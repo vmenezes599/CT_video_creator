@@ -132,3 +132,11 @@ class NarratorRecipe:
     def is_complete(self) -> bool:
         """Check if the narrator recipe is complete."""
         return len(self.narrator_data) > 0
+
+    def __len__(self) -> int:
+        """Return the number of narrator recipes."""
+        return len(self.narrator_data)
+
+    def __getitem__(self, index: int) -> ZonosTTSRecipe:
+        """Get narrator recipe by index."""
+        return self.narrator_data[index]

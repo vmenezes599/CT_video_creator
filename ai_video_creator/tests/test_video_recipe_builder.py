@@ -20,15 +20,17 @@ class TestVideoRecipeBuilder:
         user_folder = tmp_path / "user"
         story_name = "test_story"
         chapter_index = 0
-        
+
         # Create the directory structure
-        story_folder = user_folder / "stories" / story_name  # Fix: Add stories subfolder
+        story_folder = (
+            user_folder / "stories" / story_name
+        )  # Fix: Add stories subfolder
         story_folder.mkdir(parents=True)
-        
+
         # Create prompts folder and test prompt file
         prompts_folder = story_folder / "prompts"
         prompts_folder.mkdir()
-        
+
         chapter_prompt = {
             "prompts": [
                 {
@@ -50,7 +52,7 @@ class TestVideoRecipeBuilder:
 
         # Create VideoCreatorPaths instance
         paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
-        
+
         # Create the required asset files for SubVideoRecipeBuilder
         narrator_assets = {
             "assets": [
@@ -58,19 +60,19 @@ class TestVideoRecipeBuilder:
                 {"index": 2, "narrator": "assets/narrators/narrator_002.mp3"},
             ]
         }
-        
+
         image_assets = {
             "assets": [
                 {"index": 1, "image": "assets/images/image_001.jpg"},
                 {"index": 2, "image": "assets/images/image_002.jpg"},
             ]
         }
-        
+
         with open(paths.narrator_asset_file, "w", encoding="utf-8") as f:
             json.dump(narrator_assets, f)
         with open(paths.image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_assets, f)
-            
+
         return paths
 
     def test_recipe_builder_creates_correct_file(self, video_creator_paths):
@@ -92,7 +94,7 @@ class TestVideoRecipeBuilder:
                 "Scene script 2",
                 "Scene script 3",
             ]
-            
+
             builder = SubVideoRecipeBuilder(video_creator_paths)
             builder.create_video_recipe()
 
@@ -112,7 +114,7 @@ class TestVideoRecipeBuilder:
             for scene_index in range(2):
                 scene_data = saved_recipe["video_data"][scene_index]
                 assert scene_data["index"] == scene_index + 1
-                assert len(scene_data["recipe_list"]) == 2  # 2 because we have 2 narrator assets
+                assert len(scene_data["recipe_list"]) == 3
 
                 # First sub-video should have the mocked scene script
                 first_recipe = scene_data["recipe_list"][0]
@@ -126,7 +128,7 @@ class TestVideoRecipeBuilder:
         mock_scene_generator = patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
         )
-        
+
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
@@ -138,7 +140,7 @@ class TestVideoRecipeBuilder:
                 "Scene script 2",
                 "Scene script 3",
             ]
-            
+
             # Create first recipe
             builder1 = SubVideoRecipeBuilder(video_creator_paths)
             builder1.create_video_recipe()
@@ -174,8 +176,10 @@ class TestVideoRecipeBuilder:
         user_folder = tmp_path / "user"
         story_name = "three_prompt_story"
         chapter_index = 0
-        
-        story_folder = user_folder / "stories" / story_name  # Fix: Add stories subfolder
+
+        story_folder = (
+            user_folder / "stories" / story_name
+        )  # Fix: Add stories subfolder
         prompts_folder = story_folder / "prompts"
         prompts_folder.mkdir(parents=True)
 
@@ -205,7 +209,7 @@ class TestVideoRecipeBuilder:
 
         # Create VideoCreatorPaths and required assets
         video_creator_paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
-        
+
         narrator_assets = {
             "assets": [
                 {"index": 1, "narrator": "assets/narrators/narrator_001.mp3"},
@@ -213,7 +217,7 @@ class TestVideoRecipeBuilder:
                 {"index": 3, "narrator": "assets/narrators/narrator_003.mp3"},
             ]
         }
-        
+
         image_assets = {
             "assets": [
                 {"index": 1, "image": "assets/images/image_001.jpg"},
@@ -221,7 +225,7 @@ class TestVideoRecipeBuilder:
                 {"index": 3, "image": "assets/images/image_003.jpg"},
             ]
         }
-        
+
         with open(video_creator_paths.narrator_asset_file, "w", encoding="utf-8") as f:
             json.dump(narrator_assets, f)
         with open(video_creator_paths.image_asset_file, "w", encoding="utf-8") as f:
@@ -231,7 +235,7 @@ class TestVideoRecipeBuilder:
         mock_scene_generator = patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
         )
-        
+
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
@@ -243,7 +247,7 @@ class TestVideoRecipeBuilder:
                 "Scene script 2",
                 "Scene script 3",
             ]
-            
+
             builder = SubVideoRecipeBuilder(video_creator_paths)
             builder.create_video_recipe()
 
@@ -258,16 +262,18 @@ class TestVideoRecipeBuilder:
             for i in range(3):
                 scene_data = saved_recipe["video_data"][i]
                 assert (
-                    len(scene_data["recipe_list"]) == 2
-                )  # 2 because we have 2 narrator assets, limited by first 2 assets
+                    len(scene_data["recipe_list"]) == 3
+                )  # 3 because we have 3 narrator assets, limited by first 3 assets
 
     def test_recipe_builder_handles_missing_assets(self, tmp_path):
         """Test recipe builder handles missing narrator and image assets gracefully."""
         user_folder = tmp_path / "user"
         story_name = "no_assets_story"
         chapter_index = 0
-        
-        story_folder = user_folder / "stories" / story_name  # Fix: Add stories subfolder
+
+        story_folder = (
+            user_folder / "stories" / story_name
+        )  # Fix: Add stories subfolder
         prompts_folder = story_folder / "prompts"
         prompts_folder.mkdir(parents=True)
 
@@ -292,7 +298,7 @@ class TestVideoRecipeBuilder:
         mock_scene_generator = patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
         )
-        
+
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
@@ -304,7 +310,7 @@ class TestVideoRecipeBuilder:
                 "Scene script 2",
                 "Scene script 3",
             ]
-            
+
             builder = SubVideoRecipeBuilder(video_creator_paths)
             # Should not crash, should handle missing assets gracefully
             builder.create_video_recipe()
@@ -317,9 +323,7 @@ class TestVideoRecipeBuilder:
 
             # Should still create video data
             assert len(saved_recipe["video_data"]) == 1
-            assert (
-                len(saved_recipe["video_data"][0]["recipe_list"]) == 1
-            )  # 1 because no narrator assets (uses _min_sub_videos)
+            assert len(saved_recipe["video_data"][0]["recipe_list"]) == 3
 
     def test_recipe_builder_handles_audio_duration_errors(self, video_creator_paths):
         """Test recipe builder handles audio duration errors gracefully."""
@@ -328,7 +332,7 @@ class TestVideoRecipeBuilder:
         mock_scene_generator = patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
         )
-        
+
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             side_effect=Exception("Audio file not found"),
@@ -352,8 +356,10 @@ class TestVideoRecipeBuilder:
         user_folder = tmp_path / "user"
         story_name = "corrupted_story"
         chapter_index = 0
-        
-        story_folder = user_folder / "stories" / story_name  # Fix: Add stories subfolder
+
+        story_folder = (
+            user_folder / "stories" / story_name
+        )  # Fix: Add stories subfolder
         prompts_folder = story_folder / "prompts"
         prompts_folder.mkdir(parents=True)
 
@@ -363,7 +369,7 @@ class TestVideoRecipeBuilder:
             f.write("{ invalid json")
 
         video_creator_paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
-        
+
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
@@ -373,9 +379,7 @@ class TestVideoRecipeBuilder:
             try:
                 builder.create_video_recipe()
                 # If it doesn't crash, the recipe file might not be created or might be empty
-                recipe_file = (
-                    builder._paths.sub_video_recipe_file
-                )
+                recipe_file = builder._paths.sub_video_recipe_file
                 if recipe_file.exists():
                     with open(recipe_file, "r", encoding="utf-8") as f:
                         saved_recipe = json.load(f)
