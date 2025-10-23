@@ -11,10 +11,6 @@ from typing_extensions import override
 from logging_utils import logger
 
 from ai_video_creator.ComfyUI_automation import ComfyUIRequests
-from ai_video_creator.ComfyUI_automation import (
-    copy_media_to_comfyui_input_folder,
-    delete_media_from_comfyui_input_folder,
-)
 from ai_video_creator.utils import safe_move, extract_video_last_frame
 
 from .ComfyUI_automation.comfyui_video_workflows import (
@@ -111,20 +107,20 @@ class WanGenerator(IVideoGenerator):
 
         return result
 
-    def _copy_media_to_comfyui_input_folder(self, media_path: Path | str) -> Path:
+    def _upload_media_to_comfyui(self, media_path: Path | str) -> Path:
         media_path = Path(media_path)
         with tempfile.TemporaryDirectory() as temp_folder:
             if media_path.suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]:
                 media_path = extract_video_last_frame(media_path, temp_folder)
 
-            return copy_media_to_comfyui_input_folder(media_path)
+            return self.requests.upload_file(media_path)
 
     def _copy_color_match_media_to_comfyui_input_folder(
         self, media_path: Path | str
     ) -> Path | None:
         media_path = Path(media_path)
         if media_path.exists() and media_path.is_file():
-            return copy_media_to_comfyui_input_folder(media_path)
+            return self.requests.upload_file(media_path)
         return None
 
     def image_to_video(self, recipe: "WanI2VRecipe", output_file_path: Path) -> Path:
@@ -135,7 +131,7 @@ class WanGenerator(IVideoGenerator):
         :return: A list of file paths to the generated images.
         """
 
-        new_media_path = self._copy_media_to_comfyui_input_folder(recipe.media_path)
+        new_media_path = self._upload_media_to_comfyui(recipe.media_path)
 
         new_color_match_media_path = (
             self._copy_color_match_media_to_comfyui_input_folder(
@@ -159,11 +155,7 @@ class WanGenerator(IVideoGenerator):
             workflow.add_low_lora(lora, strength)
 
         workflow.set_seed(recipe.seed)
-        output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
-
-        delete_media_from_comfyui_input_folder(new_media_path)
-        if new_color_match_media_path:
-            delete_media_from_comfyui_input_folder(new_color_match_media_path)
+        output_file_names = self.requests.ensure_send_all_prompts([workflow])
 
         moved_files = self._clean_and_move_generated_files(
             output_file_path, output_file_names
@@ -181,7 +173,7 @@ class WanGenerator(IVideoGenerator):
 
         color_match_media_path = Path(recipe.color_match_media_path)
         new_color_match_media_path = (
-            copy_media_to_comfyui_input_folder(recipe.color_match_media_path)
+            self.requests.upload_file(recipe.color_match_media_path)
             if color_match_media_path.exists() and color_match_media_path.is_file()
             else None
         )
@@ -199,10 +191,7 @@ class WanGenerator(IVideoGenerator):
 
         workflow.set_seed(recipe.seed)
 
-        output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
-
-        if new_color_match_media_path:
-            delete_media_from_comfyui_input_folder(new_color_match_media_path)
+        output_file_names = self.requests.ensure_send_all_prompts([workflow])
 
         moved_files = self._clean_and_move_generated_files(
             output_file_path, output_file_names
@@ -256,7 +245,7 @@ class WanRecipeBase(VideoRecipeBase):
             recipe_type=self.recipe_type,
         )
         requests = ComfyUIRequests()
-        available_loras = requests.comfyui_get_available_loras()
+        available_loras = requests.get_available_loras()
 
         self.color_match_media_path = (
             color_match_media_path if color_match_media_path else ""
@@ -321,7 +310,7 @@ class WanRecipeBase(VideoRecipeBase):
         # TODO: Remove this when web UI is mature?
         requests = ComfyUIRequests()
         comfyui_available_loras = [
-            Path(lora) for lora in requests.comfyui_get_available_loras()
+            Path(lora) for lora in requests.get_available_loras()
         ]
 
         available_loras = []

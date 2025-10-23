@@ -37,8 +37,8 @@ class VideoAssemblerRecipeBuilder:
 
         # Load separate narrator and image assets
         self.narrator_recipe = NarratorRecipe(video_creator_paths)
-        self.narrator_assets = NarratorAssets(video_creator_paths.narrator_asset_file)
-        self.image_assets = ImageAssets(video_creator_paths.image_asset_file)
+        self.narrator_assets = NarratorAssets(video_creator_paths)
+        self.image_assets = ImageAssets(video_creator_paths)
 
         if (
             not self.narrator_assets.is_complete()
@@ -102,7 +102,7 @@ class VideoAssemblerRecipeBuilder:
         overlay.overlay_asset = VideoOverlayRecipe.DEFAULT_OVERLAY_ASSET
         self.video_assembler_recipe.set_video_overlay_recipe(overlay)
 
-        ending = VideoEndingRecipe()
+        ending = VideoEndingRecipe(self._paths)
         ending.narrator_text_list = [
             "Thank you so much for watching! We hope to see you in the next episode.",
             "If you enjoyed this video, please like and subscribe for more content. Leave a comment below to let us know your thoughts.",

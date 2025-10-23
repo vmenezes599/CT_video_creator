@@ -11,6 +11,7 @@ class VideoCreatorPaths:
 
     DEFAULT_ASSETS_MASK = "default_assets"
     USER_ASSETS_MASK = "user_assets"
+    STORY_ASSETS_MASK = "assets"
 
     def __init__(self, user_folder: Path, story_name: str, chapter_index: int):
         """Initialize VideoRecipePaths with story folder and chapter prompt path.
@@ -31,13 +32,13 @@ class VideoCreatorPaths:
         # Initialize paths
         self.video_folder = self.story_folder / "videos"
         self.video_chapter_folder = self.video_folder / f"chapter_{chapter_index+1:03}"
-        self.asset_folder = self.video_chapter_folder / "assets"
+        self.story_assets_folder = self.video_chapter_folder / "assets"
 
         # Final modules paths
-        self.narrator_asset_folder = self.asset_folder / "narrators"
-        self.image_asset_folder = self.asset_folder / "images"
-        self.sub_videos_asset_folder = self.asset_folder / "sub_videos"
-        self.video_assembler_asset_folder = self.asset_folder / "video_assembler"
+        self.narrator_asset_folder = self.story_assets_folder / "narrators"
+        self.image_asset_folder = self.story_assets_folder / "images"
+        self.sub_videos_asset_folder = self.story_assets_folder / "sub_videos"
+        self.video_assembler_asset_folder = self.story_assets_folder / "video_assembler"
 
         # Create directories if they don't exist
         self.narrator_asset_folder.mkdir(parents=True, exist_ok=True)
@@ -63,21 +64,23 @@ class VideoCreatorPaths:
 
     def mask_asset_path(self, asset_path: Path):
         """Get the masked asset path for this instance."""
-        user_folder = self.get_user_assets_folder()
+        user_assets_folder = self.get_user_assets_folder()
         default_assets_folder = self.get_default_assets_folder()
 
         # Resolve to absolute path and validate
         asset_path = asset_path.resolve()
 
-        if asset_path.is_relative_to(user_folder):
-            # Use relative_to() instead of string replacement
-            relative_path = asset_path.relative_to(user_folder)
+        if asset_path.is_relative_to(user_assets_folder):
+            relative_path = asset_path.relative_to(user_assets_folder)
             return Path(self.USER_ASSETS_MASK) / relative_path
 
         elif asset_path.is_relative_to(default_assets_folder):
-            # Use relative_to() instead of string replacement
             relative_path = asset_path.relative_to(default_assets_folder)
             return Path(self.DEFAULT_ASSETS_MASK) / relative_path
+
+        elif asset_path.is_relative_to(self.story_assets_folder):
+            relative_path = asset_path.relative_to(self.story_assets_folder)
+            return Path(self.STORY_ASSETS_MASK) / relative_path
 
         else:
             raise ValueError(
@@ -93,13 +96,10 @@ class VideoCreatorPaths:
         asset_path_str = str(asset_path)
 
         if asset_path_str.startswith(self.USER_ASSETS_MASK):
-            # Get the relative portion after the mask
             relative_str = asset_path_str[len(self.USER_ASSETS_MASK) :].lstrip("/")
 
-            # Reconstruct and resolve the full path
             result = (user_folder / relative_str).resolve()
 
-            # CRITICAL: Validate AFTER resolving to prevent path traversal
             if not result.is_relative_to(user_folder.resolve()):
                 raise ValueError(f"Asset path escapes user folder: {result}")
 
@@ -109,15 +109,25 @@ class VideoCreatorPaths:
             return result
 
         elif asset_path_str.startswith(self.DEFAULT_ASSETS_MASK):
-            # Get the relative portion after the mask
             relative_str = asset_path_str[len(self.DEFAULT_ASSETS_MASK) :].lstrip("/")
 
-            # Reconstruct and resolve the full path
             result = (default_assets_folder / relative_str).resolve()
 
-            # CRITICAL: Validate AFTER resolving to prevent path traversal
             if not result.is_relative_to(default_assets_folder.resolve()):
                 raise ValueError(f"Asset path escapes default folder: {result}")
+
+            if not result.exists():
+                raise ValueError(f"Asset path does not exist: {result}")
+
+            return result
+
+        elif asset_path_str.startswith(self.STORY_ASSETS_MASK):
+            relative_str = asset_path_str[len(self.STORY_ASSETS_MASK) :].lstrip("/")
+
+            result = (self.story_assets_folder / relative_str).resolve()
+
+            if not result.is_relative_to(self.story_assets_folder.resolve()):
+                raise ValueError(f"Asset path escapes story asset folder: {result}")
 
             if not result.exists():
                 raise ValueError(f"Asset path does not exist: {result}")

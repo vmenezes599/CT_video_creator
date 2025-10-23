@@ -34,10 +34,10 @@ class SubVideoAssetManager:
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
         # Load separate narrator and image assets
-        self.__narrator_assets = NarratorAssets(self._paths.narrator_asset_file)
-        self.__image_assets = ImageAssets(self._paths.image_asset_file)
+        self.__narrator_assets = NarratorAssets(video_creator_paths)
+        self.__image_assets = ImageAssets(video_creator_paths)
         self.recipe = SubVideoRecipe(self._paths.sub_video_recipe_file)
-        self.video_assets = SubVideoAssets(self._paths.sub_video_asset_file)
+        self.video_assets = SubVideoAssets(video_creator_paths)
 
         # Ensure video_assets lists have the same size as recipe
         self._synchronize_assets_with_image_assets()

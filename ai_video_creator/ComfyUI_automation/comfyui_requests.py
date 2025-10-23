@@ -5,14 +5,13 @@ ComfyuiRequest is a class that handles HTTP requests to the ComfyUI API.
 import os
 import time
 from datetime import datetime
+from pathlib import Path
 
 import requests
+from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER, COMFYUI_URL
 from logging_utils import logger
 from requests.exceptions import RequestException
 
-from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER, COMFYUI_URL
-
-from .comfyui_helpers import comfyui_get_history_output_name
 from .comfyui_workflow import IComfyUIWorkflow
 
 
@@ -37,12 +36,20 @@ class ComfyUIRequests:
         return requests.get(url=url, timeout=timeout)
 
     def _send_post_request(
-        self, url: str, data: dict = None, json: dict = None, timeout: int = 10
+        self,
+        url: str,
+        data: dict = None,
+        json: dict = None,
+        files: dict = None,
+        params: dict = None,
+        timeout: int = 10,
     ) -> requests.Response:
         """
         Sends a POST request using the configured session.
         """
-        response = requests.post(url=url, data=data, json=json, timeout=timeout)
+        response = requests.post(
+            url=url, data=data, json=json, files=files, params=params, timeout=timeout
+        )
         response.raise_for_status()
         return response
 
@@ -109,7 +116,7 @@ class ComfyUIRequests:
         start_time = datetime.now()
 
         while True:
-            history = self.comfyui_get_history()
+            history = self.get_history()
             if prompt_id in history:
                 break
             time.sleep(check_interval)
@@ -131,6 +138,19 @@ class ComfyUIRequests:
         except RequestException as e:
             logger.error("Error occurred while cleaning memory in ComfyUI: {}", e)
 
+    def _comfyui_get_history_output_name(self, history_entry_dict: dict) -> list[str]:
+        """
+        Get the output names from a history entry dictionary.
+        """
+
+        result = []
+        for _, output_types in history_entry_dict.get("outputs", {}).items():
+            for _, value in output_types.items():
+                for v in value:
+                    if isinstance(v, dict) and "filename" in v:
+                        result.append(v["filename"])
+        return result
+
     def _get_output_paths(self, history_entry: dict) -> list[str]:
         """
         Get the output file paths for a completed workflow.
@@ -138,7 +158,7 @@ class ComfyUIRequests:
         :param history_entry: The history entry from ComfyUI
         :return: List of full paths to output files or empty list if not found
         """
-        output_names = comfyui_get_history_output_name(history_entry)
+        output_names = self._comfyui_get_history_output_name(history_entry)
         result = []
         if output_names:
             for name in output_names:
@@ -191,7 +211,7 @@ class ComfyUIRequests:
                 )
 
                 # Get output path
-                history_entry = self.comfyui_get_last_history_entry()
+                history_entry = self.get_last_history_entry()
 
                 if history_entry:
                     self._check_for_output_success(history_entry)
@@ -232,9 +252,27 @@ class ComfyUIRequests:
         )
         return []
 
-    def comfyui_ensure_send_all_prompts(
-        self, req_list: list[IComfyUIWorkflow]
-    ) -> list[str]:
+    def upload_file(self, file_path: Path) -> Path:
+        """
+        Upload a file to ComfyUI.
+
+        :param file_path: Path to the file to upload
+        """
+        try:
+            url = f"{COMFYUI_URL}/upload/image"
+            params = {"type": "input", "overwrite": "true"}
+
+            with open(file_path, "rb") as file:
+                files = {"image": file}
+                self._send_post_request(url=url, params=params, files=files, timeout=30)
+
+            logger.debug(f"File uploaded successfully: {file_path}")
+        except (RequestException, OSError, IOError) as e:
+            logger.error(f"Failed to upload file {file_path}: {e}")
+
+        return file_path.name
+
+    def ensure_send_all_prompts(self, req_list: list[IComfyUIWorkflow]) -> list[str]:
         """
         Send all prompts in the list to ComfyUI and wait for them to finish.
 
@@ -257,7 +295,7 @@ class ComfyUIRequests:
 
         return output_image_paths
 
-    def comfyui_get_processing_queue(self) -> int:
+    def get_processing_queue(self) -> int:
         """
         Get the queue information from ComfyUI.
         """
@@ -270,7 +308,7 @@ class ComfyUIRequests:
         logger.error("Failed to fetch queue.")
         return -1
 
-    def comfyui_get_history(self) -> dict:
+    def get_history(self) -> dict:
         """
         Get the history information from ComfyUI.
         """
@@ -283,11 +321,11 @@ class ComfyUIRequests:
         logger.error("Failed to fetch history.")
         return {}
 
-    def comfyui_get_last_history_entry(self) -> dict:
+    def get_last_history_entry(self) -> dict:
         """
         Get the last history entry from ComfyUI.
         """
-        history = self.comfyui_get_history()
+        history = self.get_history()
 
         if history:
             # Get the last key from the dictionary
@@ -297,7 +335,7 @@ class ComfyUIRequests:
         logger.error("Failed to fetch last history entry.")
         return {}
 
-    def comfyui_get_available_loras(self) -> list[str]:
+    def get_available_loras(self) -> list[str]:
         """
         Get the list of available LORA models from ComfyUI.
         """

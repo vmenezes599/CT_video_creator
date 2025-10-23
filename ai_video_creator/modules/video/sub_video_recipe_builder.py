@@ -42,8 +42,8 @@ class SubVideoRecipeBuilder:
         self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
 
         # Load separate narrator and image assets
-        self.__narrator_assets = NarratorAssets(self._paths.narrator_asset_file)
-        self.__image_assets = ImageAssets(self._paths.image_asset_file)
+        self.__narrator_assets = NarratorAssets(video_creator_paths)
+        self.__image_assets = ImageAssets(video_creator_paths)
         self._recipe = None
 
         self._min_sub_videos = 3

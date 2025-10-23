@@ -81,7 +81,7 @@ class FluxAIImageGenerator(IImageGenerator):
         workflow.set_batch_size(recipe.batch_size)
         workflow.set_seed(recipe.seed)
 
-        output_file_names = self.requests.comfyui_ensure_send_all_prompts([workflow])
+        output_file_names = self.requests.ensure_send_all_prompts([workflow])
 
         moved_files = [
             self._move_asset_to_output_path(output_file_path.parent, Path(file))
@@ -113,7 +113,7 @@ class FluxImageRecipe(ImageRecipeBase):
             seed: Seed used for image generation
         """
         requests = ComfyUIRequests()
-        available_loras = requests.comfyui_get_available_loras()
+        available_loras = requests.get_available_loras()
         validated_lora = lora if lora in available_loras else ""
 
         super().__init__(
@@ -132,7 +132,7 @@ class FluxImageRecipe(ImageRecipeBase):
         """
         requests = ComfyUIRequests()
         comfyui_available_loras = [
-            Path(lora) for lora in requests.comfyui_get_available_loras()
+            Path(lora) for lora in requests.get_available_loras()
         ]
 
         available_loras = []

@@ -7,8 +7,6 @@ from pathlib import Path
 from ai_llm import LLMManager, LLMPromptBuilder
 from ai_video_creator.ComfyUI_automation import (
     ComfyUIRequests,
-    copy_media_to_comfyui_input_folder,
-    delete_media_from_comfyui_input_folder,
 )
 from ai_video_creator.environment_variables import (
     COMFYUI_OUTPUT_FOLDER,
@@ -44,7 +42,7 @@ class FlorenceGenerator:
             logger.warning("No asset provided for description generation")
             return ""
 
-        new_asset_path = copy_media_to_comfyui_input_folder(asset)
+        new_asset_path = self.requests.upload_file(asset)
 
         workflow = None
         if asset.suffix.lower() in [".png", ".jpg", ".jpeg"]:
@@ -62,9 +60,7 @@ class FlorenceGenerator:
         workflow.set_seed(random.randint(0, 2**64 - 1))
         workflow.set_output_filename(temp_file_name.stem)
 
-        self.requests.comfyui_ensure_send_all_prompts([workflow])
-
-        delete_media_from_comfyui_input_folder(new_asset_path)
+        self.requests.ensure_send_all_prompts([workflow])
 
         output_text_path = None
         for file in Path(COMFYUI_OUTPUT_FOLDER).iterdir():

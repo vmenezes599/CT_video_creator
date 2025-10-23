@@ -77,7 +77,7 @@ class TestComfyUIRequests:
         mock_get.return_value = mock_response
 
         # Act
-        queue_count = comfyui_requests.comfyui_get_processing_queue()
+        queue_count = comfyui_requests.get_processing_queue()
 
         # Assert
         assert queue_count == 3
@@ -92,7 +92,7 @@ class TestComfyUIRequests:
         mock_get.return_value = mock_response
 
         # Act
-        queue_count = comfyui_requests.comfyui_get_processing_queue()
+        queue_count = comfyui_requests.get_processing_queue()
 
         # Assert
         assert queue_count == -1
@@ -111,7 +111,7 @@ class TestComfyUIRequests:
         mock_get.return_value = mock_response
 
         # Act
-        history_data = comfyui_requests.comfyui_get_history()
+        history_data = comfyui_requests.get_history()
 
         # Assert
         assert len(history_data) == 2
@@ -128,12 +128,12 @@ class TestComfyUIRequests:
         mock_get.return_value = mock_response
 
         # Act
-        result = comfyui_requests.comfyui_get_history()
+        result = comfyui_requests.get_history()
 
         # Assert
         assert result == {}  # Function returns empty dict on failure
 
-    def test_comfyui_get_last_history_entry_success(self, comfyui_requests):
+    def test_get_last_history_entry_success(self, comfyui_requests):
         """Test successful last history entry retrieval - tests the 'last key' selection logic."""
         # Arrange
         test_history = {
@@ -147,11 +147,11 @@ class TestComfyUIRequests:
             },
         }
 
-        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+        with patch.object(comfyui_requests, "get_history") as mock_get_history:
             mock_get_history.return_value = test_history
 
             # Act
-            last_entry = comfyui_requests.comfyui_get_last_history_entry()
+            last_entry = comfyui_requests.get_last_history_entry()
 
             # Assert
             # Test that it actually returns the LAST entry (67890, not 12345)
@@ -161,14 +161,14 @@ class TestComfyUIRequests:
             }
             assert last_entry == expected_last_entry
 
-    def test_comfyui_get_last_history_entry_failure(self, comfyui_requests):
+    def test_get_last_history_entry_failure(self, comfyui_requests):
         """Test failed last history entry retrieval."""
         # Arrange
-        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+        with patch.object(comfyui_requests, "get_history") as mock_get_history:
             mock_get_history.return_value = {}
 
             # Act
-            last_entry = comfyui_requests.comfyui_get_last_history_entry()
+            last_entry = comfyui_requests.get_last_history_entry()
 
             # Assert
             assert last_entry == {}
@@ -199,7 +199,7 @@ class TestComfyUIRequests:
             ]
 
             # Act
-            result = comfyui_requests.comfyui_ensure_send_all_prompts(
+            result = comfyui_requests.ensure_send_all_prompts(
                 [workflow1, workflow2, workflow3]
             )
 
@@ -212,7 +212,7 @@ class TestComfyUIRequests:
     def test_comfyui_ensure_send_all_prompts_empty_list(self, comfyui_requests):
         """Test sending empty list of prompts."""
         # Act
-        result = comfyui_requests.comfyui_ensure_send_all_prompts([])
+        result = comfyui_requests.ensure_send_all_prompts([])
 
         # Assert
         assert result == []
@@ -237,7 +237,7 @@ class TestComfyUIRequests:
         mock_datetime.now.side_effect = [start_time, end_time]
 
         # Mock history responses - first call empty, second call has our prompt
-        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+        with patch.object(comfyui_requests, "get_history") as mock_get_history:
             mock_get_history.side_effect = [
                 {},  # First call - prompt not ready yet
                 {prompt_id: {"status": "completed"}},  # Second call - prompt found
@@ -270,7 +270,7 @@ class TestComfyUIRequests:
 
         mock_datetime.now.side_effect = [start_time, end_time]
 
-        with patch.object(comfyui_requests, "comfyui_get_history") as mock_get_history:
+        with patch.object(comfyui_requests, "get_history") as mock_get_history:
             mock_get_history.side_effect = [
                 {},
                 {},
@@ -328,9 +328,7 @@ class TestComfyUIRequests:
         with pytest.raises(RuntimeError, match="ComfyUI request failed: timeout"):
             comfyui_requests._check_for_output_success(failed_incomplete_response)
 
-    @patch(
-        "ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name"
-    )
+    @patch.object(ComfyUIRequests, "_comfyui_get_history_output_name")
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.os.path.join")
     def test_get_output_path_success(
         self, mock_path_join, mock_get_output_name, comfyui_requests
@@ -356,9 +354,7 @@ class TestComfyUIRequests:
         # Verify it uses both output names and joins with COMFYUI_OUTPUT_FOLDER
         assert mock_path_join.call_count == 2
 
-    @patch(
-        "ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name"
-    )
+    @patch.object(ComfyUIRequests, "_comfyui_get_history_output_name")
     def test_get_output_path_no_outputs(self, mock_get_output_name, comfyui_requests):
         """Test output path when no outputs are found - tests empty list return behavior."""
         # Arrange
@@ -372,9 +368,7 @@ class TestComfyUIRequests:
         assert output_paths == []
         mock_get_output_name.assert_called_once_with(history_entry)
 
-    @patch(
-        "ai_video_creator.ComfyUI_automation.comfyui_requests.comfyui_get_history_output_name"
-    )
+    @patch.object(ComfyUIRequests, "_comfyui_get_history_output_name")
     def test_get_output_path_none_outputs(self, mock_get_output_name, comfyui_requests):
         """Test output path when helper returns None - tests empty list handling."""
         # Arrange
@@ -473,7 +467,7 @@ class TestComfyUIRequests:
         ) as mock_submit, patch.object(
             comfyui_requests, "_wait_for_completion"
         ) as mock_wait, patch.object(
-            comfyui_requests, "comfyui_get_last_history_entry"
+            comfyui_requests, "get_last_history_entry"
         ) as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
@@ -514,7 +508,7 @@ class TestComfyUIRequests:
         ) as mock_submit, patch.object(
             comfyui_requests, "_wait_for_completion"
         ) as mock_wait, patch.object(
-            comfyui_requests, "comfyui_get_last_history_entry"
+            comfyui_requests, "get_last_history_entry"
         ) as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
@@ -559,7 +553,7 @@ class TestComfyUIRequests:
         ) as mock_submit, patch.object(
             comfyui_requests, "_wait_for_completion"
         ) as mock_wait, patch.object(
-            comfyui_requests, "comfyui_get_last_history_entry"
+            comfyui_requests, "get_last_history_entry"
         ) as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
@@ -627,7 +621,7 @@ class TestComfyUIRequests:
         ) as mock_submit, patch.object(
             comfyui_requests, "_wait_for_completion"
         ) as mock_wait, patch.object(
-            comfyui_requests, "comfyui_get_last_history_entry"
+            comfyui_requests, "get_last_history_entry"
         ) as mock_get_history:
 
             mock_response = Mock()

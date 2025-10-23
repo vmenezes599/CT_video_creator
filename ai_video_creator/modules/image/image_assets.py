@@ -5,17 +5,22 @@ Image assets for managing image-specific asset data and persistence.
 import json
 from pathlib import Path
 
+from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from logging_utils import logger
 
 
 class ImageAssets:
     """Class to manage image assets data and persistence only."""
 
-    def __init__(self, asset_file_path: Path):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize ImageAssets with file path."""
+        self._paths = video_creator_paths
+        asset_file_path = self._paths.image_asset_file
+
         self.asset_file_parent = asset_file_path.parent.resolve()
         self.asset_file_path = asset_file_path
         self.image_assets: list[Path] = []
+
         self._load_assets_from_file()
 
     def __validate_asset_path(self, asset_path: Path) -> Path:
@@ -39,19 +44,6 @@ class ImageAssets:
         except (FileNotFoundError, RuntimeError, OSError) as e:
             raise ValueError(f"Invalid path: {asset_path} - {e}") from e
 
-    def convert_from_relative_to_absolute(self, path: Path) -> Path:
-        """Convert a possibly relative path to an absolute path based on the asset file parent directory."""
-        if not path.is_absolute():
-            path = (self.asset_file_parent / path).resolve(strict=False)
-
-        # Now validate as absolute path
-        validated_path = self.__validate_asset_path(path)
-        return validated_path
-
-    def _convert_from_absolute_to_relative(self, path: Path) -> Path:
-        """Convert an absolute path to a relative path based on the asset file parent directory."""
-        return path.relative_to(self.asset_file_parent)
-
     def _load_assets_from_file(self):
         """Load assets from JSON file with security validation."""
         try:
@@ -66,7 +58,7 @@ class ImageAssets:
                 else:
                     asset_path = asset_data.get("image", "")
                     absolute_path = (
-                        self.convert_from_relative_to_absolute(Path(asset_path))
+                        self._paths.unmask_asset_path(Path(asset_path))
                         if asset_path
                         else None
                     )
@@ -100,7 +92,7 @@ class ImageAssets:
                 if image_asset is None:
                     image_assets_data.append({"index": index, "image": None})
                 else:
-                    relative_path = self._convert_from_absolute_to_relative(image_asset)
+                    relative_path = self._paths.mask_asset_path(image_asset)
                     image_assets_data.append(
                         {"index": index, "image": str(relative_path)}
                     )

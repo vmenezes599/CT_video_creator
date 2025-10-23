@@ -129,49 +129,67 @@ class VideoEndingRecipe:
         f"{DEFAULT_ASSETS_FOLDER}/outros/CTA_YOUTUBE_INGLES.mov"
     )
 
-    def __init__(self):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize EndingEffects with empty lists."""
+        self._paths = video_creator_paths
         self.narrator_text_list: list[str] = []
         self.narrator_clone_voice: Path | None = None
         self.seed: int = random.randint(0, (2**64) - 1)
         self.ending_overlay_start_narrator_index: int | None = None
         self.ending_start_delay_seconds: float | None = None
         self.ending_overlay_asset: Path | None = None
-        self.subvideo: Path | None = None
+        self.sub_video: Path | None = None
 
     def from_dict(self, data: dict) -> None:
         """Load effects from a dictionary."""
         self.narrator_text_list = data.get("narrator_list", [])
-        self.narrator_clone_voice = data.get("narrator_clone_voice", None)
-        if self.narrator_clone_voice:
-            self.narrator_clone_voice = Path(self.narrator_clone_voice)
+        narrator_clone_voice = data.get("narrator_clone_voice", None)
+        if narrator_clone_voice:
+            self.narrator_clone_voice = self._paths.unmask_asset_path(
+                narrator_clone_voice
+            )
+
         self.seed = data.get("seed", random.randint(0, 1**64 - 1))
         self.ending_overlay_start_narrator_index = data.get(
             "ending_overlay_start_narrator_index", None
         )
         self.ending_start_delay_seconds = data.get("ending_start_delay_seconds", None)
-        self.ending_overlay_asset = data.get("ending_overlay_asset", None)
-        if self.ending_overlay_asset:
-            self.ending_overlay_asset = Path(self.ending_overlay_asset)
-        self.subvideo = data.get("subvideo", None)
-        if self.subvideo:
-            self.subvideo = Path(self.subvideo)
+        ending_overlay_asset = data.get("ending_overlay_asset", None)
+        if ending_overlay_asset:
+            self.ending_overlay_asset = self._paths.unmask_asset_path(
+                ending_overlay_asset
+            )
+        sub_video = data.get("subvideo", None)
+        if sub_video:
+            self.sub_video = self._paths.unmask_asset_path(sub_video)
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
 
+        narrator_clone_voice_str = (
+            self._paths.mask_asset_path(self.narrator_clone_voice)
+            if self.narrator_clone_voice
+            else None
+        )
+
+        ending_overlay_asset_str = (
+            self._paths.mask_asset_path(self.ending_overlay_asset)
+            if self.ending_overlay_asset
+            else None
+        )
+
+        sub_video_str = (
+            self._paths.mask_asset_path(self.sub_video) if self.sub_video else None
+        )
+
         result = {
             "narrator_list": self.narrator_text_list,
-            "narrator_clone_voice": (
-                str(self.narrator_clone_voice) if self.narrator_clone_voice else None
-            ),
+            "narrator_clone_voice": narrator_clone_voice_str,
             "seed": self.seed,
             "ending_overlay_start_narrator_index": self.ending_overlay_start_narrator_index,
             "ending_start_delay_seconds": self.ending_start_delay_seconds,
-            "ending_overlay_asset": (
-                str(self.ending_overlay_asset) if self.ending_overlay_asset else None
-            ),
-            "subvideo": str(self.subvideo) if self.subvideo else None,
+            "ending_overlay_asset": ending_overlay_asset_str,
+            "sub_video": sub_video_str,
         }
 
         return result
@@ -192,7 +210,7 @@ class VideoEndingRecipe:
         self.narrator_text_list = []
         self.ending_overlay_start_narrator_index = None
         self.ending_start_delay_seconds = None
-        self.subvideo = None
+        self.sub_video = None
 
 
 class VideoOverlayRecipe:
@@ -261,7 +279,7 @@ class VideoAssemblerRecipe:
         self.effects_file_path = video_creator_paths.video_assembler_recipe_file
         self._narrator_asset_effects = NarratorAssetEffects()
         self._video_intro_recipe = VideoIntroRecipe(video_creator_paths)
-        self._video_ending_recipe = VideoEndingRecipe()
+        self._video_ending_recipe = VideoEndingRecipe(video_creator_paths)
         self._video_overlay_recipe = VideoOverlayRecipe(video_creator_paths)
 
         self._load_effects_from_file()
@@ -397,6 +415,6 @@ class VideoAssemblerRecipe:
 
     def set_video_ending_subvideo(self, subvideo: Path) -> Path:
         """Set video ending subvideo."""
-        self._video_ending_recipe.subvideo = subvideo
+        self._video_ending_recipe.sub_video = subvideo
         self.save_to_file()
         return subvideo

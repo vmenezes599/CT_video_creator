@@ -4,16 +4,19 @@ import json
 from pathlib import Path
 
 from logging_utils import logger
+from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from ai_video_creator.utils import ensure_collection_index_exists
 
 
 class SubVideoAssets:
     """Class to manage video assets data and persistence only."""
 
-    def __init__(self, asset_file_path: Path):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize VideoAssets with file path and expected scene count."""
-        self.asset_file_parent = asset_file_path.parent.resolve()
-        self.asset_file_path = asset_file_path
+        self._paths = video_creator_paths
+        self.asset_file_path = self._paths.sub_video_asset_file
+        self.asset_file_parent = self.asset_file_path.parent.resolve()
+
         self.assembled_sub_videos: list[Path] = []
         self.sub_video_assets: list[list[Path]] = []
 
@@ -40,19 +43,6 @@ class SubVideoAssets:
         except (FileNotFoundError, RuntimeError, OSError) as e:
             raise ValueError(f"Invalid path: {asset_path} - {e}") from e
 
-    def _convert_from_relative_to_absolute(self, path: Path) -> Path:
-        """Convert a possibly relative path to an absolute path based on the asset file parent directory."""
-        if not path.is_absolute():
-            path = (self.asset_file_parent / path).resolve(strict=False)
-
-        # Now validate as absolute path
-        validated_path = self.__validate_asset_path(path)
-        return validated_path
-
-    def _convert_from_absolute_to_relative(self, path: Path) -> Path:
-        """Convert an absolute path to a relative path based on the asset file parent directory."""
-        return path.relative_to(self.asset_file_parent)
-
     def _load_assets_from_file(self):
         """Load assets from JSON file with security validation."""
         try:
@@ -75,7 +65,7 @@ class SubVideoAssets:
                     video_value = asset.get("video_asset")
                     assembled_video_path = Path(video_value) if video_value else None
                     self.assembled_sub_videos[index] = (
-                        self._convert_from_relative_to_absolute(assembled_video_path)
+                        self._paths.unmask_asset_path(assembled_video_path)
                         if assembled_video_path
                         else None
                     )
@@ -85,7 +75,7 @@ class SubVideoAssets:
                         if sub_video is not None and sub_video != "":
                             sub_video_path = Path(sub_video)
                             self.sub_video_assets[index].append(
-                                self._convert_from_relative_to_absolute(sub_video_path)
+                                self._paths.unmask_asset_path(sub_video_path)
                                 if sub_video_path
                                 else None
                             )
@@ -138,18 +128,14 @@ class SubVideoAssets:
                     video_asset_relative = None
                     if video_asset is not None:
                         video_asset_relative = str(
-                            self._convert_from_absolute_to_relative(video_asset)
+                            self._paths.mask_asset_path(video_asset)
                         )
 
                     sub_video_assets_relative = []
                     for sub_video_asset in sub_video_assets:
                         if sub_video_asset is not None:
                             sub_video_assets_relative.append(
-                                str(
-                                    self._convert_from_absolute_to_relative(
-                                        sub_video_asset
-                                    )
-                                )
+                                str(self._paths.mask_asset_path(sub_video_asset))
                             )
                         else:
                             sub_video_assets_relative.append(None)

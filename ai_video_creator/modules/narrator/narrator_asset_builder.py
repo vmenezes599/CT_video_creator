@@ -31,7 +31,7 @@ class NarratorAssetBuilder:
         self.narrator_asset_file = self._paths.narrator_asset_file
 
         self.recipe = NarratorRecipe(video_creator_paths)
-        self.narrator_assets = NarratorAssets(self.narrator_asset_file)
+        self.narrator_assets = NarratorAssets(video_creator_paths)
 
         # Ensure narrator_assets list has the same size as recipe
         self._synchronize_assets_with_recipe()

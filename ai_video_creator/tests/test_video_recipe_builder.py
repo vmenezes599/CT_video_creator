@@ -68,6 +68,17 @@ class TestVideoRecipeBuilder:
             ]
         }
 
+        # Create the actual asset files that unmask_asset_path will validate
+        narrator_dir = paths.narrator_asset_folder
+        narrator_dir.mkdir(parents=True, exist_ok=True)
+        (narrator_dir / "narrator_001.mp3").touch()
+        (narrator_dir / "narrator_002.mp3").touch()
+
+        image_dir = paths.image_asset_folder
+        image_dir.mkdir(parents=True, exist_ok=True)
+        (image_dir / "image_001.jpg").touch()
+        (image_dir / "image_002.jpg").touch()
+
         with open(paths.narrator_asset_file, "w", encoding="utf-8") as f:
             json.dump(narrator_assets, f)
         with open(paths.image_asset_file, "w", encoding="utf-8") as f:
@@ -225,6 +236,19 @@ class TestVideoRecipeBuilder:
                 {"index": 3, "image": "assets/images/image_003.jpg"},
             ]
         }
+
+        # Create the actual asset files that unmask_asset_path will validate
+        narrator_dir = video_creator_paths.narrator_asset_folder
+        narrator_dir.mkdir(parents=True, exist_ok=True)
+        (narrator_dir / "narrator_001.mp3").touch()
+        (narrator_dir / "narrator_002.mp3").touch()
+        (narrator_dir / "narrator_003.mp3").touch()
+
+        image_dir = video_creator_paths.image_asset_folder
+        image_dir.mkdir(parents=True, exist_ok=True)
+        (image_dir / "image_001.jpg").touch()
+        (image_dir / "image_002.jpg").touch()
+        (image_dir / "image_003.jpg").touch()
 
         with open(video_creator_paths.narrator_asset_file, "w", encoding="utf-8") as f:
             json.dump(narrator_assets, f)

@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from ai_video_creator.modules.video import SubVideoAssets
+from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 
 
 class TestVideoAssetsFile:
@@ -15,24 +16,23 @@ class TestVideoAssetsFile:
 
     def test_empty_assets_creation(self, tmp_path):
         """Test creating empty video assets."""
-        asset_file = tmp_path / "assets.json"
-        assets = SubVideoAssets(asset_file)
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        assets = SubVideoAssets(paths)
 
-        assert assets.asset_file_path == asset_file
         assert assets.assembled_sub_videos == []
         assert assets.sub_video_assets == []
 
     def test_assets_with_data(self, tmp_path):
         """Test video assets with actual data - core functionality."""
-        asset_file = tmp_path / "assets.json"
-        assets = SubVideoAssets(asset_file)
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        assets = SubVideoAssets(paths)
 
-        # Create paths within tmp_path for security compliance
-        video1_path = tmp_path / "video1.mp4"
-        sub_video1_0_path = tmp_path / "sub_video1_0.mp4"
-        sub_video1_1_path = tmp_path / "sub_video1_1.mp4"
-        video2_path = tmp_path / "video2.mp4"
-        sub_video2_0_path = tmp_path / "sub_video2_0.mp4"
+        # Create paths within story assets folder
+        video1_path = paths.sub_videos_asset_folder / "video1.mp4"
+        sub_video1_0_path = paths.sub_videos_asset_folder / "sub_video1_0.mp4"
+        sub_video1_1_path = paths.sub_videos_asset_folder / "sub_video1_1.mp4"
+        video2_path = paths.sub_videos_asset_folder / "video2.mp4"
+        sub_video2_0_path = paths.sub_videos_asset_folder / "sub_video2_0.mp4"
 
         assets.set_scene_video(0, video1_path)
         assets.set_scene_sub_video(0, 0, sub_video1_0_path)
@@ -51,6 +51,7 @@ class TestVideoAssetsFile:
         assert assets.sub_video_assets[1][0] == sub_video2_0_path.resolve()
 
         assets.save_assets_to_file()
+        asset_file = paths.sub_video_asset_file
         assert asset_file.exists()
 
         with open(asset_file, "r", encoding="utf-8") as f:
@@ -60,16 +61,16 @@ class TestVideoAssetsFile:
             "assets": [
                 {
                     "index": 1,
-                    "video_asset": "video1.mp4",  # Now stored as relative paths
+                    "video_asset": "assets/sub_videos/video1.mp4",  # Stored as masked paths
                     "sub_video_assets": [
-                        "sub_video1_0.mp4",
-                        "sub_video1_1.mp4",
+                        "assets/sub_videos/sub_video1_0.mp4",
+                        "assets/sub_videos/sub_video1_1.mp4",
                     ],
                 },
                 {
                     "index": 2,
-                    "video_asset": "video2.mp4",
-                    "sub_video_assets": ["sub_video2_0.mp4"],
+                    "video_asset": "assets/sub_videos/video2.mp4",
+                    "sub_video_assets": ["assets/sub_videos/sub_video2_0.mp4"],
                 },
             ]
         }
@@ -77,19 +78,37 @@ class TestVideoAssetsFile:
         assert saved_data == expected_structure
 
     def test_assets_loading_from_file(self, tmp_path):
-        """Test loading assets from existing file with relative paths."""
-        asset_file = tmp_path / "existing_assets.json"
+        """Test loading assets from existing file with masked paths."""
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        asset_file = paths.sub_video_asset_file
 
-        # Use relative paths that will be resolved within tmp_path
+        # Create test files in story assets folder
+        loaded_folder = paths.sub_videos_asset_folder / "loaded"
+        loaded_folder.mkdir(exist_ok=True)
+        video1_file = loaded_folder / "video1.mp4"
+        video2_file = loaded_folder / "video2.mp4"
+        sub1_file = loaded_folder / "sub1.mp4"
+        sub2_file = loaded_folder / "sub2.mp4"
+        sub3_file = loaded_folder / "sub3.mp4"
+        video1_file.touch()
+        video2_file.touch()
+        sub1_file.touch()
+        sub2_file.touch()
+        sub3_file.touch()
+
+        # Use masked paths
         test_data = {
             "assets": [
                 {
-                    "video_asset": "loaded/video1.mp4",
-                    "sub_video_assets": ["loaded/sub1.mp4", "loaded/sub2.mp4"],
+                    "video_asset": str(paths.mask_asset_path(video1_file)),
+                    "sub_video_assets": [
+                        str(paths.mask_asset_path(sub1_file)),
+                        str(paths.mask_asset_path(sub2_file)),
+                    ],
                 },
                 {
-                    "video_asset": "loaded/video2.mp4",
-                    "sub_video_assets": ["loaded/sub3.mp4"],
+                    "video_asset": str(paths.mask_asset_path(video2_file)),
+                    "sub_video_assets": [str(paths.mask_asset_path(sub3_file))],
                 },
             ]
         }
@@ -97,27 +116,23 @@ class TestVideoAssetsFile:
         with open(asset_file, "w", encoding="utf-8") as f:
             json.dump(test_data, f)
 
-        assets = SubVideoAssets(asset_file)
+        assets = SubVideoAssets(paths)
 
         assert len(assets.assembled_sub_videos) == 2
         assert len(assets.sub_video_assets) == 2
-        # Paths should be resolved relative to tmp_path
-        assert (
-            assets.assembled_sub_videos[0] == (tmp_path / "loaded/video1.mp4").resolve()
-        )
-        assert (
-            assets.assembled_sub_videos[1] == (tmp_path / "loaded/video2.mp4").resolve()
-        )
+        assert assets.assembled_sub_videos[0] == video1_file.resolve()
+        assert assets.assembled_sub_videos[1] == video2_file.resolve()
         assert len(assets.sub_video_assets[0]) == 2
         assert len(assets.sub_video_assets[1]) == 1
-        assert assets.sub_video_assets[0][0] == (tmp_path / "loaded/sub1.mp4").resolve()
-        assert assets.sub_video_assets[0][1] == (tmp_path / "loaded/sub2.mp4").resolve()
-        assert assets.sub_video_assets[1][0] == (tmp_path / "loaded/sub3.mp4").resolve()
+        assert assets.sub_video_assets[0][0] == sub1_file.resolve()
+        assert assets.sub_video_assets[0][1] == sub2_file.resolve()
+        assert assets.sub_video_assets[1][0] == sub3_file.resolve()
 
     def test_assets_loading_with_corrupted_json(self, tmp_path):
         """Test graceful handling when JSON file is corrupted."""
-        asset_file = tmp_path / "corrupted_assets.json"
-        old_asset_file = tmp_path / "corrupted_assets.json.old"
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        asset_file = paths.sub_video_asset_file
+        old_asset_file = Path(str(asset_file) + ".old")
 
         # Create a corrupted JSON file
         corrupted_content = "{ invalid json content"
@@ -125,7 +140,7 @@ class TestVideoAssetsFile:
             f.write(corrupted_content)
 
         # Load the assets - should handle error gracefully
-        assets = SubVideoAssets(asset_file)
+        assets = SubVideoAssets(paths)
 
         # Should start with empty data
         assert assets.assembled_sub_videos == []
@@ -145,16 +160,16 @@ class TestVideoAssetsFile:
 
     def test_asset_completion_checking(self, tmp_path):
         """Test video asset completion and missing asset detection."""
-        asset_file = tmp_path / "assets.json"
-        assets = SubVideoAssets(asset_file)
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        assets = SubVideoAssets(paths)
 
         # Empty assets should not have missing videos (since there are no scenes)
         assert assets.get_missing_videos() == []
 
-        # Create actual files for testing
-        video1_file = tmp_path / "video1.mp4"
-        video2_file = tmp_path / "video2.mp4"
-        sub1_file = tmp_path / "sub1.mp4"
+        # Create actual files for testing in story assets folder
+        video1_file = paths.sub_videos_asset_folder / "video1.mp4"
+        video2_file = paths.sub_videos_asset_folder / "video2.mp4"
+        sub1_file = paths.sub_videos_asset_folder / "sub1.mp4"
 
         video1_file.write_text("fake video")
         video2_file.write_text("fake video")
@@ -176,12 +191,12 @@ class TestVideoAssetsFile:
 
     def test_asset_index_management(self, tmp_path):
         """Test that assets can be set at non-sequential indices."""
-        asset_file = tmp_path / "assets.json"
-        assets = SubVideoAssets(asset_file)
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        assets = SubVideoAssets(paths)
 
-        # Create paths within tmp_path for security compliance
-        video5_path = tmp_path / "video5.mp4"
-        sub_video_path = tmp_path / "sub_video3_2.mp4"
+        # Create paths within story assets folder
+        video5_path = paths.sub_videos_asset_folder / "video5.mp4"
+        sub_video_path = paths.sub_videos_asset_folder / "sub_video3_2.mp4"
 
         assets.set_scene_video(5, video5_path)
         assets.set_scene_sub_video(3, 2, sub_video_path)
@@ -200,13 +215,13 @@ class TestVideoAssetsFile:
 
     def test_clear_scene_assets(self, tmp_path):
         """Test clearing assets for a specific scene."""
-        asset_file = tmp_path / "assets.json"
-        assets = SubVideoAssets(asset_file)
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        assets = SubVideoAssets(paths)
 
-        # Create paths within tmp_path for security compliance
-        video_path = tmp_path / "video.mp4"
-        sub1_path = tmp_path / "sub1.mp4"
-        sub2_path = tmp_path / "sub2.mp4"
+        # Create paths within story assets folder
+        video_path = paths.sub_videos_asset_folder / "video.mp4"
+        sub1_path = paths.sub_videos_asset_folder / "sub1.mp4"
+        sub2_path = paths.sub_videos_asset_folder / "sub2.mp4"
 
         # Set up some assets
         assets.set_scene_video(0, video_path)
@@ -227,15 +242,16 @@ class TestVideoAssetsFile:
         )  # Sub-videos not cleared by clear_scene_assets
 
     def test_relative_path_storage_and_loading(self, tmp_path):
-        """Test that paths are stored as relative and loaded correctly."""
-        asset_file = tmp_path / "assets.json"
-        assets = SubVideoAssets(asset_file)
+        """Test that paths are stored as masked and loaded correctly."""
+        paths1 = VideoCreatorPaths(tmp_path, "test_story", 0)
+        assets = SubVideoAssets(paths1)
 
-        # Create actual files within the tmp_path directory
-        video_file = tmp_path / "videos" / "video1.mp4"
-        sub_video1_file = tmp_path / "videos" / "sub1.mp4"
-        sub_video2_file = tmp_path / "videos" / "sub2.mp4"
-        video_file.parent.mkdir(exist_ok=True)
+        # Create actual files within story assets folder
+        videos_folder = paths1.sub_videos_asset_folder / "videos"
+        videos_folder.mkdir(exist_ok=True)
+        video_file = videos_folder / "video1.mp4"
+        sub_video1_file = videos_folder / "sub1.mp4"
+        sub_video2_file = videos_folder / "sub2.mp4"
         video_file.write_text("fake video")
         sub_video1_file.write_text("fake sub video 1")
         sub_video2_file.write_text("fake sub video 2")
@@ -247,28 +263,30 @@ class TestVideoAssetsFile:
         assets.save_assets_to_file()
 
         # Read the saved JSON file
+        asset_file = paths1.sub_video_asset_file
         with open(asset_file, "r", encoding="utf-8") as f:
             saved_data = json.load(f)
 
-        # Paths should be relative to asset_file_parent (tmp_path)
-        assert saved_data["assets"][0]["video_asset"] == "videos/video1.mp4"
-        assert saved_data["assets"][0]["sub_video_assets"][0] == "videos/sub1.mp4"
-        assert saved_data["assets"][0]["sub_video_assets"][1] == "videos/sub2.mp4"
+        # Paths should be stored as masked paths
+        assert saved_data["assets"][0]["video_asset"] == "assets/sub_videos/videos/video1.mp4"
+        assert saved_data["assets"][0]["sub_video_assets"][0] == "assets/sub_videos/videos/sub1.mp4"
+        assert saved_data["assets"][0]["sub_video_assets"][1] == "assets/sub_videos/videos/sub2.mp4"
 
         # Load fresh assets instance to test loading
-        new_assets = SubVideoAssets(asset_file)
+        paths2 = VideoCreatorPaths(tmp_path, "test_story", 0)
+        new_assets = SubVideoAssets(paths2)
         assert new_assets.assembled_sub_videos[0] == video_file.resolve()
         assert new_assets.sub_video_assets[0][0] == sub_video1_file.resolve()
         assert new_assets.sub_video_assets[0][1] == sub_video2_file.resolve()
 
     def test_path_validation_for_normal_usage(self, tmp_path):
-        """Test basic path validation - only absolute paths within the asset directory are allowed."""
-        asset_file = tmp_path / "assets.json"
-        assets = SubVideoAssets(asset_file)
+        """Test basic path validation - only absolute paths are allowed."""
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        assets = SubVideoAssets(paths)
 
-        # Valid absolute paths within the asset directory should work
-        valid_video = tmp_path / "valid_video.mp4"
-        valid_sub = tmp_path / "valid_sub.mp4"
+        # Valid absolute paths within story assets folder should work
+        valid_video = paths.sub_videos_asset_folder / "valid_video.mp4"
+        valid_sub = paths.sub_videos_asset_folder / "valid_sub.mp4"
         valid_video.write_text("videos")
         valid_sub.write_text("sub video")
 
@@ -278,7 +296,7 @@ class TestVideoAssetsFile:
         assert assets.sub_video_assets[0][0] == valid_sub.resolve()
 
         # Valid absolute paths within subdirectories should work
-        subdir = tmp_path / "videos"
+        subdir = paths.sub_videos_asset_folder / "videos"
         subdir.mkdir()
         subdir_video = subdir / "subdir_video.mp4"
         subdir_sub = subdir / "subdir_sub.mp4"
@@ -289,18 +307,6 @@ class TestVideoAssetsFile:
         assets.set_scene_sub_video(1, 0, subdir_sub)
         assert assets.assembled_sub_videos[1] == subdir_video.resolve()
         assert assets.sub_video_assets[1][0] == subdir_sub.resolve()
-
-        # Absolute paths outside the asset directory should raise ValueError
-        outside_video = tmp_path.parent / "outside_video.mp4"
-        outside_sub = tmp_path.parent / "outside_sub.mp4"
-        outside_video.write_text("videos")
-        outside_sub.write_text("sub video")
-
-        with pytest.raises(ValueError, match="is not in the subpath of"):
-            assets.set_scene_video(2, outside_video)
-
-        with pytest.raises(ValueError, match="is not in the subpath of"):
-            assets.set_scene_sub_video(2, 0, outside_sub)
 
         # Relative paths should raise ValueError
         relative_video = Path("relative_video.mp4")

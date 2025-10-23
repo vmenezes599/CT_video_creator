@@ -9,11 +9,7 @@ from pathlib import Path
 
 from logging_utils import logger
 
-from ai_video_creator.ComfyUI_automation import (
-    ComfyUIRequests,
-    copy_media_to_comfyui_input_folder,
-    delete_media_from_comfyui_input_folder,
-)
+from ai_video_creator.ComfyUI_automation import ComfyUIRequests
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
 from ai_video_creator.generators import ZonosTTSRecipe
@@ -58,18 +54,16 @@ class VideoAssembler:
         self._subtitle_generator = SubtitleGenerator()
 
         # Load separate narrator and image assets
-        self.narrator_assets = NarratorAssets(self._paths.narrator_asset_file)
-        self.image_assets = ImageAssets(self._paths.image_asset_file)
+        self.narrator_assets = NarratorAssets(video_creator_paths)
+        self.image_assets = ImageAssets(video_creator_paths)
 
-        self.video_assets = SubVideoAssets(self._paths.sub_video_asset_file)
+        self.video_assets = SubVideoAssets(video_creator_paths)
         if not self.video_assets.is_complete():
             raise ValueError(
                 "Video assets are incomplete. Please ensure all required assets are present."
             )
 
-        self.video_assembler_assets = VideoAssemblerAssets(
-            self._paths.video_assembler_asset_file
-        )
+        self.video_assembler_assets = VideoAssemblerAssets(video_creator_paths)
 
         self.video_assembler_recipe = VideoAssemblerRecipe(self._paths)
 
@@ -201,7 +195,7 @@ class VideoAssembler:
                 )
                 continue
 
-            comfyui_video_path = copy_media_to_comfyui_input_folder(video_path)
+            comfyui_video_path = requests.upload_file(video_path)
 
             output_file_name = f"{comfyui_video_path.stem}_upscaled"
 
@@ -209,15 +203,13 @@ class VideoAssembler:
             workflow.set_video_path(comfyui_video_path.name)
             workflow.set_output_filename(output_file_name)
 
-            processed_videos = requests.comfyui_ensure_send_all_prompts([workflow])
+            processed_videos = requests.ensure_send_all_prompts([workflow])
             processed_video_path = Path(processed_videos[0])
             moved_path = self._move_asset_to_output_path(
                 self._paths.video_assembler_asset_folder, processed_video_path
             )
             self.video_assembler_assets.set_final_sub_video_video(index, moved_path)
             processed_videos_paths.append(moved_path)
-
-            delete_media_from_comfyui_input_folder(comfyui_video_path)
 
         logger.info(
             f"Finished upscaling and frame interpolating videos: {len(sub_video_file_paths)}"
@@ -350,7 +342,7 @@ class VideoAssembler:
             logger.info("No ending narrator defined, skipping ending video segment.")
             return video_segments
 
-        ending_video_path = ending_recipe.subvideo
+        ending_video_path = ending_recipe.sub_video
         if not ending_video_path or not ending_video_path.exists():
             logger.warning("Ending video path 'None'. Setting to first video segment.")
             ending_video_path = self.video_assembler_recipe.set_video_ending_subvideo(

@@ -33,7 +33,7 @@ class ImageAssetBuilder:
         self.image_asset_file = self._paths.image_asset_file
 
         self.recipe = ImageRecipe(self.image_recipe_file)
-        self.image_assets = ImageAssets(self.image_asset_file)
+        self.image_assets = ImageAssets(video_creator_paths)
 
         # Ensure image_assets list has the same size as recipe
         self._synchronize_assets_with_recipe()
