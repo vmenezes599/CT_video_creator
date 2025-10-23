@@ -203,13 +203,15 @@ class VideoAssembler:
             workflow.set_video_path(comfyui_video_path.name)
             workflow.set_output_filename(output_file_name)
 
-            processed_videos = requests.ensure_send_all_prompts([workflow])
-            processed_video_path = Path(processed_videos[0])
-            moved_path = self._move_asset_to_output_path(
-                self._paths.video_assembler_asset_folder, processed_video_path
+            result_files = requests.ensure_send_all_prompts(
+                [workflow], self._paths.video_assembler_asset_folder
             )
-            self.video_assembler_assets.set_final_sub_video_video(index, moved_path)
-            processed_videos_paths.append(moved_path)
+            processed_video_path = Path(result_files[0]) if result_files else None
+
+            self.video_assembler_assets.set_final_sub_video_video(
+                index, processed_video_path
+            )
+            processed_videos_paths.append(processed_video_path)
 
         logger.info(
             f"Finished upscaling and frame interpolating videos: {len(sub_video_file_paths)}"

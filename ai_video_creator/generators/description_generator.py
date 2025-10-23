@@ -2,6 +2,7 @@
 This module contains the Florence image generator class."""
 
 import random
+import tempfile
 from pathlib import Path
 
 from ai_llm import LLMManager, LLMPromptBuilder
@@ -60,18 +61,15 @@ class FlorenceGenerator:
         workflow.set_seed(random.randint(0, 2**64 - 1))
         workflow.set_output_filename(temp_file_name.stem)
 
-        self.requests.ensure_send_all_prompts([workflow])
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_output_dir = Path(temp_dir)
 
-        output_text_path = None
-        for file in Path(COMFYUI_OUTPUT_FOLDER).iterdir():
-            if temp_file_name.stem in file.stem:
-                output_text_path = file
-                break
+            results = self.requests.ensure_send_all_prompts([workflow], temp_output_dir)
 
-        with open(output_text_path, "r", encoding="utf-8") as file_handler:
-            result = file_handler.read().strip()
+            output_text_path = results[0]
 
-        output_text_path.unlink(missing_ok=True)
+            with open(output_text_path, "r", encoding="utf-8") as file_handler:
+                result = file_handler.read().strip()
 
         return result
 

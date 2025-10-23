@@ -175,7 +175,7 @@ class TestComfyUIRequests:
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     def test_comfyui_ensure_send_all_prompts_filters_none_results(
-        self, mock_sleep, comfyui_requests
+        self, mock_sleep, comfyui_requests, tmp_path
     ):
         """Test that ensure_send_all_prompts properly filters out None results and maintains list integrity."""
         # Arrange
@@ -190,17 +190,20 @@ class TestComfyUIRequests:
 
         with patch.object(
             comfyui_requests, "_process_single_workflow"
-        ) as mock_process_workflow:
+        ) as mock_process_workflow, patch.object(
+            comfyui_requests, "download_all_files"
+        ) as mock_download:
             # Simulate: success, failure, success
             mock_process_workflow.side_effect = [
                 ["/path/output1.png"],
                 [],  # Empty list instead of None for failure
                 ["/path/output3.png"],
             ]
+            mock_download.return_value = ["/path/output1.png", "/path/output3.png"]
 
             # Act
             result = comfyui_requests.ensure_send_all_prompts(
-                [workflow1, workflow2, workflow3]
+                [workflow1, workflow2, workflow3], tmp_path
             )
 
             # Assert - Should only contain successful outputs
@@ -209,13 +212,18 @@ class TestComfyUIRequests:
             assert mock_process_workflow.call_count == 3
             assert mock_sleep.call_count == 3
 
-    def test_comfyui_ensure_send_all_prompts_empty_list(self, comfyui_requests):
+    def test_comfyui_ensure_send_all_prompts_empty_list(
+        self, comfyui_requests, tmp_path
+    ):
         """Test sending empty list of prompts."""
-        # Act
-        result = comfyui_requests.ensure_send_all_prompts([])
+        with patch.object(comfyui_requests, "download_all_files") as mock_download:
+            mock_download.return_value = []
 
-        # Assert
-        assert result == []
+            # Act
+            result = comfyui_requests.ensure_send_all_prompts([], tmp_path)
+
+            # Assert
+            assert result == []
 
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
     @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.datetime")
@@ -645,4 +653,6 @@ class TestComfyUIRequests:
             )
             # Each attempt: _send_clean_memory_request sleeps, plus delay_seconds for all but last attempt
             # With max_retries=3: 3 sleeps from _send_clean_memory_request + 2 sleeps from delay_seconds = 5 total
-            assert mock_sleep.call_count == comfyui_requests.max_retries_per_request + (comfyui_requests.max_retries_per_request - 1)
+            assert mock_sleep.call_count == comfyui_requests.max_retries_per_request + (
+                comfyui_requests.max_retries_per_request - 1
+            )

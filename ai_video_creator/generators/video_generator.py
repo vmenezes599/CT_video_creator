@@ -155,13 +155,11 @@ class WanGenerator(IVideoGenerator):
             workflow.add_low_lora(lora, strength)
 
         workflow.set_seed(recipe.seed)
-        output_file_names = self.requests.ensure_send_all_prompts([workflow])
-
-        moved_files = self._clean_and_move_generated_files(
-            output_file_path, output_file_names
+        result_files = self.requests.ensure_send_all_prompts(
+            [workflow], output_file_path.parent
         )
 
-        return moved_files[0]
+        return result_files[0] if result_files else None
 
     def text_to_video(self, recipe: "WanT2VRecipe", output_file_path: Path) -> Path:
         """
@@ -191,13 +189,11 @@ class WanGenerator(IVideoGenerator):
 
         workflow.set_seed(recipe.seed)
 
-        output_file_names = self.requests.ensure_send_all_prompts([workflow])
-
-        moved_files = self._clean_and_move_generated_files(
-            output_file_path, output_file_names
+        result_files = self.requests.ensure_send_all_prompts(
+            [workflow], output_file_path.parent
         )
 
-        return moved_files[0]
+        return result_files[0] if result_files else None
 
 
 class WanRecipeBase(VideoRecipeBase):

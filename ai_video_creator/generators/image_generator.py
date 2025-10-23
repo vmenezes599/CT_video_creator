@@ -81,14 +81,11 @@ class FluxAIImageGenerator(IImageGenerator):
         workflow.set_batch_size(recipe.batch_size)
         workflow.set_seed(recipe.seed)
 
-        output_file_names = self.requests.ensure_send_all_prompts([workflow])
+        result_files = self.requests.ensure_send_all_prompts(
+            [workflow], output_file_path.parent
+        )
 
-        moved_files = [
-            self._move_asset_to_output_path(output_file_path.parent, Path(file))
-            for file in output_file_names
-        ]
-
-        return moved_files
+        return Path(result_files[0]) if result_files else None
 
 
 class FluxImageRecipe(ImageRecipeBase):

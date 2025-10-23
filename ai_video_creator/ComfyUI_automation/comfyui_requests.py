@@ -29,11 +29,13 @@ class ComfyUIRequests:
         self.max_retries_per_request = max_retries_per_request
         self.delay_seconds = delay_seconds
 
-    def _send_get_request(self, url: str, timeout: int = 10):
+    def _send_get_request(
+        self, url: str, params: dict = None, stream: bool = False, timeout: int = 10
+    ):
         """
         Sends a GET request using the configured session.
         """
-        return requests.get(url=url, timeout=timeout)
+        return requests.get(url=url, params=params, stream=stream, timeout=timeout)
 
     def _send_post_request(
         self,
@@ -272,7 +274,40 @@ class ComfyUIRequests:
 
         return file_path.name
 
-    def ensure_send_all_prompts(self, req_list: list[IComfyUIWorkflow]) -> list[str]:
+    def download_all_files(
+        self, files_to_download: list[Path], output_folder: Path
+    ) -> list[Path]:
+        """
+        Download all specified files from ComfyUI.
+
+        :param files_to_download: List of file paths to download
+        :param output_folder: Folder to save downloaded files
+        :return: List of paths to downloaded files
+        """
+        output_paths: list[Path] = []
+        for file_handler in files_to_download:
+            params = {
+                "filename": file_handler.name,
+                "subfolder": "",
+                "type": "output",
+            }
+            response = self._send_get_request(
+                f"{COMFYUI_URL}/view", params=params, stream=True, timeout=120
+            )
+            response.raise_for_status()
+            output_folder.mkdir(parents=True, exist_ok=True)
+            out_path = output_folder / file_handler.name
+            with open(out_path, "wb") as file_handler:
+                for chunk in response.iter_content(2 * 1024 * 1024):
+                    if chunk:
+                        file_handler.write(chunk)
+            output_paths.append(out_path)
+
+        return output_paths
+
+    def ensure_send_all_prompts(
+        self, req_list: list[IComfyUIWorkflow], output_dir: Path
+    ) -> list[str]:
         """
         Send all prompts in the list to ComfyUI and wait for them to finish.
 
@@ -293,7 +328,11 @@ class ComfyUIRequests:
 
         logger.info("Finished processing all ComfyUI requests.")
 
-        return output_image_paths
+        downloaded_files = self.download_all_files(
+            [Path(p) for p in output_image_paths], output_folder=output_dir
+        )
+
+        return downloaded_files
 
     def get_processing_queue(self) -> int:
         """
