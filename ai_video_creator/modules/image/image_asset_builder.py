@@ -72,17 +72,13 @@ class ImageAssetBuilder:
                 f"Using image generator: {type(image_generator).__name__} for file: {output_image_file_path.name}"
             )
 
-            output_images = image_generator.text_to_image(
+            output_image = image_generator.text_to_image(
                 recipe=image, output_file_path=output_image_file_path
             )
-            self.image_assets.set_scene_image(scene_index, output_images)
+            self.image_assets.set_scene_image(scene_index, output_image)
             self.image_assets.save_assets_to_file()  # Save progress immediately
-            for img in output_images:
-                logger.info(
-                    f"Successfully generated image for scene {scene_index + 1}: {img.name}"
-                )
             logger.info(
-                f"Using generated image for scene {scene_index + 1}: {output_images.name}"
+                f"Successfully generated {image.batch_size} image(s) for scene {scene_index + 1}."
             )
 
         except (IOError, OSError, RuntimeError) as e:
