@@ -9,13 +9,11 @@ from pathlib import Path
 
 from logging_utils import logger
 
-from ai_video_creator.ComfyUI_automation import ComfyUIRequests
+from ai_video_creator.comfyui import ComfyUIRequests
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
 from ai_video_creator.generators import ZonosTTSRecipe
-from ai_video_creator.generators.ComfyUI_automation import (
-    VideoUpscaleFrameInterpWorkflow,
-)
+from ai_video_creator.comfyui import VideoUpscaleFrameInterpWorkflow
 from ai_video_creator.generators import SubtitleGenerator
 from ai_video_creator.utils import (  # pylint: disable=unused-import
     burn_subtitles_to_video,

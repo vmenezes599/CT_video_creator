@@ -7,8 +7,8 @@ from unittest.mock import Mock, patch
 import pytest
 from requests.exceptions import RequestException
 
-from ai_video_creator.ComfyUI_automation import ComfyUIRequests
-from ai_video_creator.ComfyUI_automation.comfyui_workflow import IComfyUIWorkflow
+from ai_video_creator.comfyui import ComfyUIRequests
+from ai_video_creator.comfyui.comfyui_workflow import IComfyUIWorkflow
 
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def mock_workflow():
 class TestComfyUIRequests:
     """Test class for ComfyUIRequests."""
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.post")
+    @patch("ai_video_creator.comfyui.comfyui_requests.requests.post")
     def test_comfyui_send_prompt_success(self, mock_post, comfyui_requests):
         """Test successful prompt sending with proper data wrapping."""
         # Arrange
@@ -66,7 +66,7 @@ class TestComfyUIRequests:
         with pytest.raises(ValueError, match="The prompt must be a dictionary"):
             comfyui_requests.comfyui_send_prompt(123)
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
+    @patch("ai_video_creator.comfyui.comfyui_requests.requests.get")
     def test_comfyui_get_processing_queue_success(self, mock_get, comfyui_requests):
         """Test successful queue status retrieval - tests JSON parsing logic."""
         # Arrange
@@ -82,7 +82,7 @@ class TestComfyUIRequests:
         # Assert
         assert queue_count == 3
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
+    @patch("ai_video_creator.comfyui.comfyui_requests.requests.get")
     def test_comfyui_get_processing_queue_failure(self, mock_get, comfyui_requests):
         """Test failed queue status retrieval - tests error handling logic."""
         # Arrange
@@ -97,7 +97,7 @@ class TestComfyUIRequests:
         # Assert
         assert queue_count == -1
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
+    @patch("ai_video_creator.comfyui.comfyui_requests.requests.get")
     def test_comfyui_get_history_success(self, mock_get, comfyui_requests):
         """Test successful history retrieval - tests JSON return logic."""
         # Arrange
@@ -118,7 +118,7 @@ class TestComfyUIRequests:
         assert "12345" in history_data
         assert history_data == test_history
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.requests.get")
+    @patch("ai_video_creator.comfyui.comfyui_requests.requests.get")
     def test_comfyui_get_history_failure(self, mock_get, comfyui_requests):
         """Test failed history retrieval."""
         # Arrange
@@ -173,7 +173,7 @@ class TestComfyUIRequests:
             # Assert
             assert last_entry == {}
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_comfyui_ensure_send_all_prompts_filters_none_results(
         self, mock_sleep, comfyui_requests, tmp_path
     ):
@@ -225,8 +225,8 @@ class TestComfyUIRequests:
             # Assert
             assert result == []
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.datetime")
+    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.comfyui.comfyui_requests.datetime")
     def test_wait_for_completion_success(
         self, mock_datetime, mock_sleep, comfyui_requests
     ):
@@ -260,8 +260,8 @@ class TestComfyUIRequests:
             assert mock_sleep.call_count == 1
             mock_sleep.assert_called_with(1)  # Default check_interval
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.datetime")
+    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.comfyui.comfyui_requests.datetime")
     def test_wait_for_completion_custom_interval(
         self, mock_datetime, mock_sleep, comfyui_requests
     ):
@@ -337,7 +337,7 @@ class TestComfyUIRequests:
             comfyui_requests._check_for_output_success(failed_incomplete_response)
 
     @patch.object(ComfyUIRequests, "_comfyui_get_history_output_name")
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.os.path.join")
+    @patch("ai_video_creator.comfyui.comfyui_requests.os.path.join")
     def test_get_output_path_success(
         self, mock_path_join, mock_get_output_name, comfyui_requests
     ):
@@ -462,7 +462,7 @@ class TestComfyUIRequests:
         assert display_summary == "This is a ..."
         assert len(display_summary) == 13  # 10 + "..." = 13
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_success(
         self, mock_sleep, comfyui_requests, mock_workflow
     ):
@@ -503,7 +503,7 @@ class TestComfyUIRequests:
             mock_check_success.assert_called_once()
             mock_get_paths.assert_called_once()
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_runtime_error_retry(
         self, mock_sleep, comfyui_requests, mock_workflow
     ):
@@ -548,7 +548,7 @@ class TestComfyUIRequests:
                 mock_sleep.call_count == 4
             )  # Each attempt: sleep in _send_clean_memory_request (3s) + sleep delay_seconds
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_request_exception_retry(
         self, mock_sleep, comfyui_requests, mock_workflow
     ):
@@ -591,7 +591,7 @@ class TestComfyUIRequests:
                 mock_sleep.call_count == 4
             )  # Each attempt: sleep in _send_clean_memory_request (3s) + sleep delay_seconds
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_max_retries_exceeded(
         self, mock_sleep, comfyui_requests, mock_workflow
     ):
@@ -616,7 +616,7 @@ class TestComfyUIRequests:
                 mock_sleep.call_count == 3
             )  # Attempt 1: _send_clean_memory_request (3s) + delay_seconds; Attempt 2: _send_clean_memory_request (3s) only
 
-    @patch("ai_video_creator.ComfyUI_automation.comfyui_requests.time.sleep")
+    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_no_history_entry(
         self, mock_sleep, comfyui_requests, mock_workflow
     ):

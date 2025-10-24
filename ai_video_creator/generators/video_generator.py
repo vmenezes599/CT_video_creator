@@ -10,13 +10,8 @@ from pathlib import Path
 from typing_extensions import override
 from logging_utils import logger
 
-from ai_video_creator.ComfyUI_automation import ComfyUIRequests
+from ai_video_creator.comfyui import ComfyUIRequests, WanI2VWorkflow, WanT2VWorkflow
 from ai_video_creator.utils import safe_move, extract_video_last_frame
-
-from .ComfyUI_automation.comfyui_video_workflows import (
-    WanI2VWorkflow,
-    WanT2VWorkflow,
-)
 
 
 class VideoRecipeBase:

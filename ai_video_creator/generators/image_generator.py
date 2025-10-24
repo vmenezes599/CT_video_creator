@@ -3,14 +3,12 @@ AI Video Generation Module
 """
 
 import random
-import shutil
 from abc import ABC, abstractmethod
 from pathlib import Path
 from logging_utils import logger
 
 from ai_video_creator.utils import safe_move
-from ai_video_creator.ComfyUI_automation import ComfyUIRequests
-from .ComfyUI_automation.comfyui_image_workflows import FluxWorkflow
+from ai_video_creator.comfyui import ComfyUIRequests, FluxWorkflow
 
 
 class ImageRecipeBase:

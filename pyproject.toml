@@ -9,7 +9,7 @@ version = "0.4"
 dynamic = ["dependencies"]
 
 [tool.setuptools.package-data]
-"ai_video_creator.generators.ComfyUI_automation" = ["workflows/*.json"]
+"ai_video_creator.comfyui" = ["workflows/*.json"]
 
 [tool.setuptools.packages.find]
 where   = ["."]

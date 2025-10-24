@@ -1,8 +1,6 @@
-elevenlabs
 ffmpeg
 ffmpeg-python
 python-dotenv
-pyttsx3
 Requests
 typing_extensions
 

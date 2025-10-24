@@ -3,7 +3,7 @@ This module contains the video workflows for ComfyUI.
 """
 
 import os
-from ai_video_creator.ComfyUI_automation.comfyui_workflow import ComfyUIWorkflowBase
+from ai_video_creator.comfyui.comfyui_workflow import ComfyUIWorkflowBase
 
 
 # Get the current directory where this file is located

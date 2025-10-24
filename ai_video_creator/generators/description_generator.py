@@ -6,17 +6,11 @@ import tempfile
 from pathlib import Path
 
 from ai_llm import LLMManager, LLMPromptBuilder
-from ai_video_creator.ComfyUI_automation import (
+from ai_video_creator.comfyui import (
     ComfyUIRequests,
 )
-from ai_video_creator.environment_variables import (
-    COMFYUI_OUTPUT_FOLDER,
-    DESCRIPTION_GENERATION_LLM_MODEL,
-)
-from ai_video_creator.generators.ComfyUI_automation.comfyui_text_workflows import (
-    FlorentI2TWorkflow,
-    FlorentV2TWorkflow,
-)
+from ai_video_creator.environment_variables import DESCRIPTION_GENERATION_LLM_MODEL
+from ai_video_creator.comfyui import FlorentI2TWorkflow, FlorentV2TWorkflow
 
 from ai_video_creator.prompt import Prompt
 from logging_utils import logger

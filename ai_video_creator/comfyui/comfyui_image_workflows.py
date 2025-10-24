@@ -6,7 +6,7 @@ import os
 import random
 from typing_extensions import override
 
-from ai_video_creator.ComfyUI_automation.comfyui_workflow import ComfyUIWorkflowBase
+from ai_video_creator.comfyui.comfyui_workflow import ComfyUIWorkflowBase
 
 # Get the current directory where this file is located
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
