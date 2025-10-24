@@ -6,9 +6,7 @@ import tempfile
 from pathlib import Path
 
 from ai_llm import LLMManager, LLMPromptBuilder
-from ai_video_creator.comfyui import (
-    ComfyUIRequests,
-)
+from ai_video_creator.comfyui import ComfyUIRequests
 from ai_video_creator.environment_variables import DESCRIPTION_GENERATION_LLM_MODEL
 from ai_video_creator.comfyui import FlorentI2TWorkflow, FlorentV2TWorkflow
 
@@ -99,8 +97,7 @@ class SceneScriptGenerator:
 
     def _generate_scene_script_prompt(self, index: int) -> LLMPromptBuilder:
         """
-        Generate a prompt to enrich a single visual segment (from subdivision)
-        into a full scene script description.
+        Generate a prompt to enrich a single visual segment (from subdivision) into a full scene script description.
         This is the second phase after subdivision.
         """
 
@@ -129,6 +126,8 @@ class SceneScriptGenerator:
             "Use the original visual prompt only for optional cues about symbolism, mood, or visual composition — never for literal details.",
             "Do not introduce characters, actions, or objects not supported by the Florence2 description or the current segment.",
             "Preserve the visual setting and sequence, ensuring the result aligns with what would be seen in the image.",
+            f"Adhere strictly to the resolved time period for this scene ({self._sub_video_prompt.scene_time_period}): align "
+            "clothing, props, architecture, and technology to it; forbid anachronisms; if timing is ambiguous, use era-neutral descriptions.",
             "You may add environmental details, lighting, motion, or atmosphere for richness.",
             "Do not contradict or reinterpret the original visual intent.",
             "Write as if describing a cinematic shot ready for generation.",
@@ -335,10 +334,12 @@ def main():
         "In the beginning, there was only the deep, a vast emptiness, a canvas waiting. From this void, God’s thoughts took shape, swirling and coalescing in the infinite silence. He breathed, and a spark—a light—came into being, warm and radiant. Let there be light, He declared, and in an instant, the darkness shattered like glass, revealing a tapestry of brilliance that spread across the cosmos. The air crackled with energy as colors burst forth; vibrant hues painted the heavens.",
         "",
         "",
+        "",
     )
     current_prompt = Prompt(
         "With each utterance, He crafted the sky above—a vast expanse of deep blues and soft whites—and the waters below, their surfaces shimmering like gemstones under the newborn sun. Establishing boundaries that formed a delicate balance, He watched as the stars flickered to life like celestial messengers sent to herald this new creation. Mountains rose majestically from the earth, their jagged peaks touching the heavens while valleys nestled in their embrace, filled with vibrant greens that danced in the gentle breeze.",
         "In a breathtaking widescreen panorama, the sky unfurls in deep blues and soft whites, while the waters below sparkle like scattered gemstones, reflecting the golden hue of the newborn sun. God stands at the edge of a rugged mountain peak, arms outstretched as he shapes the celestial canvas above, while humanity gathers in awe at the valley's edge, their silhouettes framed against the vibrant greens of swaying grass and blooming wildflowers. The atmosphere is imbued with a sense of sublime creation, as gentle breezes carry whispers of life through this newly formed world, where every element vibrates with harmony and potential.",
+        "",
         "",
     )
     image_path = Path(

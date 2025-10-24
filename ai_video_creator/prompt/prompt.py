@@ -11,10 +11,12 @@ class Prompt:
         narrator: str,
         visual_description: str,
         visual_prompt: str,
+        scene_time_period: str,
     ):
         self.narrator = narrator
         self.visual_description = visual_description
         self.visual_prompt = visual_prompt
+        self.scene_time_period = scene_time_period
 
     @classmethod
     def from_dict(cls, data: dict) -> "Prompt":
@@ -23,6 +25,7 @@ class Prompt:
             narrator=data.get("narrator", ""),
             visual_description=data.get("visual_description", ""),
             visual_prompt=data.get("visual_prompt", ""),
+            scene_time_period=data.get("scene_time_period", ""),
         )
 
     @classmethod
@@ -50,21 +53,3 @@ class Prompt:
             if len(self.narrator) > 100
             else f"Narrator: {self.narrator}"
         )
-
-    def __repr__(self):
-        """Detailed string representation of the Prompt."""
-        return f"Prompt(narrator='{self.narrator[:50]}...', visual_description='{self.visual_description[:50]}...', visual_prompt='{self.visual_prompt[:50]}...')"
-
-    def __eq__(self, other):
-        """Check equality with another Prompt object."""
-        if isinstance(other, Prompt):
-            return (
-                self.narrator == other.narrator
-                and self.visual_description == other.visual_description
-                and self.visual_prompt == other.visual_prompt
-            )
-        return False
-
-    def __hash__(self):
-        """Generate hash for the Prompt object."""
-        return hash((self.narrator, self.visual_description, self.visual_prompt))
