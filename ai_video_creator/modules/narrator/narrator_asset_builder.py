@@ -78,7 +78,7 @@ class NarratorAssetBuilder:
             )
 
             self.narrator_assets.set_scene_narrator(scene_index, output_audio)
-            self.narrator_assets.save_assets_to_file()  # Save progress immediately
+            self.narrator_assets.save_assets_to_file()
             logger.info(
                 f"Successfully generated narrator for scene {scene_index + 1}: {output_audio.name}"
             )

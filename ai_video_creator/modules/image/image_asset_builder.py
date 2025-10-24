@@ -76,7 +76,7 @@ class ImageAssetBuilder:
                 recipe=image, output_file_path=output_image_file_path
             )
             self.image_assets.set_scene_image(scene_index, output_image)
-            self.image_assets.save_assets_to_file()  # Save progress immediately
+            self.image_assets.save_assets_to_file()
             logger.info(
                 f"Successfully generated {image.batch_size} image(s) for scene {scene_index + 1}."
             )
@@ -104,7 +104,6 @@ class ImageAssetBuilder:
 
         logger.info("Starting image asset cleanup process")
 
-        # Get list of valid (non-None) asset files to keep
         valid_image_assets = [
             asset for asset in self.image_assets.image_assets if asset is not None
         ]

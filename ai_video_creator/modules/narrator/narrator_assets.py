@@ -22,27 +22,6 @@ class NarratorAssets:
 
         self._load_assets_from_file()
 
-    def __validate_asset_path(self, asset_path: Path) -> Path:
-        """
-        Validate and resolve asset path, ensuring it's absolute.
-        Returns the validated path or raises ValueError for invalid paths.
-        """
-        try:
-            # Require absolute paths only
-            if not asset_path.is_absolute():
-                raise ValueError(f"Only absolute paths are allowed: {asset_path}")
-
-            # Resolve the absolute path
-            resolved_path = asset_path.resolve(strict=False)
-
-            # Basic security check: prevent path traversal attempts
-            if ".." in str(asset_path):
-                raise ValueError(f"Path traversal not allowed: {asset_path}")
-
-            return resolved_path
-        except (FileNotFoundError, RuntimeError, OSError) as e:
-            raise ValueError(f"Invalid path: {asset_path} - {e}") from e
-
     def _load_assets_from_file(self):
         """Load assets from JSON file with security validation."""
         try:
@@ -117,18 +96,12 @@ class NarratorAssets:
 
     def set_scene_narrator(self, scene_index: int, narrator_file_path: Path) -> None:
         """Set narrator file path for a specific scene with security validation."""
-        try:
-            # Validate the path for security
-            validated_path = self.__validate_asset_path(narrator_file_path)
 
-            self.ensure_index_exists(scene_index)
-            self.narrator_assets[scene_index] = validated_path
-            logger.debug(
-                f"Set narrator for scene {scene_index + 1}: {validated_path.name}"
-            )
-        except ValueError as e:
-            logger.error(f"Failed to set narrator for scene {scene_index + 1}: {e}")
-            raise
+        self.ensure_index_exists(scene_index)
+        self.narrator_assets[scene_index] = narrator_file_path
+        logger.debug(
+            f"Set narrator for scene {scene_index + 1}: {narrator_file_path.name}"
+        )
 
     def clear_scene_narrator(self, scene_index: int) -> None:
         """Clear narrator asset for a specific scene."""
