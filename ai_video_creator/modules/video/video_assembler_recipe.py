@@ -77,10 +77,15 @@ class VideoIntroRecipe:
 
     def from_dict(self, data: dict) -> None:
         """Load effects from a dictionary."""
-        intro_asset_masked = data.get("intro_asset", Path())
+        intro_asset_masked = data.get("intro_asset", None)
 
         self.intro_effects = data.get("intro_effects", [])
-        self.intro_asset = self._paths.unmask_asset_path(intro_asset_masked)
+
+        self.intro_asset = (
+            self._paths.unmask_asset_path(intro_asset_masked)
+            if intro_asset_masked
+            else None
+        )
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
@@ -144,10 +149,11 @@ class VideoEndingRecipe:
         """Load effects from a dictionary."""
         self.narrator_text_list = data.get("narrator_list", [])
         narrator_clone_voice = data.get("narrator_clone_voice", None)
-        if narrator_clone_voice:
-            self.narrator_clone_voice = self._paths.unmask_asset_path(
-                narrator_clone_voice
-            )
+        self.narrator_clone_voice = (
+            self._paths.unmask_asset_path(Path(narrator_clone_voice))
+            if narrator_clone_voice
+            else None
+        )
 
         self.seed = data.get("seed", random.randint(0, 1**64 - 1))
         self.ending_overlay_start_narrator_index = data.get(
@@ -155,31 +161,33 @@ class VideoEndingRecipe:
         )
         self.ending_start_delay_seconds = data.get("ending_start_delay_seconds", None)
         ending_overlay_asset = data.get("ending_overlay_asset", None)
-        if ending_overlay_asset:
-            self.ending_overlay_asset = self._paths.unmask_asset_path(
-                ending_overlay_asset
-            )
+        self.ending_overlay_asset = (
+            self._paths.unmask_asset_path(Path(ending_overlay_asset))
+            if ending_overlay_asset
+            else None
+        )
         sub_video = data.get("subvideo", None)
-        if sub_video:
-            self.sub_video = self._paths.unmask_asset_path(sub_video)
+        self.sub_video = (
+            self._paths.unmask_asset_path(Path(sub_video)) if sub_video else None
+        )
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
 
         narrator_clone_voice_str = (
-            self._paths.mask_asset_path(self.narrator_clone_voice)
+            str(self._paths.mask_asset_path(self.narrator_clone_voice))
             if self.narrator_clone_voice
             else None
         )
 
         ending_overlay_asset_str = (
-            self._paths.mask_asset_path(self.ending_overlay_asset)
+            str(self._paths.mask_asset_path(self.ending_overlay_asset))
             if self.ending_overlay_asset
             else None
         )
 
         sub_video_str = (
-            self._paths.mask_asset_path(self.sub_video) if self.sub_video else None
+            str(self._paths.mask_asset_path(self.sub_video)) if self.sub_video else None
         )
 
         result = {
@@ -230,10 +238,14 @@ class VideoOverlayRecipe:
 
     def from_dict(self, data: dict) -> None:
         """Load effects from a dictionary."""
-        outro_asset_masked = data.get("outro_asset", Path())
+        outro_asset_masked = data.get("outro_asset", None)
 
         self.overlay_effects = data.get("outro_effects", [])
-        self.overlay_asset = self._paths.unmask_asset_path(outro_asset_masked)
+        self.overlay_asset = (
+            self._paths.unmask_asset_path(outro_asset_masked)
+            if outro_asset_masked
+            else None
+        )
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""

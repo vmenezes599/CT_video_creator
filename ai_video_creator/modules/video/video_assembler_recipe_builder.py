@@ -1,5 +1,6 @@
 """Module to build video assembler recipes based on assets and defaults."""
 
+from pathlib import Path
 from logging_utils import logger
 
 from ai_video_creator.utils import VideoCreatorPaths
@@ -107,9 +108,9 @@ class VideoAssemblerRecipeBuilder:
             "Thank you so much for watching! We hope to see you in the next episode.",
             "If you enjoyed this video, please like and subscribe for more content. Leave a comment below to let us know your thoughts.",
         ]
-        ending.narrator_clone_voice = self.narrator_recipe.narrator_data[
-            0
-        ].clone_voice_path
+        ending.narrator_clone_voice = Path(
+            self.narrator_recipe.narrator_data[0].clone_voice_path
+        )
         ending.ending_overlay_start_narrator_index = 1
         ending.ending_overlay_asset = VideoEndingRecipe.DEFAULT_ENDING_OVERLAY_ASSET
         ending.ending_start_delay_seconds = 1.0

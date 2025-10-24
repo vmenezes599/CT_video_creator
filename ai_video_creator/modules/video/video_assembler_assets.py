@@ -50,28 +50,28 @@ class VideoAssemblerAssets:
             with open(self.asset_file_path, "r", encoding="utf-8") as file:
                 data: dict = json.load(file)
 
-                assets = data.get("assets", [])
-                ensure_collection_index_exists(self.final_sub_videos, len(assets) - 1)
+            assets = data.get("assets", [])
+            ensure_collection_index_exists(self.final_sub_videos, len(assets) - 1)
 
-                # Load assets from the "assets" array format
-                for index, asset in enumerate(assets):
+            # Load assets from the "assets" array format
+            for index, asset in enumerate(assets):
 
-                    # Load video asset with security validation
-                    video_value = asset.get("video_asset")
-                    video_value_path = Path(video_value) if video_value else None
-                    self.final_sub_videos[index] = (
-                        self._paths.unmask_asset_path(video_value_path)
-                        if video_value_path
-                        else None
-                    )
+                # Load video asset with security validation
+                video_value = asset.get("video_asset")
+                video_value_path = Path(video_value) if video_value else None
+                self.final_sub_videos[index] = (
+                    self._paths.unmask_asset_path(video_value_path)
+                    if video_value_path
+                    else None
+                )
 
-                video_ending_value = data.get("video_ending")
-                if video_ending_value:
-                    self.video_ending = self._paths.unmask_asset_path(
-                        Path(video_ending_value)
-                    )
+            video_ending_value = data.get("video_ending")
+            if video_ending_value:
+                self.video_ending = self._paths.unmask_asset_path(
+                    Path(video_ending_value)
+                )
 
-                self.save_assets_to_file()
+            self.save_assets_to_file()
 
         except json.JSONDecodeError:
             logger.error(
@@ -82,7 +82,6 @@ class VideoAssemblerAssets:
             if self.asset_file_path.exists():
                 self.asset_file_path.rename(old_file_path)
             self.final_sub_videos = []
-            self.sub_video_assets = []
             # Create a new empty file
             self.save_assets_to_file()
 
@@ -91,7 +90,6 @@ class VideoAssemblerAssets:
                 f"Asset file not found: {self.asset_file_path.name} - starting with empty assets"
             )
             self.final_sub_videos = []
-            self.sub_video_assets = []
 
     def save_assets_to_file(self) -> None:
         """Save the current state of the video assets to a file with relative paths."""
@@ -111,7 +109,9 @@ class VideoAssemblerAssets:
                     # Convert paths to relative paths for storage
                     video_asset_relative = None
                     if video_asset is not None:
-                        video_asset_relative = self._paths.mask_asset_path(video_asset)
+                        video_asset_relative = str(
+                            self._paths.mask_asset_path(video_asset)
+                        )
 
                     videos = {
                         "index": i + 1,

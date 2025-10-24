@@ -129,9 +129,6 @@ class VideoCreatorPaths:
             if not result.is_relative_to(self.story_assets_folder.resolve()):
                 raise ValueError(f"Asset path escapes story asset folder: {result}")
 
-            if not result.exists():
-                raise ValueError(f"Asset path does not exist: {result}")
-
             return result
 
         else:
