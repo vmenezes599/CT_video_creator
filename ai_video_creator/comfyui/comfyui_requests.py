@@ -272,7 +272,7 @@ class ComfyUIRequests:
         except (RequestException, OSError, IOError) as e:
             logger.error(f"Failed to upload file {file_path}: {e}")
 
-        return file_path.name
+        return Path(file_path.name)
 
     def download_all_files(
         self, files_to_download: list[Path], output_folder: Path
