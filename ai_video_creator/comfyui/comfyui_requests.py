@@ -136,7 +136,7 @@ class ComfyUIRequests:
             )
             if not response.ok:
                 logger.error("Failed to clean memory in ComfyUI: {}", response.text)
-            time.sleep(3)  # Give ComfyUI time to process the request
+            time.sleep(5)  # Give ComfyUI time to process the request
         except RequestException as e:
             logger.error("Error occurred while cleaning memory in ComfyUI: {}", e)
 

@@ -88,7 +88,7 @@ class NarratorAssets:
                 f"Error saving narrator assets to {self._asset_file_path.name}: {e}"
             )
 
-    def ensure_index_exists(self, scene_index: int) -> None:
+    def _ensure_index_exists(self, scene_index: int) -> None:
         """Extend list to ensure the scene_index exists."""
         # Extend narrator_list if needed
         while len(self.narrator_assets) <= scene_index:
@@ -97,7 +97,7 @@ class NarratorAssets:
     def set_scene_narrator(self, scene_index: int, narrator_file_path: Path) -> None:
         """Set narrator file path for a specific scene with security validation."""
 
-        self.ensure_index_exists(scene_index)
+        self._ensure_index_exists(scene_index)
         self.narrator_assets[scene_index] = narrator_file_path
         logger.debug(
             f"Set narrator for scene {scene_index + 1}: {narrator_file_path.name}"
@@ -105,7 +105,7 @@ class NarratorAssets:
 
     def clear_scene_narrator(self, scene_index: int) -> None:
         """Clear narrator asset for a specific scene."""
-        self.ensure_index_exists(scene_index)
+        self._ensure_index_exists(scene_index)
         self.narrator_assets[scene_index] = None
         logger.debug(f"Cleared narrator asset for scene {scene_index + 1}")
 
@@ -128,6 +128,14 @@ class NarratorAssets:
         """Check if all narrator assets are present for all scenes."""
         missing = self.get_missing_narrator_assets()
         return len(missing) == 0
+
+    def get_used_assets_list(self) -> list[Path]:
+        """Get a list of all used narrator asset file paths."""
+        used_assets = []
+        for narrator in self.narrator_assets:
+            if narrator is not None and narrator.exists() and narrator.is_file():
+                used_assets.append(narrator)
+        return used_assets
 
     def __len__(self) -> int:
         """Return the number of narrator asset slots."""

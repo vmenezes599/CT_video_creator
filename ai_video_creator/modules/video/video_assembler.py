@@ -471,12 +471,3 @@ class VideoAssembler:
                     continue
                 file.unlink()
                 logger.info(f"Deleted asset file: {file}")
-
-    def clean_unused_assets(self):
-        """Clean up video assets for a specific story folder."""
-
-        logger.info("Starting video asset cleanup process")
-
-        self._clean_assembler_assets()
-
-        logger.info("Video asset cleanup process completed successfully")

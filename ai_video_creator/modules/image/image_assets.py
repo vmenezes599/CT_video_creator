@@ -123,6 +123,14 @@ class ImageAssets:
         missing = self.get_missing_image_assets()
         return len(missing) == 0
 
+    def get_used_assets_list(self) -> list[Path]:
+        """Get a list of all used image asset file paths."""
+        used_assets = []
+        for image in self.image_assets:
+            if image is not None and image.exists() and image.is_file():
+                used_assets.append(image)
+        return used_assets
+
     def __len__(self) -> int:
         """Return the number of image asset slots."""
         return len(self.image_assets)

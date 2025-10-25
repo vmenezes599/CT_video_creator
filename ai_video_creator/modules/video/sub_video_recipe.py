@@ -163,9 +163,9 @@ class SubVideoRecipe:
             for recipe_index, recipe in enumerate(item, 1):
                 recipe_dict = recipe.to_dict()
                 recipe_dict = {"sub_video_index": recipe_index, **recipe_dict}
-                
+
                 # Handle media_path if it exists (only for WanI2VRecipe)
-                if hasattr(recipe, 'media_path'):
+                if hasattr(recipe, "media_path"):
                     media_path = recipe.media_path
                     if media_path:
                         # Convert to relative path for storage
@@ -211,3 +211,25 @@ class SubVideoRecipe:
                 json.dump(self.to_dict(), file, ensure_ascii=False, indent=4)
         except IOError as e:
             logger.error(f"Error saving video recipe to {self.recipe_path.name}: {e}")
+
+    def get_used_assets_list(self) -> list[Path]:
+        """Get a list of all used media asset file paths."""
+        used_assets = []
+        for video_recipes in self.video_data:
+            for recipe in video_recipes:
+                if hasattr(recipe, "media_path"):
+                    media_path = recipe.media_path
+                    if (
+                        media_path is not None
+                        and media_path.exists()
+                        and media_path.is_file()
+                    ):
+                        used_assets.append(media_path)
+                color_match_media_path = recipe.color_match_media_path
+                if (
+                    color_match_media_path is not None
+                    and color_match_media_path.exists()
+                    and color_match_media_path.is_file()
+                ):
+                    used_assets.append(color_match_media_path)
+        return used_assets

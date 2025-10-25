@@ -14,7 +14,7 @@ from .modules.video import (
     VideoAssembler,
 )
 
-from .utils import VideoCreatorPaths
+from .utils import VideoCreatorPaths, internal_clean_unused_assets
 
 
 def create_narrator_and_image_recipe_from_prompt(
@@ -173,17 +173,4 @@ def assemble_final_video(
 def clean_unused_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """Clean up video assets for a specific story folder."""
 
-    paths = VideoCreatorPaths(
-        user_folder=user_folder,
-        story_name=story_name,
-        chapter_index=chapter_index,
-    )
-
-    narrator_and_image_asset_manager = NarratorAndImageAssetManager(paths)
-    narrator_and_image_asset_manager.clean_unused_assets()
-
-    video_asset_manager = SubVideoAssetManager(paths)
-    video_asset_manager.clean_unused_assets()
-
-    video_assembler = VideoAssembler(paths)
-    video_assembler.clean_unused_assets()
+    internal_clean_unused_assets(user_folder, story_name, chapter_index)

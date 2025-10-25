@@ -259,126 +259,6 @@ class TestNarratorAndImageAssetManager:
             and manager.image_builder.image_assets.is_complete()
         )
 
-    def test_cleanup_assets_removes_unused_files(self, video_creator_paths):
-        """Test that cleanup_assets removes files not referenced in assets."""
-
-        # Create separate asset folders for new architecture
-        narrator_assets_folder = video_creator_paths.narrator_asset_folder
-        image_assets_folder = video_creator_paths.image_asset_folder
-
-        # Create some asset files that should be kept
-        valid_narrator1 = narrator_assets_folder / "chapter_001_narrator_001.mp3"
-        valid_image1 = image_assets_folder / "chapter_001_image_001.png"
-        valid_narrator2 = narrator_assets_folder / "chapter_001_narrator_002.mp3"
-
-        # Create some files that should be deleted
-        old_narrator = narrator_assets_folder / "old_narrator.mp3"
-        old_image = image_assets_folder / "old_image.png"
-        # Note: temp files without narrator/image patterns won't be deleted
-        # This is safer behavior in the new architecture
-
-        # Create all files
-        for file_path in [
-            valid_narrator1,
-            valid_image1,
-            valid_narrator2,
-            old_narrator,
-            old_image,
-        ]:
-            file_path.touch()
-
-        manager = NarratorAndImageAssetManager(video_creator_paths)
-
-        # Set up some assets to be kept - use absolute paths as production would
-        manager.narrator_builder.narrator_assets.set_scene_narrator(0, valid_narrator1)
-        manager.image_builder.image_assets.set_scene_image(0, valid_image1)
-        manager.narrator_builder.narrator_assets.set_scene_narrator(1, valid_narrator2)
-        # Note: scene 1 has no image asset (None)
-
-        # Run cleanup
-        manager.clean_unused_assets()
-
-        # Verify that valid assets are kept
-        assert valid_narrator1.exists()
-        assert valid_image1.exists()
-        assert valid_narrator2.exists()
-
-        # Verify that unused files matching asset patterns are deleted
-        assert not old_narrator.exists()
-        assert not old_image.exists()
-
-    def test_cleanup_assets_handles_none_values_in_assets(
-        self, video_creator_paths
-    ):
-        """Test that cleanup_assets properly handles None values in asset lists."""
-
-        # Create separate asset folders for new architecture
-        narrator_assets_folder = video_creator_paths.narrator_asset_folder
-        image_assets_folder = video_creator_paths.image_asset_folder
-
-        # Create some files with proper patterns for cleanup
-        valid_file = narrator_assets_folder / "valid_narrator.mp3"
-        invalid_narrator_file = narrator_assets_folder / "invalid_narrator.mp3"
-        invalid_image_file = image_assets_folder / "invalid_image.png"
-
-        valid_file.touch()
-        invalid_narrator_file.touch()
-        invalid_image_file.touch()
-
-        with patch("logging_utils.logger"):
-            manager = NarratorAndImageAssetManager(video_creator_paths)
-
-            # Set only one asset, leaving others as None - use absolute path as production would
-            manager.narrator_builder.narrator_assets.set_scene_narrator(0, valid_file)
-            # manager.narrator_builder.narrator_assets.narrator_assets[1] is None
-            # manager.image_builder.image_assets.image_assets[0] and [1] are None
-
-            # Run cleanup
-            manager.clean_unused_assets()
-
-            # Verify that the valid file is kept
-            assert valid_file.exists()
-
-            # Verify that the unused files are deleted
-            assert not invalid_narrator_file.exists()
-            assert not invalid_image_file.exists()
-
-    def test_cleanup_assets_preserves_directories(self, video_creator_paths):
-        """Test that cleanup_assets only removes files, not directories."""
-
-        # Create separate asset folders for new architecture
-        narrator_assets_folder = video_creator_paths.narrator_asset_folder
-        image_assets_folder = video_creator_paths.image_asset_folder
-
-        # Create subdirectories in both asset folders
-        narrator_sub_dir = narrator_assets_folder / "subdirectory"
-        image_sub_dir = image_assets_folder / "subdirectory"
-        narrator_sub_dir.mkdir()
-        image_sub_dir.mkdir()
-
-        # Create files inside the subdirectories with proper patterns
-        file_in_narrator_subdir = narrator_sub_dir / "test_narrator.txt"
-        file_in_image_subdir = image_sub_dir / "test_image.txt"
-        file_in_narrator_subdir.touch()
-        file_in_image_subdir.touch()
-
-        # Create files in the main assets folders with proper patterns
-        main_narrator_file = narrator_assets_folder / "main_narrator.txt"
-        main_image_file = image_assets_folder / "main_image.txt"
-        main_narrator_file.touch()
-        main_image_file.touch()
-
-        manager = NarratorAndImageAssetManager(video_creator_paths)
-
-        # Run cleanup with no assets set (all should be deleted except directories)
-        manager.clean_unused_assets()
-
-        # Verify that the subdirectories still exist
-        assert narrator_sub_dir.exists()
-        assert narrator_sub_dir.is_dir()
-        assert image_sub_dir.exists()
-        assert image_sub_dir.is_dir()
-
     def test_generate_narrator_and_image_assets_success(self, video_creator_paths):
         """Test successful generation of narrator and image assets."""
         video_asset_manager = NarratorAndImageAssetManager(video_creator_paths)
@@ -396,7 +276,7 @@ class TestNarratorAndImageAssetManager:
                 # Create actual file to test file operations
                 output_file_path.parent.mkdir(parents=True, exist_ok=True)
                 output_file_path.write_text(f"Fake image for: {recipe.prompt}")
-                return [output_file_path]
+                return output_file_path
 
         # Replace only the generator classes, not the core business logic
         for recipe in video_asset_manager.narrator_builder.recipe.narrator_data:
@@ -562,8 +442,8 @@ class TestNarratorAndImageAssetManager:
             output_path = kwargs.get("output_file_path")
             if output_path:
                 Path(output_path).write_text("Test image content", encoding="utf-8")
-                return [output_path]  # Return list as expected by image generators
-            return []
+                return output_path
+            return None
 
         mock_audio_gen.clone_text_to_speech.side_effect = audio_side_effect
         mock_image_gen.text_to_image.side_effect = image_side_effect

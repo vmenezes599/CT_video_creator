@@ -84,17 +84,6 @@ class NarratorAndImageAssetManager:
 
         logger.info("Video asset generation process completed successfully")
 
-    def clean_unused_assets(self):
-        """Clean up video assets for a specific story folder."""
-
-        logger.info("Starting video asset cleanup process")
-
-        # Clean unused assets using both builders
-        self.narrator_builder.clean_unused_narrator_assets()
-        self.image_builder.clean_unused_image_assets()
-
-        logger.info("Video asset cleanup process completed successfully")
-
     def create_narrator_and_image_recipes(self):
         """Create both narrator and image recipes from prompts."""
         logger.info("Creating narrator and image recipes from prompts")

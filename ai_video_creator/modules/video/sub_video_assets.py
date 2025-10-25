@@ -233,3 +233,17 @@ class SubVideoAssets:
         """Check if all scenes have video assets."""
 
         return len(self.get_missing_videos()) == 0
+
+    def get_used_assets_list(self) -> list[Path]:
+        """Get a list of all used video asset file paths."""
+        used_assets = []
+        for video in self.assembled_sub_videos:
+            if video is not None and video.exists() and video.is_file():
+                used_assets.append(video)
+
+        for sub_video_list in self.sub_video_assets:
+            for sub_video in sub_video_list:
+                if sub_video is not None and sub_video.exists() and sub_video.is_file():
+                    used_assets.append(sub_video)
+
+        return used_assets

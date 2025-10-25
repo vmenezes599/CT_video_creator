@@ -66,7 +66,7 @@ class FakeImageGenerator(IImageGenerator):
 
     def text_to_image(
         self, recipe: ImageRecipeBase, output_file_path: Path
-    ) -> List[Path]:
+    ) -> Path:
         """Create a fake image file with recipe content."""
         if self.track_calls:
             self.calls.append(f"image: {recipe.prompt}")
@@ -78,7 +78,7 @@ class FakeImageGenerator(IImageGenerator):
             f"Seed: {getattr(recipe, 'seed', 'N/A')}\n"
             f"Generated at: {output_file_path}"
         )
-        return [output_file_path]
+        return output_file_path
 
 
 class FakeVideoGenerator(IVideoGenerator):

@@ -14,18 +14,7 @@ import pytest
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssetManager
 from ai_video_creator.modules.video import SubVideoAssetManager, SubVideoRecipeBuilder
 from ai_video_creator.utils import VideoCreatorPaths
-from ai_video_creator.video_creator import (
-    create_narrator_and_image_recipe_from_prompt,
-    create_narrators_and_images_from_recipe,
-    create_sub_video_recipes_from_images,
-    create_sub_videos_from_sub_video_recipes,
-)
-from .test_fakes import (
-    FakeAudioGenerator,
-    FakeImageGenerator,
-    FakeVideoGenerator,
-    TrackingFakeGenerators,
-)
+from .test_fakes import TrackingFakeGenerators
 
 
 class TestVideoCreationWorkflow:
@@ -37,11 +26,11 @@ class TestVideoCreationWorkflow:
         user_folder = tmp_path
         story_name = "integration_story"
         chapter_index = 0
-        
+
         # Create the necessary directory structure
         story_folder = user_folder / "stories" / story_name
         story_folder.mkdir(parents=True)
-        
+
         # Create prompts folder and chapter prompt file
         prompts_folder = story_folder / "prompts"
         prompts_folder.mkdir()
@@ -73,9 +62,9 @@ class TestVideoCreationWorkflow:
 
         # Create VideoCreatorPaths object
         paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
-        
+
         return paths
-    
+
     @pytest.fixture
     def complete_story_setup(self, video_creator_paths):
         """Create a complete story structure for integration testing."""
@@ -211,12 +200,20 @@ class TestVideoCreationWorkflow:
 
         narrator_data = {
             "assets": [
-                {"index": i+1, "narrator": f"assets/narrator/chapter_001_narrator_{i+1:03}.mp3"} for i in range(3)
+                {
+                    "index": i + 1,
+                    "narrator": f"assets/narrator/chapter_001_narrator_{i+1:03}.mp3",
+                }
+                for i in range(3)
             ]
         }
         image_data = {
             "assets": [
-                {"index": i+1, "image": f"assets/image/chapter_001_image_{i+1:03}.png"} for i in range(3)
+                {
+                    "index": i + 1,
+                    "image": f"assets/image/chapter_001_image_{i+1:03}.png",
+                }
+                for i in range(3)
             ]
         }
 
@@ -230,7 +227,7 @@ class TestVideoCreationWorkflow:
         mock_scene_generator = patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
         )
-        
+
         with patch(
             "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
             return_value=5.0,
@@ -242,7 +239,7 @@ class TestVideoCreationWorkflow:
                 "Scene script 2",
                 "Scene script 3",
             ]
-            
+
             recipe_builder = SubVideoRecipeBuilder(video_creator_paths)
             recipe_builder.create_video_recipe()
 
@@ -260,14 +257,9 @@ class TestVideoCreationWorkflow:
         tracking = TrackingFakeGenerators()
         video_manager = SubVideoAssetManager(video_creator_paths)
 
-        # Replace video generators with fake implementations
-        class TrackingVideoGenerator:
-            def __init__(self):
-                return tracking.get_video_generator()
-                
         for scene_data in video_manager.recipe.video_data:
             for recipe in scene_data:
-                recipe.GENERATOR_TYPE = lambda: tracking.get_video_generator()
+                recipe.GENERATOR_TYPE = tracking.get_video_generator
 
         # Mock the concatenation function and FFmpeg operations since they require real video files
         # Mock FlorenceGenerator to avoid AI/LLM calls
@@ -299,10 +291,12 @@ class TestVideoCreationWorkflow:
 
             mock_concat.side_effect = fake_concat
             mock_extract.side_effect = fake_extract
-            
+
             # Mock FlorenceGenerator.generate_description to return test data
             mock_florence_instance = MockFlorenceGenerator.return_value
-            mock_florence_instance.generate_description.return_value = "Generated description from Florence"
+            mock_florence_instance.generate_description.return_value = (
+                "Generated description from Florence"
+            )
 
             # Test the workflow
             video_manager.generate_video_assets()
@@ -380,9 +374,9 @@ class TestVideoCreationWorkflow:
 
         # Replace generators with failing ones
         for recipe in asset_manager.narrator_builder.recipe.narrator_data:
-            recipe.GENERATOR_TYPE = lambda: FailingAudioGenerator()
+            recipe.GENERATOR_TYPE = FailingAudioGenerator
         for recipe in asset_manager.image_builder.recipe.image_data:
-            recipe.GENERATOR_TYPE = lambda: FailingImageGenerator()
+            recipe.GENERATOR_TYPE = FailingImageGenerator
 
         # Test that errors are handled gracefully
         try:
