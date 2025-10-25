@@ -13,7 +13,7 @@ from .video_creator import (
 def main():
     """Main function to run the AI Video Creator application."""
     user_folder = Path(".").resolve()
-    story_path = "Ancient Egypt 3.0"
+    story_path = "simple_story"
     chapter_index = 0
 
     # create_narrator_and_image_recipe_from_prompt(user_folder, story_path, chapter_index)

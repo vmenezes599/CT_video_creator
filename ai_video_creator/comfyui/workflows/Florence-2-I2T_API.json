@@ -38,17 +38,15 @@
     },
     "3": {
         "inputs": {
-            "filename_prefix": "text",
-            "output_folder": "output",
-            "file_extension": ".txt",
-            "string": [
+            "text": [
                 "1",
                 2
-            ]
+            ],
+            "filename_prefix": "output_text.txt"
         },
-        "class_type": "SaveStringKJ",
+        "class_type": "OutputString",
         "_meta": {
-            "title": "Save String KJ"
+            "title": "Output String"
         }
     },
     "4": {
