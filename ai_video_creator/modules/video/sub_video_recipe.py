@@ -218,14 +218,18 @@ class SubVideoRecipe:
         for video_recipes in self.video_data:
             for recipe in video_recipes:
                 if hasattr(recipe, "media_path"):
-                    media_path = recipe.media_path
+                    media_path = Path(recipe.media_path) if recipe.media_path else None
                     if (
                         media_path is not None
                         and media_path.exists()
                         and media_path.is_file()
                     ):
                         used_assets.append(media_path)
-                color_match_media_path = recipe.color_match_media_path
+                color_match_media_path = (
+                    Path(recipe.color_match_media_path)
+                    if recipe.color_match_media_path
+                    else None
+                )
                 if (
                     color_match_media_path is not None
                     and color_match_media_path.exists()

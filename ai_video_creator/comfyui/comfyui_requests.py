@@ -291,17 +291,20 @@ class ComfyUIRequests:
                 "subfolder": "",
                 "type": "output",
             }
-            response = self._send_get_request(
-                f"{COMFYUI_URL}/view", params=params, stream=True, timeout=120
-            )
-            response.raise_for_status()
-            output_folder.mkdir(parents=True, exist_ok=True)
-            out_path = output_folder / file_handler.name
-            with open(out_path, "wb") as file_handler:
-                for chunk in response.iter_content(2 * 1024 * 1024):
-                    if chunk:
-                        file_handler.write(chunk)
-            output_paths.append(out_path)
+            try:
+                response = self._send_get_request(
+                    f"{COMFYUI_URL}/view", params=params, stream=True, timeout=120
+                )
+                response.raise_for_status()
+                output_folder.mkdir(parents=True, exist_ok=True)
+                out_path = output_folder / file_handler.name
+                with open(out_path, "wb") as file_handler:
+                    for chunk in response.iter_content(2 * 1024 * 1024):
+                        if chunk:
+                            file_handler.write(chunk)
+                output_paths.append(out_path)
+            except RequestException as e:
+                logger.warning(f"Failed to download file {file_handler.name}: {e}")
 
         return output_paths
 
