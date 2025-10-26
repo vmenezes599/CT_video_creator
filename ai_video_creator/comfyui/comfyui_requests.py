@@ -243,8 +243,6 @@ class ComfyUIRequests:
 
             finally:
                 self._send_clean_memory_request()
-                if tries < self.max_retries_per_request:
-                    time.sleep(self.delay_seconds)
 
         # If all retries exhausted
         logger.error(
@@ -335,7 +333,7 @@ class ComfyUIRequests:
             [Path(p) for p in output_image_paths], output_folder=output_dir
         )
 
-        if len(downloaded_files) >= len(req_list):
+        if len(downloaded_files) < len(req_list):
             logger.error("No files were downloaded from ComfyUI.")
             raise RequestException("Failed to generate assets from workflows.")
 
