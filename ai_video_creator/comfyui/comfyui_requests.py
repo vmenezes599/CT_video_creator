@@ -335,6 +335,10 @@ class ComfyUIRequests:
             [Path(p) for p in output_image_paths], output_folder=output_dir
         )
 
+        if len(downloaded_files) >= len(req_list):
+            logger.error("No files were downloaded from ComfyUI.")
+            raise RequestException("Failed to generate assets from workflows.")
+
         return downloaded_files
 
     def get_processing_queue(self) -> int:

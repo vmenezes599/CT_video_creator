@@ -24,7 +24,6 @@ from .ffmpeg_wrapper import (
     VideoBlitPosition,
 )
 from .video_creator_paths import VideoCreatorPaths
-from .garbage_collector import internal_clean_unused_assets
 
 __all__ = [
     "concatenate_videos_remove_last_frame_except_last",
@@ -37,7 +36,6 @@ __all__ = [
     "blit_overlay_video_onto_main_video",
     "concatenate_videos_no_reencoding",
     "ensure_collection_index_exists",
-    "internal_clean_unused_assets",
     "get_next_available_filename",
     "extend_audio_to_duration",
     "extract_video_last_frame",

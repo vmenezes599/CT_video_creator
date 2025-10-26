@@ -14,7 +14,8 @@ from .modules.video import (
     VideoAssembler,
 )
 
-from .utils import VideoCreatorPaths, internal_clean_unused_assets
+from .utils import VideoCreatorPaths
+from .utils.garbage_collector import internal_clean_unused_assets
 
 
 def create_narrator_and_image_recipe_from_prompt(

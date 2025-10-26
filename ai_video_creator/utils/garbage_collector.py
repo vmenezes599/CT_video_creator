@@ -3,7 +3,7 @@
 from pathlib import Path
 from loguru import logger
 
-from ai_video_creator.utils import VideoCreatorPaths
+from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
 from ai_video_creator.modules.video import (

@@ -5,7 +5,7 @@ Narrator assets for managing narrator-specific asset data and persistence.
 import json
 from pathlib import Path
 
-from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
+from ai_video_creator.utils import VideoCreatorPaths
 from logging_utils import logger
 
 
