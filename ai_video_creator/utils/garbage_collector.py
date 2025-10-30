@@ -27,7 +27,7 @@ def internal_clean_unused_assets(
     narrator_assets = NarratorAssets(paths)
     image_assets = ImageAssets(paths)
     sub_video_assets = SubVideoAssets(paths)
-    sub_video_recipe = SubVideoRecipe(paths.sub_video_recipe_file)
+    sub_video_recipe = SubVideoRecipe(paths)
     video_assembler_assets = VideoAssemblerAssets(paths)
 
     assets_to_keep = set()

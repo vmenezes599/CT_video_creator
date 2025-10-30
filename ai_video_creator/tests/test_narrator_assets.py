@@ -27,7 +27,7 @@ class TestNarratorAssets:
         """Test loading existing narrator assets file."""
         paths = VideoCreatorPaths(tmp_path, "test_story", 0)
         asset_file = paths.narrator_asset_file
-        
+
         # Create test asset files in story assets folder
         test_narrator1 = paths.narrator_asset_folder / "narrator_001.mp3"
         test_narrator2 = paths.narrator_asset_folder / "narrator_002.mp3"
@@ -96,7 +96,6 @@ class TestNarratorAssets:
         # Set up mixed scenario
         assets.set_scene_narrator(0, test_narrator1)  # Exists
         # For nonexistent file, we need to bypass validation by setting directly
-        assets._ensure_index_exists(1)
         assets.narrator_assets[1] = paths.narrator_asset_folder / "nonexistent.mp3"  # Doesn't exist
         assets.narrator_assets.append(None)  # No asset set
 
@@ -147,7 +146,6 @@ class TestNarratorAssets:
         assert assets.is_complete()
 
         # Add invalid asset by bypassing validation
-        assets._ensure_index_exists(1)
         assets.narrator_assets[1] = paths.narrator_asset_folder / "nonexistent.mp3"
         assert not assets.is_complete()
 

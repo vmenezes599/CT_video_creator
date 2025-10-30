@@ -3,10 +3,10 @@
 from logging_utils import logger
 from ai_video_creator.utils import VideoCreatorPaths
 
-from ai_video_creator.modules.image import ImageAssetBuilder, ImageRecipeBuilder
+from ai_video_creator.modules.image import ImageAssetManager, ImageRecipeBuilder
 from ai_video_creator.modules.narrator import (
     NarratorRecipeBuilder,
-    NarratorAssetBuilder,
+    NarratorAssetManager,
 )
 
 
@@ -28,10 +28,10 @@ class NarratorAndImageAssetManager:
         self.output_file_prefix = f"chapter_{self.chapter_index+1:03}"
 
         # Initialize separate builders for narrator and image assets
-        self.narrator_builder = NarratorAssetBuilder(video_creator_paths)
+        self.narrator_builder = NarratorAssetManager(video_creator_paths)
         self.narrator_recipe_builder = NarratorRecipeBuilder(video_creator_paths)
 
-        self.image_builder = ImageAssetBuilder(video_creator_paths)
+        self.image_builder = ImageAssetManager(video_creator_paths)
         self.image_recipe_builder = ImageRecipeBuilder(video_creator_paths)
 
         logger.debug(

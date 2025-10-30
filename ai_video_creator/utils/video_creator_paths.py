@@ -25,9 +25,7 @@ class VideoCreatorPaths:
         self.story_folder = user_folder / "stories" / story_name
         self.chapter_index = chapter_index
 
-        self.chapter_prompt_path = (
-            self.story_folder / "prompts" / f"chapter_{chapter_index+1:03}.json"
-        )
+        self.chapter_prompt_path = self.story_folder / "prompts" / f"chapter_{chapter_index+1:03}.json"
 
         # Initialize paths
         self.video_folder = self.story_folder / "videos"
@@ -39,28 +37,31 @@ class VideoCreatorPaths:
         self.image_asset_folder = self.story_assets_folder / "images"
         self.sub_videos_asset_folder = self.story_assets_folder / "sub_videos"
         self.video_assembler_asset_folder = self.story_assets_folder / "video_assembler"
+        self.background_music_asset_folder = self.story_assets_folder / "background_music"
 
         # Create directories if they don't exist
         self.narrator_asset_folder.mkdir(parents=True, exist_ok=True)
         self.image_asset_folder.mkdir(parents=True, exist_ok=True)
         self.sub_videos_asset_folder.mkdir(parents=True, exist_ok=True)
         self.video_assembler_asset_folder.mkdir(parents=True, exist_ok=True)
+        self.background_music_asset_folder.mkdir(parents=True, exist_ok=True)
 
         # Recipe file paths
         self.narrator_recipe_file = self.video_chapter_folder / "narrator_recipe.json"
-        self.narrator_asset_file = self.video_chapter_folder / "narrator_assets.json"
         self.image_recipe_file = self.video_chapter_folder / "image_recipe.json"
-        self.image_asset_file = self.video_chapter_folder / "image_assets.json"
-
         self.sub_video_recipe_file = self.video_chapter_folder / "sub_video_recipe.json"
+        self.video_assembler_recipe_file = self.video_chapter_folder / "video_assembler_recipe.json"
+        self.background_music_recipe_file = self.video_chapter_folder / "background_music_recipe.json"
+
+        # Assets file paths
+        self.narrator_asset_file = self.video_chapter_folder / "narrator_assets.json"
+        self.image_asset_file = self.video_chapter_folder / "image_assets.json"
         self.sub_video_asset_file = self.video_chapter_folder / "sub_video_assets.json"
-        self.video_assembler_asset_file = (
-            self.video_chapter_folder / "video_assembler_assets.json"
-        )
-        self.video_assembler_recipe_file = (
-            self.video_chapter_folder / "video_assembler_recipe.json"
-        )
-        self.video_output_file = self.video_chapter_folder / "output.mp4"
+        self.video_assembler_asset_file = self.video_chapter_folder / "video_assembler_assets.json"
+
+        self.background_music_asset_file = self.video_chapter_folder / "background_music_assets.json"
+
+        self.video_output_file = self.video_chapter_folder / f"video_chapter_{chapter_index+1:03}.mp4"
 
     def mask_asset_path(self, asset_path: Path):
         """Get the masked asset path for this instance."""
@@ -83,9 +84,7 @@ class VideoCreatorPaths:
             return Path(self.STORY_ASSETS_MASK) / relative_path
 
         else:
-            raise ValueError(
-                f"Asset path is not under known assets folders: {asset_path}"
-            )
+            raise ValueError(f"Asset path is not under known assets folders: {asset_path}")
 
     def unmask_asset_path(self, asset_path: Path):
         """Get the unmasked asset path for this instance."""
@@ -132,9 +131,7 @@ class VideoCreatorPaths:
             return result
 
         else:
-            raise ValueError(
-                f"Asset path does not start with known masks: {asset_path}"
-            )
+            raise ValueError(f"Asset path does not start with known masks: {asset_path}")
 
     def _mask_user_assets_folder(self, asset_path: Path):
         """Get the user assets folder path for this instance."""
@@ -144,9 +141,7 @@ class VideoCreatorPaths:
         asset_path = asset_path.resolve()
 
         if not asset_path.is_relative_to(user_folder):
-            raise ValueError(
-                f"Asset path is not under user assets folder: {asset_path}"
-            )
+            raise ValueError(f"Asset path is not under user assets folder: {asset_path}")
 
         # Use relative_to() instead of string replacement
         relative_path = asset_path.relative_to(user_folder)
@@ -185,9 +180,7 @@ class VideoCreatorPaths:
         asset_path = asset_path.resolve()
 
         if not asset_path.is_relative_to(default_assets_folder):
-            raise ValueError(
-                f"Asset path is not under default assets folder: {asset_path}"
-            )
+            raise ValueError(f"Asset path is not under default assets folder: {asset_path}")
 
         # Use relative_to() instead of string replacement
         relative_path = asset_path.relative_to(default_assets_folder)

@@ -5,13 +5,13 @@
 from .image_recipe import ImageRecipe
 from .image_assets import ImageAssets
 from .image_recipe_builder import ImageRecipeBuilder
-from .image_asset_builder import ImageAssetBuilder
+from .image_asset_manager import ImageAssetManager
 
 
-__all__ = [    
+__all__ = [
     # Separate image classes
+    "ImageRecipeBuilder",
+    "ImageAssetManager",
     "ImageRecipe",
     "ImageAssets",
-    "ImageRecipeBuilder",
-    "ImageAssetBuilder",
 ]

@@ -12,11 +12,13 @@ class Prompt:
         visual_description: str,
         visual_prompt: str,
         scene_time_period: str,
+        mood: str,
     ):
         self.narrator = narrator
         self.visual_description = visual_description
         self.visual_prompt = visual_prompt
         self.scene_time_period = scene_time_period
+        self.mood = mood
 
     @classmethod
     def from_dict(cls, data: dict) -> "Prompt":
@@ -26,6 +28,7 @@ class Prompt:
             visual_description=data.get("visual_description", ""),
             visual_prompt=data.get("visual_prompt", ""),
             scene_time_period=data.get("scene_time_period", ""),
+            mood=data.get("mood", ""),
         )
 
     @classmethod
@@ -48,8 +51,4 @@ class Prompt:
 
     def __str__(self):
         """String representation showing the narrator text."""
-        return (
-            f"Narrator: {self.narrator[:100]}..."
-            if len(self.narrator) > 100
-            else f"Narrator: {self.narrator}"
-        )
+        return f"Narrator: {self.narrator[:100]}..." if len(self.narrator) > 100 else f"Narrator: {self.narrator}"

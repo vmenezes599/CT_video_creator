@@ -10,7 +10,7 @@ from .narrator_assets import NarratorAssets
 from .narrator_recipe import NarratorRecipe
 
 
-class NarratorAssetBuilder:
+class NarratorAssetManager:
     """Class to build narrator assets from recipes."""
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
@@ -36,23 +36,17 @@ class NarratorAssetBuilder:
         # Ensure narrator_assets list has the same size as recipe
         self._synchronize_assets_with_recipe()
 
-        logger.debug(
-            f"NarratorAssetBuilder initialized with {len(self.recipe.narrator_data)} scenes"
-        )
+        logger.debug(f"NarratorAssetBuilder initialized with {len(self.recipe.narrator_data)} scenes")
 
     def _synchronize_assets_with_recipe(self):
         """Ensure narrator_assets list has the same size as recipe."""
         recipe_size = len(self.recipe.narrator_data)
-        logger.debug(
-            f"Synchronizing narrator assets with recipe - target size: {recipe_size}"
-        )
+        logger.debug(f"Synchronizing narrator assets with recipe - target size: {recipe_size}")
 
         # Extend or truncate narrator_list to match recipe size
         while len(self.narrator_assets.narrator_assets) < recipe_size:
             self.narrator_assets.narrator_assets.append(None)
-        self.narrator_assets.narrator_assets = self.narrator_assets.narrator_assets[
-            :recipe_size
-        ]
+        self.narrator_assets.narrator_assets = self.narrator_assets.narrator_assets[:recipe_size]
 
         logger.debug(
             f"Narrator asset synchronization completed - narrator assets: {len(self.narrator_assets.narrator_assets)}"
@@ -65,8 +59,7 @@ class NarratorAssetBuilder:
             audio = self.recipe.narrator_data[scene_index]
             audio_generator: IAudioGenerator = audio.GENERATOR_TYPE()
             output_audio_file_path = (
-                self._paths.narrator_asset_folder
-                / f"{self.output_file_prefix}_narrator_{scene_index+1:03}.mp3"
+                self._paths.narrator_asset_folder / f"{self.output_file_prefix}_narrator_{scene_index+1:03}.mp3"
             )
             logger.debug(
                 f"Using audio generator: {type(audio_generator).__name__} for file: {output_audio_file_path.name}"
@@ -79,14 +72,10 @@ class NarratorAssetBuilder:
 
             self.narrator_assets.set_scene_narrator(scene_index, output_audio)
             self.narrator_assets.save_assets_to_file()
-            logger.info(
-                f"Successfully generated narrator for scene {scene_index + 1}: {output_audio.name}"
-            )
+            logger.info(f"Successfully generated narrator for scene {scene_index + 1}: {output_audio.name}")
 
         except (IOError, OSError, RuntimeError) as e:
-            logger.error(
-                f"Failed to generate narrator for scene {scene_index + 1}: {e}"
-            )
+            logger.error(f"Failed to generate narrator for scene {scene_index + 1}: {e}")
 
     def generate_narrator_assets(self):
         """Generate all missing narrator assets from the recipe."""
@@ -109,9 +98,7 @@ class NarratorAssetBuilder:
         logger.info("Starting narrator asset cleanup process")
 
         # Get list of valid (non-None) asset files to keep
-        valid_narrator_assets = [
-            asset for asset in self.narrator_assets.narrator_assets if asset is not None
-        ]
+        valid_narrator_assets = [asset for asset in self.narrator_assets.narrator_assets if asset is not None]
         assets_to_keep = set(valid_narrator_assets)
 
         for file in self._paths.narrator_asset_folder.glob("*narrator*"):

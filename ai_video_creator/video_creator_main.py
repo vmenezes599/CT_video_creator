@@ -17,7 +17,7 @@ def main():
     story_path = "simple_story"
     chapter_index = 0
 
-    # clean_unused_assets(user_folder, story_path, chapter_index)
+    clean_unused_assets(user_folder, story_path, chapter_index)
 
     # create_narrator_and_image_recipe_from_prompt(user_folder, story_path, chapter_index)
     create_narrators_and_images_from_recipe(user_folder, story_path, chapter_index)

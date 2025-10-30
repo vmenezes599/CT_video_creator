@@ -57,9 +57,7 @@ class VideoAssembler:
 
         self.video_assets = SubVideoAssets(video_creator_paths)
         if not self.video_assets.is_complete():
-            raise ValueError(
-                "Video assets are incomplete. Please ensure all required assets are present."
-            )
+            raise ValueError("Video assets are incomplete. Please ensure all required assets are present.")
 
         self.video_assembler_assets = VideoAssemblerAssets(video_creator_paths)
 
@@ -85,9 +83,7 @@ class VideoAssembler:
         Generate a video segment from a image and audio file.
         """
         image_path_obj = Path(image_path)
-        temp_file = (
-            self._paths.video_assembler_asset_folder / f"temp_{image_path_obj.stem}.mp4"
-        )
+        temp_file = self._paths.video_assembler_asset_folder / f"temp_{image_path_obj.stem}.mp4"
 
         output_path = create_video_segment_from_image_and_audio(
             image_path=image_path, audio_path=audio_path, output_path=temp_file
@@ -160,9 +156,7 @@ class VideoAssembler:
     def _move_asset_to_output_path(self, target_path: Path, asset_path: Path) -> Path:
         """Move asset to the database folder and return the new path."""
         if not asset_path.exists():
-            logger.warning(
-                f"Asset file does not exist while trying to move it: {asset_path}"
-            )
+            logger.warning(f"Asset file does not exist while trying to move it: {asset_path}")
             logger.warning("Sometimes ComfyUI return temporary files. Ignoring...")
             return Path("")
 
@@ -171,26 +165,18 @@ class VideoAssembler:
         logger.trace(f"Asset moved successfully to: {complete_target_path}")
         return complete_target_path
 
-    def _upscale_and_frame_interp_video_list(
-        self, sub_video_file_paths: list[Path]
-    ) -> list[Path]:
+    def _upscale_and_frame_interp_video_list(self, sub_video_file_paths: list[Path]) -> list[Path]:
         """
         Upscale and apply frame interpolation to the video files if needed.
         """
-        logger.info(
-            f"Upscaling and frame interpolating {len(sub_video_file_paths)} videos"
-        )
+        logger.info(f"Upscaling and frame interpolating {len(sub_video_file_paths)} videos")
         requests = ComfyUIRequests()
 
         processed_videos_paths: list[Path] = []
         for index, video_path in enumerate(sub_video_file_paths):
             if self.video_assembler_assets.has_video(index):
-                logger.info(
-                    f"Video already set for scene {index+1}, skipping upscale and frame interpolation."
-                )
-                processed_videos_paths.append(
-                    self.video_assembler_assets.final_sub_videos[index]
-                )
+                logger.info(f"Video already set for scene {index+1}, skipping upscale and frame interpolation.")
+                processed_videos_paths.append(self.video_assembler_assets.final_sub_videos[index])
                 continue
 
             comfyui_video_path = requests.upload_file(video_path)
@@ -201,25 +187,17 @@ class VideoAssembler:
             workflow.set_video_path(comfyui_video_path.name)
             workflow.set_output_filename(output_file_name)
 
-            result_files = requests.ensure_send_all_prompts(
-                [workflow], self._paths.video_assembler_asset_folder
-            )
+            result_files = requests.ensure_send_all_prompts([workflow], self._paths.video_assembler_asset_folder)
             processed_video_path = Path(result_files[0]) if result_files else None
 
-            self.video_assembler_assets.set_final_sub_video_video(
-                index, processed_video_path
-            )
+            self.video_assembler_assets.set_final_sub_video_video(index, processed_video_path)
             processed_videos_paths.append(processed_video_path)
 
-        logger.info(
-            f"Finished upscaling and frame interpolating videos: {len(sub_video_file_paths)}"
-        )
+        logger.info(f"Finished upscaling and frame interpolating videos: {len(sub_video_file_paths)}")
 
         return processed_videos_paths
 
-    def _combine_video_with_audio(
-        self, video_segments: list[Path], audio_segments: list[Path]
-    ) -> list[Path]:
+    def _combine_video_with_audio(self, video_segments: list[Path], audio_segments: list[Path]) -> list[Path]:
         """
         Create video segments from the sub-videos defined in the video recipe.
         """
@@ -227,12 +205,8 @@ class VideoAssembler:
         processed_narrators = self._apply_narrator_effects(audio_segments)
 
         results = []
-        for i, (video_path, audio_path) in enumerate(
-            zip(video_segments, processed_narrators), 1
-        ):
-            logger.info(
-                f"Processing segment {i}/{len(audio_segments)}: {Path(video_path).name}"
-            )
+        for i, (video_path, audio_path) in enumerate(zip(video_segments, processed_narrators), 1):
+            logger.info(f"Processing segment {i}/{len(audio_segments)}: {Path(video_path).name}")
 
             video_segment = self._combine_sub_video_with_audio(video_path, audio_path)
             results.append(video_segment)
@@ -268,9 +242,7 @@ class VideoAssembler:
 
         return [reencoded_intro, *video_segments]
 
-    def _generate_ending_narrators(
-        self, ending_recipe: VideoEndingRecipe
-    ) -> list[Path]:
+    def _generate_ending_narrators(self, ending_recipe: VideoEndingRecipe) -> list[Path]:
         """
         Generate ending narrators if they are missing.
         """
@@ -285,14 +257,10 @@ class VideoAssembler:
 
         generated_audio_paths = []
         for index, narrator_text in enumerate(narrator_text_list):
-            recipe = ZonosTTSRecipe(
-                prompt=narrator_text, seed=seed, clone_voice_path=clone_voice_path
-            )
+            recipe = ZonosTTSRecipe(prompt=narrator_text, seed=seed, clone_voice_path=clone_voice_path)
             output_name = output_path_base.with_stem(f"{base_name}_{index + 1}")
             tts_generator = ZonosTTSRecipe.GENERATOR_TYPE()
-            generated_audio = tts_generator.clone_text_to_speech(
-                recipe=recipe, output_file_path=output_name
-            )
+            generated_audio = tts_generator.clone_text_to_speech(recipe=recipe, output_file_path=output_name)
 
             self._temp_files.append(generated_audio)
             generated_audio_paths.append(generated_audio)
@@ -307,9 +275,7 @@ class VideoAssembler:
         """
         logger.info("Concatenating ending narrators")
 
-        concatenated_narrator_path = (
-            self._paths.narrator_asset_folder / "ending_narrator_concatenated.mp3"
-        )
+        concatenated_narrator_path = self._paths.narrator_asset_folder / "ending_narrator_concatenated.mp3"
 
         concatenated_narrator_path = concatenate_audio_with_silence_inbetween(
             narrator_path_list, concatenated_narrator_path
@@ -335,43 +301,29 @@ class VideoAssembler:
             logger.info("No ending recipe defined, skipping ending video segment.")
             return video_segments
 
-        if (
-            not ending_recipe.narrator_text_list
-            or len(ending_recipe.narrator_text_list) == 0
-        ):
+        if not ending_recipe.narrator_text_list or len(ending_recipe.narrator_text_list) == 0:
             logger.info("No ending narrator defined, skipping ending video segment.")
             return video_segments
 
         ending_video_path = ending_recipe.sub_video
         if not ending_video_path or not ending_video_path.exists():
             logger.warning("Ending video path 'None'. Setting to first video segment.")
-            ending_video_path = self.video_assembler_recipe.set_video_ending_subvideo(
-                video_segments_without_audio[0]
-            )
+            ending_video_path = self.video_assembler_recipe.set_video_ending_subvideo(video_segments_without_audio[0])
 
         ending_narrator_paths = self._generate_ending_narrators(ending_recipe)
 
-        concatenated_narrator_path = self._concatenate_ending_narrators(
-            ending_narrator_paths
-        )
+        concatenated_narrator_path = self._concatenate_ending_narrators(ending_narrator_paths)
 
-        ending_sub_video = self._combine_sub_video_with_audio(
-            ending_video_path, concatenated_narrator_path
-        )
+        ending_sub_video = self._combine_sub_video_with_audio(ending_video_path, concatenated_narrator_path)
 
         start_time_seconds = (
-            get_audio_duration(
-                ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index]
-            )
-            + 1.5
+            get_audio_duration(ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index]) + 1.5
         )
 
         ending_sub_video = blit_overlay_video_onto_main_video(
             overlay_video=ending_recipe.ending_overlay_asset,
             main_video=ending_sub_video,
-            output_path=ending_sub_video.with_stem(
-                f"{ending_sub_video.stem}_overlayed"
-            ),
+            output_path=ending_sub_video.with_stem(f"{ending_sub_video.stem}_overlayed"),
             position=VideoBlitPosition.CENTER,
             scale_percent=1.0,
             start_time_seconds=start_time_seconds,
@@ -398,9 +350,7 @@ class VideoAssembler:
         video_segments = self._combine_video_with_audio(video_segments, audio_segments)
 
         # Intro and ending are already in the right format
-        video_segments = self._add_ending_video_segment(
-            video_segments, video_segments_without_audio
-        )
+        video_segments = self._add_ending_video_segment(video_segments, video_segments_without_audio)
         video_segments = self._add_intro_video_segment(video_segments)
 
         return video_segments
@@ -449,6 +399,9 @@ class VideoAssembler:
 
         output_file = self._post_process(output_file)
 
+        if output_file is not None:
+            output_file.rename(self.output_path)
+
         _ = self._subtitle_generator.generate_subtitles_from_audio(output_file)
 
         self._cleanup()
@@ -459,11 +412,7 @@ class VideoAssembler:
         """
         Clean up video assembler assets.
         """
-        assets_to_keep = [
-            asset
-            for asset in self.video_assembler_assets.final_sub_videos
-            if asset is not None
-        ]
+        assets_to_keep = [asset for asset in self.video_assembler_assets.final_sub_videos if asset is not None]
 
         for file in self._paths.video_assembler_asset_folder.glob("*"):
             if file.is_file():

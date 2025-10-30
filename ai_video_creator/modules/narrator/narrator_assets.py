@@ -5,7 +5,7 @@ Narrator assets for managing narrator-specific asset data and persistence.
 import json
 from pathlib import Path
 
-from ai_video_creator.utils import VideoCreatorPaths
+from ai_video_creator.utils import VideoCreatorPaths, ensure_collection_index_exists
 from logging_utils import logger
 
 
@@ -35,16 +35,10 @@ class NarratorAssets:
                     self.narrator_assets.append(None)
                 else:
                     asset_path = asset_data.get("narrator", "")
-                    absolute_path = (
-                        self._paths.unmask_asset_path(Path(asset_path))
-                        if asset_path
-                        else None
-                    )
+                    absolute_path = self._paths.unmask_asset_path(Path(asset_path)) if asset_path else None
                     self.narrator_assets.append(absolute_path)
 
-            logger.debug(
-                f"Successfully loaded {len(self.narrator_assets)} narrator assets"
-            )
+            logger.debug(f"Successfully loaded {len(self.narrator_assets)} narrator assets")
 
         except json.JSONDecodeError:
             logger.error(
@@ -59,9 +53,7 @@ class NarratorAssets:
             self.save_assets_to_file()
 
         except FileNotFoundError:
-            logger.debug(
-                f"Narrator asset file not found: {self._asset_file_path.name} - starting with empty assets"
-            )
+            logger.debug(f"Narrator asset file not found: {self._asset_file_path.name} - starting with empty assets")
             self.narrator_assets = []
 
     def save_assets_to_file(self) -> None:
@@ -73,39 +65,25 @@ class NarratorAssets:
                     narrator_assets_data.append({"index": index, "narrator": None})
                 else:
                     relative_path = self._paths.mask_asset_path(narrator_asset)
-                    narrator_assets_data.append(
-                        {"index": index, "narrator": str(relative_path)}
-                    )
+                    narrator_assets_data.append({"index": index, "narrator": str(relative_path)})
 
             data = {"assets": narrator_assets_data}
             with open(self._asset_file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
-            logger.trace(
-                f"Narrator assets saved with {len(narrator_assets_data)} items"
-            )
+            logger.trace(f"Narrator assets saved with {len(narrator_assets_data)} items")
         except IOError as e:
-            logger.error(
-                f"Error saving narrator assets to {self._asset_file_path.name}: {e}"
-            )
-
-    def _ensure_index_exists(self, scene_index: int) -> None:
-        """Extend list to ensure the scene_index exists."""
-        # Extend narrator_list if needed
-        while len(self.narrator_assets) <= scene_index:
-            self.narrator_assets.append(None)
+            logger.error(f"Error saving narrator assets to {self._asset_file_path.name}: {e}")
 
     def set_scene_narrator(self, scene_index: int, narrator_file_path: Path) -> None:
         """Set narrator file path for a specific scene with security validation."""
 
-        self._ensure_index_exists(scene_index)
+        ensure_collection_index_exists(self.narrator_assets, scene_index)
         self.narrator_assets[scene_index] = narrator_file_path
-        logger.debug(
-            f"Set narrator for scene {scene_index + 1}: {narrator_file_path.name}"
-        )
+        logger.debug(f"Set narrator for scene {scene_index + 1}: {narrator_file_path.name}")
 
     def clear_scene_narrator(self, scene_index: int) -> None:
         """Clear narrator asset for a specific scene."""
-        self._ensure_index_exists(scene_index)
+        ensure_collection_index_exists(self.narrator_assets, scene_index)
         self.narrator_assets[scene_index] = None
         logger.debug(f"Cleared narrator asset for scene {scene_index + 1}")
 
