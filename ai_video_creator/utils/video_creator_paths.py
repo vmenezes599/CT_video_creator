@@ -25,9 +25,7 @@ class VideoCreatorPaths:
         self.story_folder = user_folder / "stories" / story_name
         self.chapter_index = chapter_index
 
-        self.chapter_prompt_path = (
-            self.story_folder / "prompts" / f"chapter_{chapter_index+1:03}.json"
-        )
+        self.chapter_prompt_path = self.story_folder / "prompts" / f"chapter_{chapter_index+1:03}.json"
 
         # Initialize paths
         self.video_folder = self.story_folder / "videos"
@@ -54,13 +52,9 @@ class VideoCreatorPaths:
 
         self.sub_video_recipe_file = self.video_chapter_folder / "sub_video_recipe.json"
         self.sub_video_asset_file = self.video_chapter_folder / "sub_video_assets.json"
-        self.video_assembler_asset_file = (
-            self.video_chapter_folder / "video_assembler_assets.json"
-        )
-        self.video_assembler_recipe_file = (
-            self.video_chapter_folder / "video_assembler_recipe.json"
-        )
-        self.video_output_file = self.video_chapter_folder / "output.mp4"
+        self.video_assembler_asset_file = self.video_chapter_folder / "video_assembler_assets.json"
+        self.video_assembler_recipe_file = self.video_chapter_folder / "video_assembler_recipe.json"
+        self.video_output_file = self.video_chapter_folder / f"chapter_{self.chapter_index+1:03}_output.mp4"
 
     def mask_asset_path(self, asset_path: Path):
         """Get the masked asset path for this instance."""
@@ -83,9 +77,7 @@ class VideoCreatorPaths:
             return Path(self.STORY_ASSETS_MASK) / relative_path
 
         else:
-            raise ValueError(
-                f"Asset path is not under known assets folders: {asset_path}"
-            )
+            raise ValueError(f"Asset path is not under known assets folders: {asset_path}")
 
     def unmask_asset_path(self, asset_path: Path):
         """Get the unmasked asset path for this instance."""
@@ -132,9 +124,7 @@ class VideoCreatorPaths:
             return result
 
         else:
-            raise ValueError(
-                f"Asset path does not start with known masks: {asset_path}"
-            )
+            raise ValueError(f"Asset path does not start with known masks: {asset_path}")
 
     def _mask_user_assets_folder(self, asset_path: Path):
         """Get the user assets folder path for this instance."""
@@ -144,9 +134,7 @@ class VideoCreatorPaths:
         asset_path = asset_path.resolve()
 
         if not asset_path.is_relative_to(user_folder):
-            raise ValueError(
-                f"Asset path is not under user assets folder: {asset_path}"
-            )
+            raise ValueError(f"Asset path is not under user assets folder: {asset_path}")
 
         # Use relative_to() instead of string replacement
         relative_path = asset_path.relative_to(user_folder)
@@ -185,9 +173,7 @@ class VideoCreatorPaths:
         asset_path = asset_path.resolve()
 
         if not asset_path.is_relative_to(default_assets_folder):
-            raise ValueError(
-                f"Asset path is not under default assets folder: {asset_path}"
-            )
+            raise ValueError(f"Asset path is not under default assets folder: {asset_path}")
 
         # Use relative_to() instead of string replacement
         relative_path = asset_path.relative_to(default_assets_folder)
