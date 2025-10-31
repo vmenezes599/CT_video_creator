@@ -20,9 +20,7 @@ class ImageRecipe:
         self.extra_image_data: list[dict] = []
         self.__load_from_file(recipe_path)
 
-    def add_image_data(
-        self, image_data: FluxImageRecipe, extra_image_data: dict = None
-    ) -> None:
+    def add_image_data(self, image_data: FluxImageRecipe, extra_image_data: dict = None) -> None:
         """Add image data to the recipe."""
         self.image_data.append(image_data)
         # Always append extra_image_data to maintain alignment with image_data
@@ -34,9 +32,7 @@ class ImageRecipe:
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
-                self.image_data = [
-                    self._create_recipe_from_dict(item) for item in data["image_data"]
-                ]
+                self.image_data = [self._create_recipe_from_dict(item) for item in data["image_data"]]
 
                 for image_data in data["image_data"]:
                     extra_data = image_data.get("extra_data", {})
@@ -46,14 +42,11 @@ class ImageRecipe:
                 self.save_current_state()
 
         except FileNotFoundError:
-            logger.info(
-                f"Image recipe file not found: {file_path.name} - starting with empty recipe"
-            )
+            logger.info(f"Image recipe file not found: {file_path.name} - starting with empty recipe")
         except (KeyError, json.JSONDecodeError) as e:
             logger.error(
-                f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe"
+                f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe\n\nDetails: {e}"
             )
-            logger.error(f"Details: {e}")
             # Rename corrupted file to .old for backup
             old_file_path = Path(str(file_path) + ".old")
             if file_path.exists():
@@ -86,9 +79,7 @@ class ImageRecipe:
         """
         image_data = [
             {"index": i, "extra_data": extra, **item.to_dict()}
-            for i, (item, extra) in enumerate(
-                zip(self.image_data, self.extra_image_data), 1
-            )
+            for i, (item, extra) in enumerate(zip(self.image_data, self.extra_image_data), 1)
         ]
 
         return {"image_data": image_data}

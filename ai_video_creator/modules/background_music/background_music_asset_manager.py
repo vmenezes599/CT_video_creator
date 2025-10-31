@@ -36,17 +36,19 @@ class BackgroundMusicAssetManager:
         # Ensure background_music_assets list has the same size as recipe
         self._synchronize_assets_with_recipe()
 
-        logger.debug(f"BackgroundMusicAssetManager initialized with {len(self.recipe.music_data)} scenes")
+        logger.debug(f"BackgroundMusicAssetManager initialized with {len(self.recipe.music_recipes)} scenes")
 
     def _synchronize_assets_with_recipe(self):
         """Ensure background_music_assets list has the same size as recipe."""
-        recipe_size = len(self.recipe.music_data)
+        recipe_size = len(self.recipe.music_recipes)
         logger.debug(f"Synchronizing background music assets with recipe - target size: {recipe_size}")
 
         # Extend or truncate background_music_assets to match recipe size
         while len(self.background_music_assets.background_music_assets) < recipe_size:
             self.background_music_assets.background_music_assets.append(None)
-        self.background_music_assets.background_music_assets = self.background_music_assets.background_music_assets[:recipe_size]
+        self.background_music_assets.background_music_assets = self.background_music_assets.background_music_assets[
+            :recipe_size
+        ]
 
         logger.debug(
             f"Background music asset synchronization completed - music assets: {len(self.background_music_assets.background_music_assets)}"
@@ -56,7 +58,7 @@ class BackgroundMusicAssetManager:
         """Generate background music asset for a scene."""
         try:
             logger.info(f"Generating background music asset for scene {scene_index + 1}")
-            music_info = self.recipe.music_data[scene_index]
+            music_info = self.recipe.music_recipes[scene_index]
             audio_generator: IAudioGenerator = music_info.get("generator_type", IAudioGenerator)()
             output_audio_file_path = (
                 self._paths.background_music_asset_folder / f"{self.output_file_prefix}_bgmusic_{scene_index+1:03}.mp3"
@@ -98,7 +100,9 @@ class BackgroundMusicAssetManager:
         logger.info("Starting background music asset cleanup process")
 
         # Get list of valid (non-None) asset files to keep
-        valid_background_music_assets = [asset for asset in self.background_music_assets.background_music_assets if asset is not None]
+        valid_background_music_assets = [
+            asset for asset in self.background_music_assets.background_music_assets if asset is not None
+        ]
         assets_to_keep = set(valid_background_music_assets)
 
         for file in self._paths.background_music_asset_folder.glob("*bgmusic*"):

@@ -71,6 +71,9 @@ class VideoCreatorPaths:
         # Resolve to absolute path and validate
         asset_path = asset_path.resolve()
 
+        if asset_path.is_dir():
+            raise ValueError(f"Asset path is a folder, expected a file: {asset_path}")
+
         if asset_path.is_relative_to(user_assets_folder):
             relative_path = asset_path.relative_to(user_assets_folder)
             return Path(self.USER_ASSETS_MASK) / relative_path

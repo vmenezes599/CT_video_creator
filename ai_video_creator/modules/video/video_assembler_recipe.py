@@ -81,11 +81,7 @@ class VideoIntroRecipe:
 
         self.intro_effects = data.get("intro_effects", [])
 
-        self.intro_asset = (
-            self._paths.unmask_asset_path(intro_asset_masked)
-            if intro_asset_masked
-            else None
-        )
+        self.intro_asset = self._paths.unmask_asset_path(intro_asset_masked) if intro_asset_masked else None
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
@@ -96,9 +92,7 @@ class VideoIntroRecipe:
         ]
         available_intros = []
         for path in available_intro_folders:
-            available_intros.extend(
-                [str(self._paths.mask_asset_path(f)) for f in path.glob("*.mp4")]
-            )
+            available_intros.extend([str(self._paths.mask_asset_path(f)) for f in path.glob("*.mp4")])
 
         if self.intro_asset:
             intro_asset_masked = str(self._paths.mask_asset_path(self.intro_asset))
@@ -108,9 +102,7 @@ class VideoIntroRecipe:
         result = {
             "intro_asset": intro_asset_masked,
             "available_intros": available_intros,
-            "intro_effects": [
-                effect.to_dict() if effect else None for effect in self.intro_effects
-            ],
+            "intro_effects": [effect.to_dict() if effect else None for effect in self.intro_effects],
         }
 
         return result
@@ -130,9 +122,7 @@ class VideoEndingRecipe:
     Ending video recipe class.
     """
 
-    DEFAULT_ENDING_OVERLAY_ASSET = Path(
-        f"{DEFAULT_ASSETS_FOLDER}/outros/CTA_YOUTUBE_INGLES.mov"
-    )
+    DEFAULT_ENDING_OVERLAY_ASSET = Path(f"{DEFAULT_ASSETS_FOLDER}/outros/CTA_YOUTUBE_INGLES.mov")
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize EndingEffects with empty lists."""
@@ -150,45 +140,31 @@ class VideoEndingRecipe:
         self.narrator_text_list = data.get("narrator_list", [])
         narrator_clone_voice = data.get("narrator_clone_voice", None)
         self.narrator_clone_voice = (
-            self._paths.unmask_asset_path(Path(narrator_clone_voice))
-            if narrator_clone_voice
-            else None
+            self._paths.unmask_asset_path(Path(narrator_clone_voice)) if narrator_clone_voice else None
         )
 
         self.seed = data.get("seed", random.randint(0, 1**64 - 1))
-        self.ending_overlay_start_narrator_index = data.get(
-            "ending_overlay_start_narrator_index", None
-        )
+        self.ending_overlay_start_narrator_index = data.get("ending_overlay_start_narrator_index", None)
         self.ending_start_delay_seconds = data.get("ending_start_delay_seconds", None)
         ending_overlay_asset = data.get("ending_overlay_asset", None)
         self.ending_overlay_asset = (
-            self._paths.unmask_asset_path(Path(ending_overlay_asset))
-            if ending_overlay_asset
-            else None
+            self._paths.unmask_asset_path(Path(ending_overlay_asset)) if ending_overlay_asset else None
         )
         sub_video = data.get("subvideo", None)
-        self.sub_video = (
-            self._paths.unmask_asset_path(Path(sub_video)) if sub_video else None
-        )
+        self.sub_video = self._paths.unmask_asset_path(Path(sub_video)) if sub_video else None
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
 
         narrator_clone_voice_str = (
-            str(self._paths.mask_asset_path(self.narrator_clone_voice))
-            if self.narrator_clone_voice
-            else None
+            str(self._paths.mask_asset_path(self.narrator_clone_voice)) if self.narrator_clone_voice else None
         )
 
         ending_overlay_asset_str = (
-            str(self._paths.mask_asset_path(self.ending_overlay_asset))
-            if self.ending_overlay_asset
-            else None
+            str(self._paths.mask_asset_path(self.ending_overlay_asset)) if self.ending_overlay_asset else None
         )
 
-        sub_video_str = (
-            str(self._paths.mask_asset_path(self.sub_video)) if self.sub_video else None
-        )
+        sub_video_str = str(self._paths.mask_asset_path(self.sub_video)) if self.sub_video else None
 
         result = {
             "narrator_list": self.narrator_text_list,
@@ -204,11 +180,7 @@ class VideoEndingRecipe:
 
     def is_empty(self) -> bool:
         """Check if ending effects are empty."""
-        return (
-            not self.narrator_text_list
-            and self.ending_overlay_asset is None
-            and self.narrator_clone_voice is None
-        )
+        return not self.narrator_text_list and self.ending_overlay_asset is None and self.narrator_clone_voice is None
 
     def clear(self) -> None:
         """Clear ending asset and effects."""
@@ -226,9 +198,7 @@ class VideoOverlayRecipe:
     Outro effects class.
     """
 
-    DEFAULT_OVERLAY_ASSET = Path(
-        f"{DEFAULT_ASSETS_FOLDER}/outros/CTA_YOUTUBE_INGLES.mov"
-    )
+    DEFAULT_OVERLAY_ASSET = Path(f"{DEFAULT_ASSETS_FOLDER}/outros/CTA_YOUTUBE_INGLES.mov")
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize OutroEffects with empty lists."""
@@ -241,11 +211,7 @@ class VideoOverlayRecipe:
         outro_asset_masked = data.get("outro_asset", None)
 
         self.overlay_effects = data.get("outro_effects", [])
-        self.overlay_asset = (
-            self._paths.unmask_asset_path(outro_asset_masked)
-            if outro_asset_masked
-            else None
-        )
+        self.overlay_asset = self._paths.unmask_asset_path(outro_asset_masked) if outro_asset_masked else None
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
@@ -256,9 +222,7 @@ class VideoOverlayRecipe:
         ]
         available_outros = []
         for path in available_outro_folders:
-            available_outros.extend(
-                [str(self._paths.mask_asset_path(f)) for f in path.glob("*")]
-            )
+            available_outros.extend([str(self._paths.mask_asset_path(f)) for f in path.glob("*")])
 
         if self.overlay_asset:
             masked_outro_asset = str(self._paths.mask_asset_path(self.overlay_asset))
@@ -268,9 +232,7 @@ class VideoOverlayRecipe:
         return {
             "outro_asset": masked_outro_asset,
             "available_outros": available_outros,
-            "outro_effects": [
-                effect.to_dict() if effect else None for effect in self.overlay_effects
-            ],
+            "outro_effects": [effect.to_dict() if effect else None for effect in self.overlay_effects],
         }
 
     def is_empty(self) -> bool:
@@ -299,9 +261,7 @@ class VideoAssemblerRecipe:
     def _load_effects_from_file(self):
         """Load video assembler recipe from the video assembler recipe file."""
         try:
-            logger.debug(
-                f"Loading video assembler recipe from: {self.effects_file_path.name}"
-            )
+            logger.debug(f"Loading video assembler recipe from: {self.effects_file_path.name}")
             with open(self.effects_file_path, "r", encoding="utf-8") as file_handler:
                 data: dict = json.load(file_handler)
 
@@ -322,9 +282,7 @@ class VideoAssemblerRecipe:
 
             logger.info("Successfully loaded video assembler recipe.")
         except FileNotFoundError:
-            logger.warning(
-                f"Video assembler recipe file not found: {self.effects_file_path.name}"
-            )
+            logger.warning(f"Video assembler recipe file not found: {self.effects_file_path.name}")
         except (
             json.JSONDecodeError,
             PermissionError,
@@ -333,9 +291,7 @@ class VideoAssemblerRecipe:
             ValueError,
             TypeError,
         ) as e:
-            logger.error(
-                f"Failed to load video assembler recipe - invalid data format: {e}"
-            )
+            logger.error(f"Failed to load video assembler recipe - invalid data format: {e}")
         finally:
             self.save_to_file()
 
@@ -353,9 +309,7 @@ class VideoAssemblerRecipe:
             logger.trace("Video assembler recipe saved.")
 
         except IOError as e:
-            logger.error(
-                f"Error saving video assembler recipe to {self.effects_file_path.name}: {e}"
-            )
+            logger.error(f"Error saving video assembler recipe to {self.effects_file_path.name}: {e}")
 
     def match_size_to_target(self, target_size: int) -> None:
         """Ensure video_effects lists have the specified target size."""
@@ -364,13 +318,9 @@ class VideoAssemblerRecipe:
         # Extend or truncate narrator_effects to match target size
         while len(self._narrator_asset_effects.narrator_effects) < target_size:
             self._narrator_asset_effects.narrator_effects.append([])
-        self._narrator_asset_effects.narrator_effects = (
-            self._narrator_asset_effects.narrator_effects[:target_size]
-        )
+        self._narrator_asset_effects.narrator_effects = self._narrator_asset_effects.narrator_effects[:target_size]
 
-        logger.debug(
-            f"Ensured narrator effects: {len(self._narrator_asset_effects.narrator_effects)}"
-        )
+        logger.debug(f"Ensured narrator effects: {len(self._narrator_asset_effects.narrator_effects)}")
 
     def is_complete(self) -> bool:
         """Check if the VideoAssemblerRecipe is properly initialized."""
@@ -430,3 +380,12 @@ class VideoAssemblerRecipe:
         self._video_ending_recipe.sub_video = subvideo
         self.save_to_file()
         return subvideo
+
+    def get_used_assets_list(self) -> list[Path]:
+        """Get a list of all used video asset file paths."""
+        used_assets = []
+
+        if self._video_ending_recipe.sub_video:
+            used_assets.append(self._video_ending_recipe.sub_video)
+
+        return used_assets

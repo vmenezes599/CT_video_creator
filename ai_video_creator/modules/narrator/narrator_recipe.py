@@ -41,25 +41,17 @@ class NarratorRecipe:
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
-                self.narrator_data = [
-                    self._create_recipe_from_dict(item)
-                    for item in data["narrator_data"]
-                ]
+                self.narrator_data = [self._create_recipe_from_dict(item) for item in data["narrator_data"]]
 
-                logger.info(
-                    f"Successfully loaded {len(self.narrator_data)} narrator recipes"
-                )
+                logger.info(f"Successfully loaded {len(self.narrator_data)} narrator recipes")
                 self.save_current_state()
 
         except FileNotFoundError:
-            logger.info(
-                f"Narrator recipe file not found: {file_path.name} - starting with empty recipe"
-            )
+            logger.info(f"Narrator recipe file not found: {file_path.name} - starting with empty recipe")
         except (KeyError, json.JSONDecodeError) as e:
             logger.error(
-                f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe"
+                f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe\n\nDetails: {e}"
             )
-            logger.error(f"Details: {e}")
             # Rename corrupted file to .old for backup
             old_file_path = Path(str(file_path) + ".old")
             if file_path.exists():
@@ -74,11 +66,7 @@ class NarratorRecipe:
         recipe_type = data.get("recipe_type")
 
         if "clone_voice_path" in data:
-            data["clone_voice_path"] = str(
-                self.video_creator_paths.unmask_asset_path(
-                    Path(data["clone_voice_path"])
-                )
-            )
+            data["clone_voice_path"] = str(self.video_creator_paths.unmask_asset_path(Path(data["clone_voice_path"])))
 
         if recipe_type == "ZonosTTSRecipeType":
             return ZonosTTSRecipe.from_dict(data)
@@ -102,19 +90,12 @@ class NarratorRecipe:
         ]
         available_voices = []
         for path in available_voices_paths:
-            available_voices.extend(
-                [
-                    str(self.video_creator_paths.mask_asset_path(f))
-                    for f in path.glob("*.mp3")
-                ]
-            )
+            available_voices.extend([str(self.video_creator_paths.mask_asset_path(f)) for f in path.glob("*.mp3")])
 
         narrator_data = [item.to_dict() for item in self.narrator_data]
         result = []
         for i, item in enumerate(narrator_data, 1):
-            item["clone_voice_path"] = str(
-                self.video_creator_paths.mask_asset_path(Path(item["clone_voice_path"]))
-            )
+            item["clone_voice_path"] = str(self.video_creator_paths.mask_asset_path(Path(item["clone_voice_path"])))
             result.append({"index": i, **item, "available_voices": available_voices})
 
         return {"narrator_data": result}
@@ -125,9 +106,7 @@ class NarratorRecipe:
             with open(self.recipe_path, "w", encoding="utf-8") as file:
                 json.dump(self.to_dict(), file, ensure_ascii=False, indent=4)
         except IOError as e:
-            logger.error(
-                f"Error saving narrator recipe to {self.recipe_path.name}: {e}"
-            )
+            logger.error(f"Error saving narrator recipe to {self.recipe_path.name}: {e}")
 
     def is_complete(self) -> bool:
         """Check if the narrator recipe is complete."""

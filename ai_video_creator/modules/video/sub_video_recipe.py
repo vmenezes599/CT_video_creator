@@ -36,7 +36,7 @@ class SubVideoRecipe:
         self.extra_data: list[dict] = []
         self.video_data: list[list[WanI2VRecipe | WanT2VRecipe]] = []
 
-        self.__from_dict(recipe_path)
+        self._from_dict(recipe_path)
 
     def add_video_data(self, video_data: list[WanI2VRecipe | WanT2VRecipe], extra_data: dict = None) -> None:
         """Add video data to the recipe."""
@@ -45,7 +45,7 @@ class SubVideoRecipe:
         self.extra_data.append(extra_data if extra_data else {})
         self.save_current_state()
 
-    def __from_dict(self, file_path: Path) -> None:
+    def _from_dict(self, file_path: Path) -> None:
         """Load video recipe from a JSON file."""
         try:
             with open(file_path, "r", encoding="utf-8") as file:
@@ -64,8 +64,9 @@ class SubVideoRecipe:
         except FileNotFoundError:
             logger.info(f"Recipe file not found: {file_path.name} - starting with empty recipe")
         except (KeyError, json.JSONDecodeError) as e:
-            logger.error(f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe")
-            logger.error(f"Details: {e}")
+            logger.error(
+                f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe\n\nDetails: {e}"
+            )
 
             # Rename corrupted file to .old for backup
             old_file_path = Path(str(file_path) + ".old")

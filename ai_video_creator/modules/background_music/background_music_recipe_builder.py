@@ -5,11 +5,15 @@ from ai_video_creator.prompt import Prompt
 
 from ai_video_creator.utils import VideoCreatorPaths
 
-from .background_music_recipe import BackgroundMusicRecipe
+from ai_video_creator.utils import get_audio_duration
+from ai_video_creator.modules.narrator import NarratorAssets
+from .background_music_recipe import BackgroundMusicRecipe, MusicRecipe
 
 
 class BackgroundMusicRecipeBuilder:
     """Background music recipe builder for creating background music recipes from stories."""
+
+    DEFAULT_VOLUME_LEVEL = 0.25
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize BackgroundMusicRecipeBuilder with recipe data."""
@@ -24,58 +28,62 @@ class BackgroundMusicRecipeBuilder:
 
         self._chapter_prompt_path = self._paths.chapter_prompt_path
 
+        self._narrator_assets = NarratorAssets(video_creator_paths)
+
+        if not self._narrator_assets.is_complete():
+            raise ValueError("Narrator assets are incomplete. Cannot build background music recipe.")
+
         # Load video prompt
         self._video_prompt = Prompt.load_from_json(self._chapter_prompt_path)
 
         self.recipe = None
 
-    def _default_init_time(self) -> int:
-        """Get the default initialization time for background music."""
-        return 21
+    def _generate_music_prompt(self, music_data: dict) -> list[dict]:
+        """Generate music prompt based on narrator and mood."""
+        generated_prompts = {}
 
-    def _get_default_end_time(self) -> int:
-        """Get the total length of the chapter video in seconds."""
-        return 120
+        assert len(music_data) == len(
+            self._narrator_assets.narrator_assets
+        ), "Mismatch between music data and narrator assets."
 
-    def _get_default_volume_level(self) -> float:
-        """Get the default volume level for background music."""
-        return 0.25
 
-    def _verify_recipe_against_prompt(self) -> bool:
-        """Verify the recipe against the prompt to ensure all required data is present."""
-        logger.debug("Verifying background music recipe against prompt data")
+        same_mood_duration = 0
 
-        if not self.recipe.music_data or len(self.recipe.music_data) != len(self._video_prompt):
-            return False
+        for audio_asset, data in zip(music_data, self._narrator_assets.narrator_assets):
+            narrator = data["narrator"]
+            mood = data["mood"]
+            narrator_info = get_audio_duration(audio_asset)
+            
+            
+            same_mood_duration += narrator_info.duration_seconds
+            
+            
+            
 
-        return True
-
-    def _extract_average_mood(self) -> str:
-        """Extract average mood from video prompts."""
-        return ""
-
-    def _generate_music_prompt_from_mood(self, mood: str) -> str:
-        """Generate a music prompt based on the given mood."""
-        if mood:
-            return f"Create background music that reflects a {mood} atmosphere."
-        else:
-            return "Create relaxing background music."
+        return generated_prompts
 
     def _create_default_background_music_recipe(self) -> None:
         """Create background music recipe using default prompts."""
         logger.info(f"Creating background music recipes for {len(self._video_prompt)} prompts")
 
-        average_mood = self._extract_average_mood()
+        music_data = []
+        for prompt in self._video_prompt:
+            narrator = prompt.narrator
+            mood = prompt.mood
 
-        average_mood_music_prompt = self._generate_music_prompt_from_mood(average_mood)
+            music_data.append({"narrator": narrator, "mood": mood})
 
-        music_info = {
-            "prompt": average_mood_music_prompt,
-            "start_time": self._default_init_time(),
-            "end_time": self._get_default_end_time(),
-            "volume_level": self._get_default_volume_level(),
-        }
-        self.recipe.add_music_data(music_info)
+        music_data = self._generate_music_prompt(music_data)
+
+        for data in music_data:
+            narrator = data["narrator"]
+            music_prompt = data["music_prompt"]
+            mood = data["mood"]
+
+            music_recipe = MusicRecipe(
+                narrator=narrator, prompt=music_prompt, mood=mood, volume_level=self.DEFAULT_VOLUME_LEVEL
+            )
+            self.recipe.add_music_recipe(music_recipe)
 
         logger.info(f"Successfully created {len(self._video_prompt)} background music recipes")
 
@@ -86,7 +94,7 @@ class BackgroundMusicRecipeBuilder:
 
         self.recipe = BackgroundMusicRecipe(self._paths)
 
-        if not self._verify_recipe_against_prompt():
+        if self.recipe.is_empty():
             self.recipe.clean()
             self._create_default_background_music_recipe()
 

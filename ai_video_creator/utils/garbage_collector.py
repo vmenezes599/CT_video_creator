@@ -10,17 +10,14 @@ from ai_video_creator.modules.video import (
     SubVideoAssets,
     SubVideoRecipe,
     VideoAssemblerAssets,
+    VideoAssemblerRecipe,
 )
 
 
-def internal_clean_unused_assets(
-    user_folder: Path, story_name: str, chapter_index: int
-) -> None:
+def internal_clean_unused_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """Cleans all generated assets for a given story and chapter."""
 
-    logger.info(
-        f"Cleaning unused assets for story: {story_name}, chapter: {chapter_index + 1}"
-    )
+    logger.info(f"Cleaning unused assets for story: {story_name}, chapter: {chapter_index + 1}")
 
     paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
 
@@ -29,13 +26,15 @@ def internal_clean_unused_assets(
     sub_video_assets = SubVideoAssets(paths)
     sub_video_recipe = SubVideoRecipe(paths)
     video_assembler_assets = VideoAssemblerAssets(paths)
+    video_assembler_recipe = VideoAssemblerRecipe(paths)
 
     assets_to_keep = set()
     assets_to_keep.update(narrator_assets.get_used_assets_list())
     assets_to_keep.update(image_assets.get_used_assets_list())
     assets_to_keep.update(sub_video_assets.get_used_assets_list())
-    assets_to_keep.update(video_assembler_assets.get_used_assets_list())
     assets_to_keep.update(sub_video_recipe.get_used_assets_list())
+    assets_to_keep.update(video_assembler_assets.get_used_assets_list())
+    assets_to_keep.update(video_assembler_recipe.get_used_assets_list())
 
     all_folders_to_clean = [
         paths.narrator_asset_folder,

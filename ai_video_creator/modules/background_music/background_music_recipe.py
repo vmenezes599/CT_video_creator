@@ -10,6 +10,40 @@ from logging_utils import logger
 from ai_video_creator.utils import VideoCreatorPaths
 
 
+class MusicRecipe:
+    """Class to represent music data for a scene."""
+
+    def __init__(self, narrator: str, prompt: str, mood: str, volume_level: float):
+        self.narrator = narrator
+        self.prompt = prompt
+        self.mood = mood
+        self.volume_level = volume_level
+
+    def to_dict(self) -> dict:
+        """Convert MusicRecipe to dictionary."""
+        return {
+            "narrator": self.narrator,
+            "prompt": self.prompt,
+            "mood": self.mood,
+            "volume_level": self.volume_level,
+        }
+
+    @staticmethod
+    def from_dict(data: dict) -> "MusicRecipe":
+        """Create MusicRecipe from dictionary."""
+        required_fields = ["narrator", "prompt", "mood", "volume_level"]
+        missing_fields = set(required_fields - data.keys())
+        if missing_fields:
+            raise ValueError(f"Missing fields in MusicRecipe data: {missing_fields}")
+
+        return MusicRecipe(
+            narrator=data["narrator"],
+            prompt=data["prompt"],
+            mood=data["mood"],
+            volume_level=data["volume_level"],
+        )
+
+
 class BackgroundMusicRecipe:
     """Recipe for managing background music data for scenes."""
 
@@ -21,39 +55,34 @@ class BackgroundMusicRecipe:
         self.recipe_file_parent = recipe_path.parent
         self.recipe_path = recipe_path
 
-        self.extra_data: list[dict] = []
-        self.music_data: list[dict] = []
+        self.music_recipes: list[MusicRecipe] = []
 
-        self.__from_dict(recipe_path)
+        self._from_dict(recipe_path)
 
-    def add_music_data(self, music_data: dict, extra_data: dict = None) -> None:
+    def add_music_recipe(self, music_recipe: MusicRecipe) -> None:
         """Add music data to the recipe."""
-        self.music_data.append(music_data)
-        # Always append extra_data to keep indices aligned, use empty dict if None
-        self.extra_data.append(extra_data if extra_data else {})
+        self.music_recipes.append(music_recipe)
         self.save_current_state()
 
-    def __from_dict(self, file_path: Path) -> None:
+    def _from_dict(self, file_path: Path) -> None:
         """Load background music recipe from a JSON file."""
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
-                music_data = data.get("music_data", [])
+                music_recipes = data.get("music_recipes", [])
 
-                for item in music_data:
-                    music_info = item.get("music_info", {})
-                    self.music_data.append(music_info)
-                    extra_data = item.get("extra_data", {})
-                    self.extra_data.append(extra_data)
+                for item in music_recipes:
+                    self.music_recipes.append(MusicRecipe.from_dict(item))
 
-                logger.info(f"Successfully loaded {len(self.music_data)} background music recipes")
+                logger.info(f"Successfully loaded {len(self.music_recipes)} background music recipes")
                 self.save_current_state()
 
         except FileNotFoundError:
             logger.info(f"Recipe file not found: {file_path.name} - starting with empty recipe")
         except (KeyError, json.JSONDecodeError) as e:
-            logger.error(f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe")
-            logger.error(f"Details: {e}")
+            logger.error(
+                f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe\n\nDetails: {e}"
+            )
 
             # Rename corrupted file to .old for backup
             old_file_path = Path(str(file_path) + ".old")
@@ -66,8 +95,7 @@ class BackgroundMusicRecipe:
 
     def clean(self) -> None:
         """Clean the current recipe data."""
-        self.music_data = []
-        self.extra_data = []
+        self.music_recipes = []
 
     def to_dict(self) -> dict:
         """Convert BackgroundMusicRecipe to dictionary.
@@ -75,17 +103,15 @@ class BackgroundMusicRecipe:
         Returns:
             Dictionary representation of the BackgroundMusicRecipe
         """
-        result = {"music_data": []}
-
-        for i, music_info in enumerate(self.music_data, 1):
-            result_item = {
+        recipes = []
+        for i, music_info in enumerate(self.music_recipes, 1):
+            recipe_dict = {
                 "index": i,
-                "extra_data": self.extra_data[i - 1],
-                "music_info": music_info,
+                **music_info.to_dict(),
             }
-            result["music_data"].append(result_item)
+            recipes.append(recipe_dict)
 
-        return result
+        return {"music_recipes": recipes}
 
     def save_current_state(self) -> None:
         """Save the current state of the background music recipe to a file."""
@@ -101,7 +127,7 @@ class BackgroundMusicRecipe:
     def get_used_assets_list(self) -> list[Path]:
         """Get a list of all used background music asset file paths."""
         used_assets = []
-        for music_info in self.music_data:
+        for music_info in self.music_recipes:
             if isinstance(music_info, dict):
                 music_path = music_info.get("music_path")
                 if music_path:
@@ -109,3 +135,7 @@ class BackgroundMusicRecipe:
                     if music_path.exists() and music_path.is_file():
                         used_assets.append(music_path)
         return used_assets
+
+    def is_empty(self) -> bool:
+        """Check if the music recipes list is empty."""
+        return not self.music_recipes
