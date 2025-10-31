@@ -39,16 +39,12 @@ class VideoAssemblerAssets:
                 video_value = asset.get("video_asset")
                 video_value_path = Path(video_value) if video_value else None
                 self.final_sub_videos[index] = (
-                    self._paths.unmask_asset_path(video_value_path)
-                    if video_value_path
-                    else None
+                    self._paths.unmask_asset_path(video_value_path) if video_value_path else None
                 )
 
             video_ending_value = data.get("video_ending")
             if video_ending_value:
-                self.video_ending = self._paths.unmask_asset_path(
-                    Path(video_ending_value)
-                )
+                self.video_ending = self._paths.unmask_asset_path(Path(video_ending_value))
 
             self.save_assets_to_file()
 
@@ -65,9 +61,7 @@ class VideoAssemblerAssets:
             self.save_assets_to_file()
 
         except FileNotFoundError:
-            logger.debug(
-                f"Asset file not found: {self.asset_file_path.name} - starting with empty assets"
-            )
+            logger.debug(f"Asset file not found: {self.asset_file_path.name} - starting with empty assets")
             self.final_sub_videos = []
 
     def save_assets_to_file(self) -> None:
@@ -88,9 +82,7 @@ class VideoAssemblerAssets:
                     # Convert paths to relative paths for storage
                     video_asset_relative = None
                     if video_asset:
-                        video_asset_relative = str(
-                            self._paths.mask_asset_path(Path(video_asset))
-                        )
+                        video_asset_relative = str(self._paths.mask_asset_path(Path(video_asset)))
 
                     videos = {
                         "index": i + 1,
@@ -101,29 +93,21 @@ class VideoAssemblerAssets:
 
                 data = {
                     "video_ending": (
-                        self._paths.mask_asset_path(self.video_ending)
-                        if self.video_ending
-                        else None
+                        str(self._paths.mask_asset_path(self.video_ending)) if self.video_ending else None
                     ),
                     "assets": assets,
                 }
                 json.dump(data, file, indent=4)
             logger.trace(f"Assets saved with {len(assets)} scene assets")
         except IOError as e:
-            logger.error(
-                f"Error saving video assets to {self.asset_file_path.name}: {e}"
-            )
+            logger.error(f"Error saving video assets to {self.asset_file_path.name}: {e}")
 
-    def set_final_sub_video_video(
-        self, scene_index: int, video_file_path: Path
-    ) -> None:
+    def set_final_sub_video_video(self, scene_index: int, video_file_path: Path) -> None:
         """Set video file path for a specific scene with security validation."""
         try:
             ensure_collection_index_exists(self.final_sub_videos, scene_index)
             self.final_sub_videos[scene_index] = video_file_path
-            logger.debug(
-                f"Set video for scene {scene_index + 1}: {video_file_path.name}"
-            )
+            logger.debug(f"Set video for scene {scene_index + 1}: {video_file_path.name}")
             self.save_assets_to_file()
         except ValueError as e:
             logger.error(f"Failed to set video for scene {scene_index + 1}: {e}")
@@ -150,9 +134,7 @@ class VideoAssemblerAssets:
         if scene_index < 0 or scene_index >= len(self.final_sub_videos):
             return False
         video_asset = self.final_sub_videos[scene_index]
-        return (
-            video_asset is not None and video_asset.exists() and video_asset.is_file()
-        )
+        return video_asset is not None and video_asset.exists() and video_asset.is_file()
 
     def get_missing_videos(self) -> list[int]:
         """Get a summary of missing videos per scene."""
