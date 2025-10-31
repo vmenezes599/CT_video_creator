@@ -36,7 +36,7 @@ class SubVideoAssetManager:
         # Load separate narrator and image assets
         self.__narrator_assets = NarratorAssets(video_creator_paths)
         self.__image_assets = ImageAssets(video_creator_paths)
-        self.recipe = SubVideoRecipe(self._paths.sub_video_recipe_file)
+        self.recipe = SubVideoRecipe(self._paths)
         self.video_assets = SubVideoAssets(video_creator_paths)
 
         # Ensure video_assets lists have the same size as recipe

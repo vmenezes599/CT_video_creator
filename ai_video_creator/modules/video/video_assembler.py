@@ -108,7 +108,6 @@ class VideoAssembler:
             sub_video_path=video_path, audio_path=audio_path, output_path=temp_file
         )
 
-        self._temp_files.append(output_path)
         return output_path
 
     def _compose(self, video_segments: list[Path]):
@@ -209,6 +208,7 @@ class VideoAssembler:
             logger.info(f"Processing segment {i}/{len(audio_segments)}: {Path(video_path).name}")
 
             video_segment = self._combine_sub_video_with_audio(video_path, audio_path)
+            self._temp_files.append(video_segment)
             results.append(video_segment)
 
         logger.info(f"Created {len(results)} video segments")
@@ -399,8 +399,7 @@ class VideoAssembler:
 
         output_file = self._post_process(output_file)
 
-        if output_file is not None:
-            output_file.rename(self.output_path)
+        output_file = output_file.rename(self.output_path)
 
         _ = self._subtitle_generator.generate_subtitles_from_audio(output_file)
 

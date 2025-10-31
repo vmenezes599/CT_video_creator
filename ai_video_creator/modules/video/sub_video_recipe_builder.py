@@ -205,7 +205,7 @@ class SubVideoRecipeBuilder:
 
         logger.info("Starting video recipe creation process")
 
-        self._recipe = SubVideoRecipe(self._paths.sub_video_recipe_file)
+        self._recipe = SubVideoRecipe(self._paths)
 
         if not self._verify_recipe_against_prompt():
             self._recipe.clean()
