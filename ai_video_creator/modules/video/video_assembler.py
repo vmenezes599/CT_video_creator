@@ -315,15 +315,18 @@ class VideoAssembler:
         concatenated_narrator_path = self._concatenate_ending_narrators(ending_narrator_paths)
 
         ending_sub_video = self._combine_sub_video_with_audio(ending_video_path, concatenated_narrator_path)
+        self._temp_files.append(ending_sub_video)
 
         start_time_seconds = (
             get_audio_duration(ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index]) + 1.5
         )
 
+        output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
+
         ending_sub_video = blit_overlay_video_onto_main_video(
             overlay_video=ending_recipe.ending_overlay_asset,
             main_video=ending_sub_video,
-            output_path=ending_sub_video.with_stem(f"{ending_sub_video.stem}_overlayed"),
+            output_path=output_path,
             position=VideoBlitPosition.CENTER,
             scale_percent=1.0,
             start_time_seconds=start_time_seconds,
