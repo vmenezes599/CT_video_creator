@@ -358,27 +358,27 @@ class VideoAssembler:
 
         return video_segments
 
-    def _post_process(self, main_video_path: Path):
+    def _post_process(self, main_video_path: Path) -> Path:
         """
         Apply post-compose effects to the final video.
         """
         overlay_recipe = self.video_assembler_recipe.get_video_overlay_recipe()
         if not overlay_recipe:
             logger.info("No outro effects defined, skipping post-compose effects.")
-            return
+            return main_video_path
 
-        outro_video_path = overlay_recipe.overlay_asset
-        if not outro_video_path or not outro_video_path.exists():
+        overlay_asset_path = overlay_recipe.overlay_asset
+        if not overlay_asset_path or not overlay_asset_path.exists():
             logger.warning("Outro video path is invalid or does not exist.")
-            return
+            return main_video_path
 
-        logger.info(f"Adding outro video segment: {outro_video_path.name}")
+        logger.info(f"Adding outro video segment: {overlay_asset_path.name}")
         output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_final")
 
         self._temp_files.append(main_video_path)
 
         output_path = blit_overlay_video_onto_main_video(
-            overlay_video=outro_video_path,
+            overlay_video=overlay_asset_path,
             main_video=main_video_path,
             output_path=output_video_path,
         )
