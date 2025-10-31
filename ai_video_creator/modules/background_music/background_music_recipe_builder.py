@@ -2,6 +2,8 @@
 
 from logging_utils import logger
 from ai_video_creator.prompt import Prompt
+from ai_video_creator.environment_variables import BACKGROUND_MUSIC_PROMPT_LLM_MODEL
+from ai_llm import LLMManager, LLMPromptBuilder
 
 from ai_video_creator.utils import VideoCreatorPaths
 
@@ -13,6 +15,7 @@ from .background_music_recipe import BackgroundMusicRecipe, MusicRecipe
 class BackgroundMusicRecipeBuilder:
     """Background music recipe builder for creating background music recipes from stories."""
 
+    DEFAULT_LLM_MODEL = BACKGROUND_MUSIC_PROMPT_LLM_MODEL
     DEFAULT_VOLUME_LEVEL = 0.25
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
@@ -36,7 +39,22 @@ class BackgroundMusicRecipeBuilder:
         # Load video prompt
         self._video_prompt = Prompt.load_from_json(self._chapter_prompt_path)
 
+        self._llm_manager = LLMManager()
         self.recipe = None
+
+    def _generate_prompt_builder_for_music_prompt(
+        self, music_data: dict, index: int, narrator_duration: float, same_mood_duration: float
+    ) -> LLMPromptBuilder:
+        """Generate a music prompt based on narrator, mood, and duration."""
+        return LLMPromptBuilder("")
+
+    def _generate_scene_script_validator(self, response: str) -> bool:
+        """Validate the generated music prompt."""
+        return True
+
+    def _generate_scene_script_post_process(self, response: str) -> dict:
+        """Post-process the generated music prompt."""
+        return response
 
     def _generate_music_prompt(self, music_data: dict) -> list[dict]:
         """Generate music prompt based on narrator and mood."""
@@ -46,19 +64,27 @@ class BackgroundMusicRecipeBuilder:
             self._narrator_assets.narrator_assets
         ), "Mismatch between music data and narrator assets."
 
-
         same_mood_duration = 0
 
-        for audio_asset, data in zip(music_data, self._narrator_assets.narrator_assets):
-            narrator = data["narrator"]
-            mood = data["mood"]
-            narrator_info = get_audio_duration(audio_asset)
-            
-            
-            same_mood_duration += narrator_info.duration_seconds
-            
-            
-            
+        for index, _ in enumerate(music_data):
+            audio_asset = self._narrator_assets.narrator_assets[index]
+            narrator_duration_seconds = get_audio_duration(audio_asset)
+
+            prompt_builder = self._generate_prompt_builder_for_music_prompt(
+                music_data,
+                index,
+                narrator_duration_seconds,
+                same_mood_duration,
+            )
+
+            response = self._llm_manager.send_prompt_advanced(
+                self.DEFAULT_LLM_MODEL,
+                prompt_builder,
+                self._generate_scene_script_validator,
+                self._generate_scene_script_post_process,
+            )
+
+            same_mood_duration += narrator_duration_seconds
 
         return generated_prompts
 
