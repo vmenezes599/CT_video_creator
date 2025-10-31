@@ -369,7 +369,7 @@ class VideoAssembler:
 
         overlay_asset_path = overlay_recipe.overlay_asset
         if not overlay_asset_path or not overlay_asset_path.exists():
-            logger.warning("Outro video path is invalid or does not exist.")
+            logger.warning("Overlay video path is invalid or does not exist.")
             return main_video_path
 
         logger.info(f"Adding outro video segment: {overlay_asset_path.name}")
