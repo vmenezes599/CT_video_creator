@@ -13,11 +13,11 @@ from ai_video_creator.utils import VideoCreatorPaths
 class MusicRecipe:
     """Class to represent music data for a scene."""
 
-    def __init__(self, narrator: str, prompt: str, mood: str, volume_level: float):
+    def __init__(self, narrator: str, prompt: str, mood: str, seed: int):
         self.narrator = narrator
         self.prompt = prompt
         self.mood = mood
-        self.volume_level = volume_level
+        self.seed = seed
 
     def to_dict(self) -> dict:
         """Convert MusicRecipe to dictionary."""
@@ -25,7 +25,6 @@ class MusicRecipe:
             "narrator": self.narrator,
             "prompt": self.prompt,
             "mood": self.mood,
-            "volume_level": self.volume_level,
         }
 
     @staticmethod
@@ -40,7 +39,7 @@ class MusicRecipe:
             narrator=data["narrator"],
             prompt=data["prompt"],
             mood=data["mood"],
-            volume_level=data["volume_level"],
+            seed=data["seed"],
         )
 
 
