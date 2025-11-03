@@ -91,21 +91,3 @@ class NarratorAssetManager:
             self.generate_narrator_asset(scene_index)
 
         logger.info("Narrator asset generation process completed successfully")
-
-    def clean_unused_narrator_assets(self):
-        """Clean up narrator assets for a specific story folder."""
-
-        logger.info("Starting narrator asset cleanup process")
-
-        # Get list of valid (non-None) asset files to keep
-        valid_narrator_assets = [asset for asset in self.narrator_assets.narrator_assets if asset is not None]
-        assets_to_keep = set(valid_narrator_assets)
-
-        for file in self._paths.narrator_asset_folder.glob("*narrator*"):
-            if file.is_file():
-                if file in assets_to_keep:
-                    continue
-                file.unlink()
-                logger.info(f"Deleted narrator asset file: {file}")
-
-        logger.info("Narrator asset cleanup process completed successfully")

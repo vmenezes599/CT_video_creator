@@ -86,23 +86,3 @@ class BackgroundMusicAssetManager:
             self.generate_background_music_asset(scene_index)
 
         logger.info("Background music asset generation process completed successfully")
-
-    def clean_unused_background_music_assets(self):
-        """Clean up background music assets for a specific story folder."""
-
-        logger.info("Starting background music asset cleanup process")
-
-        # Get list of valid (non-None) asset files to keep
-        valid_background_music_assets = [
-            asset for asset in self.background_music_assets.background_music_assets if asset is not None
-        ]
-        assets_to_keep = set(valid_background_music_assets)
-
-        for file in self._paths.background_music_asset_folder.glob("*bgmusic*"):
-            if file.is_file():
-                if file in assets_to_keep:
-                    continue
-                file.unlink()
-                logger.info(f"Deleted background music asset file: {file}")
-
-        logger.info("Background music asset cleanup process completed successfully")

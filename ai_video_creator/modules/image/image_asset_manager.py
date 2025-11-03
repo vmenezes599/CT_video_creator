@@ -85,20 +85,3 @@ class ImageAssetManager:
             self.generate_image_asset(scene_index)
 
         logger.info("Image asset generation process completed successfully")
-
-    def clean_unused_image_assets(self):
-        """Clean up image assets for a specific story folder."""
-
-        logger.info("Starting image asset cleanup process")
-
-        valid_image_assets = [asset for asset in self.image_assets.image_assets if asset is not None]
-        assets_to_keep = set(valid_image_assets)
-
-        for file in self._paths.image_asset_folder.glob("*image*"):
-            if file.is_file():
-                if file in assets_to_keep:
-                    continue
-                file.unlink()
-                logger.info(f"Deleted image asset file: {file}")
-
-        logger.info("Image asset cleanup process completed successfully")
