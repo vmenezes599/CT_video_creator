@@ -3,11 +3,11 @@ Unit tests for garbage_collector module.
 """
 
 import json
-from pathlib import Path
 
 import pytest
 
-from ai_video_creator.utils import VideoCreatorPaths, internal_clean_unused_assets
+from ai_video_creator.utils import VideoCreatorPaths
+from ai_video_creator.utils.garbage_collector import internal_clean_unused_assets
 
 
 class TestGarbageCollector:
@@ -119,9 +119,7 @@ class TestGarbageCollector:
 
         return paths, user_folder, story_name, chapter_index
 
-    def test_cleanup_removes_unused_narrator_and_image_files(
-        self, video_creator_paths
-    ):
+    def test_cleanup_removes_unused_narrator_and_image_files(self, video_creator_paths):
         """Test that cleanup removes unused files from narrator and image folders."""
         paths, user_folder, story_name, chapter_index = video_creator_paths
 
@@ -300,9 +298,7 @@ class TestGarbageCollector:
             json.dump(image_assets, f)
 
         # Create empty video assets
-        video_assets = {
-            "assets": [{"index": 1, "video_asset": None, "sub_video_assets": []}]
-        }
+        video_assets = {"assets": [{"index": 1, "video_asset": None, "sub_video_assets": []}]}
         with open(paths.sub_video_asset_file, "w", encoding="utf-8") as f:
             json.dump(video_assets, f)
 

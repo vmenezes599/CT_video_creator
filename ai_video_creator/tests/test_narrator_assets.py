@@ -5,9 +5,7 @@ Unit tests for narrator_assets module.
 import json
 import os
 import stat
-from pathlib import Path
 
-import pytest
 
 from ai_video_creator.modules.narrator.narrator_assets import NarratorAssets
 from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
@@ -95,8 +93,8 @@ class TestNarratorAssets:
 
         # Set up mixed scenario
         assets.set_scene_narrator(0, test_narrator1)  # Exists
-        # For nonexistent file, we need to bypass validation by setting directly
-        assets.narrator_assets[1] = paths.narrator_asset_folder / "nonexistent.mp3"  # Doesn't exist
+        # For nonexistent file, we need to bypass validation by appending directly
+        assets.narrator_assets.append(paths.narrator_asset_folder / "nonexistent.mp3")  # Doesn't exist
         assets.narrator_assets.append(None)  # No asset set
 
         missing = assets.get_missing_narrator_assets()
@@ -146,7 +144,7 @@ class TestNarratorAssets:
         assert assets.is_complete()
 
         # Add invalid asset by bypassing validation
-        assets.narrator_assets[1] = paths.narrator_asset_folder / "nonexistent.mp3"
+        assets.narrator_assets.append(paths.narrator_asset_folder / "nonexistent.mp3")
         assert not assets.is_complete()
 
     def test_narrator_assets_len_and_getitem(self, tmp_path):

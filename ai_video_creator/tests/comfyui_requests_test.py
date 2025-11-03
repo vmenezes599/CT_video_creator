@@ -14,9 +14,7 @@ from ai_video_creator.comfyui.comfyui_workflow import IComfyUIWorkflow
 @pytest.fixture
 def comfyui_requests():
     """Fixture to create a ComfyUIRequests instance."""
-    return ComfyUIRequests(
-        max_retries_per_request=3, delay_seconds=1
-    )  # Reduce delay for testing
+    return ComfyUIRequests(max_retries_per_request=3, delay_seconds=1)  # Reduce delay for testing
 
 
 @pytest.fixture
@@ -174,10 +172,8 @@ class TestComfyUIRequests:
             assert last_entry == {}
 
     @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
-    def test_comfyui_ensure_send_all_prompts_filters_none_results(
-        self, mock_sleep, comfyui_requests, tmp_path
-    ):
-        """Test that ensure_send_all_prompts properly filters out None results and maintains list integrity."""
+    def test_comfyui_ensure_send_all_prompts_filters_none_results(self, mock_sleep, comfyui_requests, tmp_path):
+        """Test that ensure_send_all_prompts raises exception when any workflow fails."""
         # Arrange
         workflow1 = Mock(spec=IComfyUIWorkflow)
         workflow1.get_workflow_summary.return_value = "workflow1/summary"
@@ -188,33 +184,25 @@ class TestComfyUIRequests:
         workflow3 = Mock(spec=IComfyUIWorkflow)
         workflow3.get_workflow_summary.return_value = "workflow3/summary"
 
-        with patch.object(
-            comfyui_requests, "_process_single_workflow"
-        ) as mock_process_workflow, patch.object(
+        with patch.object(comfyui_requests, "_process_single_workflow") as mock_process_workflow, patch.object(
             comfyui_requests, "download_all_files"
         ) as mock_download:
             # Simulate: success, failure, success
             mock_process_workflow.side_effect = [
                 ["/path/output1.png"],
-                [],  # Empty list instead of None for failure
+                [],  # Empty list for failure
                 ["/path/output3.png"],
             ]
             mock_download.return_value = ["/path/output1.png", "/path/output3.png"]
 
-            # Act
-            result = comfyui_requests.ensure_send_all_prompts(
-                [workflow1, workflow2, workflow3], tmp_path
-            )
+            # Act & Assert - Should raise exception when not all workflows succeed
+            with pytest.raises(RequestException, match="Failed to generate assets from workflows"):
+                comfyui_requests.ensure_send_all_prompts([workflow1, workflow2, workflow3], tmp_path)
 
-            # Assert - Should only contain successful outputs
-            assert len(result) == 2  # Only non-None results
-            assert result == ["/path/output1.png", "/path/output3.png"]
             assert mock_process_workflow.call_count == 3
             assert mock_sleep.call_count == 3
 
-    def test_comfyui_ensure_send_all_prompts_empty_list(
-        self, comfyui_requests, tmp_path
-    ):
+    def test_comfyui_ensure_send_all_prompts_empty_list(self, comfyui_requests, tmp_path):
         """Test sending empty list of prompts."""
         with patch.object(comfyui_requests, "download_all_files") as mock_download:
             mock_download.return_value = []
@@ -227,9 +215,7 @@ class TestComfyUIRequests:
 
     @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
     @patch("ai_video_creator.comfyui.comfyui_requests.datetime")
-    def test_wait_for_completion_success(
-        self, mock_datetime, mock_sleep, comfyui_requests
-    ):
+    def test_wait_for_completion_success(self, mock_datetime, mock_sleep, comfyui_requests):
         """Test successful completion waiting - tests polling logic and timing calculation."""
         # Arrange
         prompt_id = "test_prompt_123"
@@ -262,9 +248,7 @@ class TestComfyUIRequests:
 
     @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
     @patch("ai_video_creator.comfyui.comfyui_requests.datetime")
-    def test_wait_for_completion_custom_interval(
-        self, mock_datetime, mock_sleep, comfyui_requests
-    ):
+    def test_wait_for_completion_custom_interval(self, mock_datetime, mock_sleep, comfyui_requests):
         """Test completion waiting with custom check interval."""
         # Arrange
         prompt_id = "test_prompt_456"
@@ -286,9 +270,7 @@ class TestComfyUIRequests:
             ]
 
             # Act
-            processing_time = comfyui_requests._wait_for_completion(
-                prompt_id, check_interval=3
-            )
+            processing_time = comfyui_requests._wait_for_completion(prompt_id, check_interval=3)
 
             # Assert
             assert processing_time == 30
@@ -323,14 +305,10 @@ class TestComfyUIRequests:
         with pytest.raises(RuntimeError, match="ComfyUI request failed: success"):
             comfyui_requests._check_for_output_success(incomplete_response)
 
-    def test_check_for_output_success_both_failed_and_incomplete(
-        self, comfyui_requests
-    ):
+    def test_check_for_output_success_both_failed_and_incomplete(self, comfyui_requests):
         """Test output success validation with both failed status and incomplete - tests priority of error checking."""
         # Arrange
-        failed_incomplete_response = {
-            "status": {"status_str": "timeout", "completed": False}
-        }
+        failed_incomplete_response = {"status": {"status_str": "timeout", "completed": False}}
 
         # Act & Assert - Should fail on status_str first
         with pytest.raises(RuntimeError, match="ComfyUI request failed: timeout"):
@@ -338,9 +316,7 @@ class TestComfyUIRequests:
 
     @patch.object(ComfyUIRequests, "_comfyui_get_history_output_name")
     @patch("ai_video_creator.comfyui.comfyui_requests.os.path.join")
-    def test_get_output_path_success(
-        self, mock_path_join, mock_get_output_name, comfyui_requests
-    ):
+    def test_get_output_path_success(self, mock_path_join, mock_get_output_name, comfyui_requests):
         """Test successful output path construction - tests file path building logic."""
         # Arrange
         history_entry = {"outputs": {"images": ["file1.png", "file2.png"]}}
@@ -389,35 +365,27 @@ class TestComfyUIRequests:
         # Assert
         assert output_paths == []
 
-    def test_create_workflow_summary_short_summary(
-        self, comfyui_requests, mock_workflow
-    ):
+    def test_create_workflow_summary_short_summary(self, comfyui_requests, mock_workflow):
         """Test workflow summary creation with short summary - tests no truncation."""
         # Arrange
         mock_workflow.get_workflow_summary.return_value = "Short workflow name"
 
         # Act
-        full_summary, display_summary = comfyui_requests._create_workflow_summary(
-            mock_workflow
-        )
+        full_summary, display_summary = comfyui_requests._create_workflow_summary(mock_workflow)
 
         # Assert
         assert full_summary == "Short workflow name"
         assert display_summary == "Short workflow name"
         assert "..." not in display_summary
 
-    def test_create_workflow_summary_long_summary(
-        self, comfyui_requests, mock_workflow
-    ):
+    def test_create_workflow_summary_long_summary(self, comfyui_requests, mock_workflow):
         """Test workflow summary creation with long summary - tests truncation logic."""
         # Arrange
         long_name = "A" * 150  # 150 characters, should be truncated
         mock_workflow.get_workflow_summary.return_value = long_name
 
         # Act
-        full_summary, display_summary = comfyui_requests._create_workflow_summary(
-            mock_workflow
-        )
+        full_summary, display_summary = comfyui_requests._create_workflow_summary(mock_workflow)
 
         # Assert
         assert full_summary == long_name
@@ -425,37 +393,27 @@ class TestComfyUIRequests:
         assert display_summary.endswith("...")
         assert display_summary.startswith("A" * 100)
 
-    def test_create_workflow_summary_exactly_max_length(
-        self, comfyui_requests, mock_workflow
-    ):
+    def test_create_workflow_summary_exactly_max_length(self, comfyui_requests, mock_workflow):
         """Test workflow summary creation with exactly max length - tests boundary condition."""
         # Arrange
         exact_length_name = "B" * 100  # Exactly 100 characters
         mock_workflow.get_workflow_summary.return_value = exact_length_name
 
         # Act
-        full_summary, display_summary = comfyui_requests._create_workflow_summary(
-            mock_workflow
-        )
+        full_summary, display_summary = comfyui_requests._create_workflow_summary(mock_workflow)
 
         # Assert
         assert full_summary == exact_length_name
         assert display_summary == exact_length_name
         assert "..." not in display_summary
 
-    def test_create_workflow_summary_custom_max_length(
-        self, comfyui_requests, mock_workflow
-    ):
+    def test_create_workflow_summary_custom_max_length(self, comfyui_requests, mock_workflow):
         """Test workflow summary creation with custom max length."""
         # Arrange
-        mock_workflow.get_workflow_summary.return_value = (
-            "This is a longer workflow name"
-        )
+        mock_workflow.get_workflow_summary.return_value = "This is a longer workflow name"
 
         # Act
-        full_summary, display_summary = comfyui_requests._create_workflow_summary(
-            mock_workflow, max_length=10
-        )
+        full_summary, display_summary = comfyui_requests._create_workflow_summary(mock_workflow, max_length=10)
 
         # Assert
         assert full_summary == "This is a longer workflow name"
@@ -463,20 +421,14 @@ class TestComfyUIRequests:
         assert len(display_summary) == 13  # 10 + "..." = 13
 
     @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
-    def test_process_single_workflow_success(
-        self, mock_sleep, comfyui_requests, mock_workflow
-    ):
+    def test_process_single_workflow_success(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test successful single workflow processing - tests complete flow integration."""
         # Arrange
         mock_workflow.get_workflow_summary.return_value = "test_workflow"
 
-        with patch.object(
-            comfyui_requests, "_submit_single_prompt"
-        ) as mock_submit, patch.object(
+        with patch.object(comfyui_requests, "_submit_single_prompt") as mock_submit, patch.object(
             comfyui_requests, "_wait_for_completion"
-        ) as mock_wait, patch.object(
-            comfyui_requests, "get_last_history_entry"
-        ) as mock_get_history, patch.object(
+        ) as mock_wait, patch.object(comfyui_requests, "get_last_history_entry") as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
             comfyui_requests, "_get_output_paths"
@@ -487,9 +439,7 @@ class TestComfyUIRequests:
             mock_response.json.return_value = {"prompt_id": "prompt_123"}
             mock_submit.return_value = mock_response
             mock_wait.return_value = 25
-            mock_get_history.return_value = {
-                "status": {"status_str": "success", "completed": True}
-            }
+            mock_get_history.return_value = {"status": {"status_str": "success", "completed": True}}
             mock_get_paths.return_value = ["/output/result.png"]
 
             # Act
@@ -504,20 +454,14 @@ class TestComfyUIRequests:
             mock_get_paths.assert_called_once()
 
     @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
-    def test_process_single_workflow_runtime_error_retry(
-        self, mock_sleep, comfyui_requests, mock_workflow
-    ):
+    def test_process_single_workflow_runtime_error_retry(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test workflow processing with RuntimeError and successful retry - tests retry mechanism."""
         # Arrange
         mock_workflow.get_workflow_summary.return_value = "test_workflow"
 
-        with patch.object(
-            comfyui_requests, "_submit_single_prompt"
-        ) as mock_submit, patch.object(
+        with patch.object(comfyui_requests, "_submit_single_prompt") as mock_submit, patch.object(
             comfyui_requests, "_wait_for_completion"
-        ) as mock_wait, patch.object(
-            comfyui_requests, "get_last_history_entry"
-        ) as mock_get_history, patch.object(
+        ) as mock_wait, patch.object(comfyui_requests, "get_last_history_entry") as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
             comfyui_requests, "_get_output_paths"
@@ -528,9 +472,7 @@ class TestComfyUIRequests:
             mock_response.json.return_value = {"prompt_id": "prompt_123"}
             mock_submit.return_value = mock_response
             mock_wait.return_value = 30
-            mock_get_history.return_value = {
-                "status": {"status_str": "success", "completed": True}
-            }
+            mock_get_history.return_value = {"status": {"status_str": "success", "completed": True}}
             mock_check_success.side_effect = [
                 RuntimeError("First attempt failed"),
                 None,
@@ -540,29 +482,21 @@ class TestComfyUIRequests:
             # Act
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
-            # Assert
-            assert result == ["/output/result.png"]
-            assert mock_submit.call_count == 2  # Should retry once
-            assert mock_check_success.call_count == 2
-            assert (
-                mock_sleep.call_count == 4
-            )  # Each attempt: sleep in _send_clean_memory_request (3s) + sleep delay_seconds
+        # Assert
+        assert result == ["/output/result.png"]
+        assert mock_submit.call_count == 2  # Should retry once
+        assert mock_check_success.call_count == 2
+        assert mock_sleep.call_count == 2  # Each attempt calls _send_clean_memory_request which sleeps for 5s
 
     @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
-    def test_process_single_workflow_request_exception_retry(
-        self, mock_sleep, comfyui_requests, mock_workflow
-    ):
+    def test_process_single_workflow_request_exception_retry(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test workflow processing with RequestException and successful retry - tests different exception handling."""
         # Arrange
         mock_workflow.get_workflow_summary.return_value = "test_workflow"
 
-        with patch.object(
-            comfyui_requests, "_submit_single_prompt"
-        ) as mock_submit, patch.object(
+        with patch.object(comfyui_requests, "_submit_single_prompt") as mock_submit, patch.object(
             comfyui_requests, "_wait_for_completion"
-        ) as mock_wait, patch.object(
-            comfyui_requests, "get_last_history_entry"
-        ) as mock_get_history, patch.object(
+        ) as mock_wait, patch.object(comfyui_requests, "get_last_history_entry") as mock_get_history, patch.object(
             comfyui_requests, "_check_for_output_success"
         ) as mock_check_success, patch.object(
             comfyui_requests, "_get_output_paths"
@@ -576,25 +510,19 @@ class TestComfyUIRequests:
                 mock_response,
             ]
             mock_wait.return_value = 20
-            mock_get_history.return_value = {
-                "status": {"status_str": "success", "completed": True}
-            }
+            mock_get_history.return_value = {"status": {"status_str": "success", "completed": True}}
             mock_get_paths.return_value = ["/output/retry_result.png"]
 
             # Act
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
-            # Assert
-            assert result == ["/output/retry_result.png"]
-            assert mock_submit.call_count == 2
-            assert (
-                mock_sleep.call_count == 4
-            )  # Each attempt: sleep in _send_clean_memory_request (3s) + sleep delay_seconds
+        # Assert
+        assert result == ["/output/retry_result.png"]
+        assert mock_submit.call_count == 2
+        assert mock_sleep.call_count == 2  # Each attempt calls _send_clean_memory_request which sleeps for 5s
 
     @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
-    def test_process_single_workflow_max_retries_exceeded(
-        self, mock_sleep, comfyui_requests, mock_workflow
-    ):
+    def test_process_single_workflow_max_retries_exceeded(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test workflow processing when max retries are exceeded - tests failure propagation."""
         # Arrange
         comfyui_requests.max_retries_per_request = 2  # Set low retry count for testing
@@ -607,52 +535,35 @@ class TestComfyUIRequests:
             # Act
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
-            # Assert
-            assert result == []  # Should return empty list after all retries exhausted
-            assert (
-                mock_submit.call_count == 2
-            )  # Should try exactly max_retries_per_request times
-            assert (
-                mock_sleep.call_count == 3
-            )  # Attempt 1: _send_clean_memory_request (3s) + delay_seconds; Attempt 2: _send_clean_memory_request (3s) only
+        # Assert
+        assert result == []  # Should return empty list after all retries exhausted
+        assert mock_submit.call_count == 2  # Should try exactly max_retries_per_request times
+        assert mock_sleep.call_count == 2  # Each attempt calls _send_clean_memory_request which sleeps for 5s
 
     @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
-    def test_process_single_workflow_no_history_entry(
-        self, mock_sleep, comfyui_requests, mock_workflow
-    ):
+    def test_process_single_workflow_no_history_entry(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test workflow processing when no history entry is found - tests edge case handling and retry logic."""
         # Arrange
         mock_workflow.get_workflow_summary.return_value = "test_workflow"
 
-        with patch.object(
-            comfyui_requests, "_submit_single_prompt"
-        ) as mock_submit, patch.object(
+        with patch.object(comfyui_requests, "_submit_single_prompt") as mock_submit, patch.object(
             comfyui_requests, "_wait_for_completion"
-        ) as mock_wait, patch.object(
-            comfyui_requests, "get_last_history_entry"
-        ) as mock_get_history:
+        ) as mock_wait, patch.object(comfyui_requests, "get_last_history_entry") as mock_get_history:
 
             mock_response = Mock()
             mock_response.json.return_value = {"prompt_id": "prompt_123"}
             mock_submit.return_value = mock_response
             mock_wait.return_value = 15
-            mock_get_history.return_value = (
-                {}
-            )  # Empty history - this triggers the retry logic
+            mock_get_history.return_value = {}  # Empty history - this triggers the retry logic
 
             # Act
             result = comfyui_requests._process_single_workflow(mock_workflow)
 
-            # Assert
-            assert result == []
-            # Should retry up to max_retries_per_request times (default is 5 from fixture, but we set it to 3)
-            assert mock_submit.call_count == comfyui_requests.max_retries_per_request
-            assert mock_wait.call_count == comfyui_requests.max_retries_per_request
-            assert (
-                mock_get_history.call_count == comfyui_requests.max_retries_per_request
-            )
-            # Each attempt: _send_clean_memory_request sleeps, plus delay_seconds for all but last attempt
-            # With max_retries=3: 3 sleeps from _send_clean_memory_request + 2 sleeps from delay_seconds = 5 total
-            assert mock_sleep.call_count == comfyui_requests.max_retries_per_request + (
-                comfyui_requests.max_retries_per_request - 1
-            )
+        # Assert
+        assert result == []
+        # Should retry up to max_retries_per_request times (default is 5 from fixture, but we set it to 3)
+        assert mock_submit.call_count == comfyui_requests.max_retries_per_request
+        assert mock_wait.call_count == comfyui_requests.max_retries_per_request
+        assert mock_get_history.call_count == comfyui_requests.max_retries_per_request
+        # Each attempt calls _send_clean_memory_request which sleeps for 5s
+        assert mock_sleep.call_count == comfyui_requests.max_retries_per_request

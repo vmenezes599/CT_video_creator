@@ -5,9 +5,8 @@ Unit tests for video_recipe module.
 import json
 
 from ai_video_creator.generators import WanI2VRecipe, WanT2VRecipe
-from ai_video_creator.modules.video import (
-    SubVideoRecipe,
-)
+from ai_video_creator.modules.video import SubVideoRecipe
+from ai_video_creator.utils import VideoCreatorPaths
 
 
 class TestVideoRecipeFile:
@@ -15,20 +14,20 @@ class TestVideoRecipeFile:
 
     def test_empty_recipe_creation(self, tmp_path):
         """Test creating an empty recipe."""
-        recipe_path = tmp_path / "test_recipe.json"
-        recipe = SubVideoRecipe(recipe_path)
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        recipe = SubVideoRecipe(paths)
 
-        assert recipe.recipe_path == recipe_path
+        assert recipe.recipe_path == paths.sub_video_recipe_file
         assert not recipe.video_data
 
     def test_recipe_with_data(self, tmp_path):
         """Test recipe with actual data - core functionality."""
-        recipe_path = tmp_path / "test_recipe.json"
-        recipe = SubVideoRecipe(recipe_path)
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        recipe = SubVideoRecipe(paths)
 
-        # Create test files within the tmp_path to satisfy path validation
-        test_image = tmp_path / "image.jpg"
-        test_color_match = tmp_path / "color_match_image.jpg"
+        # Create test files within the story assets folder
+        test_image = paths.sub_videos_asset_folder / "image.jpg"
+        test_color_match = paths.sub_videos_asset_folder / "color_match_image.jpg"
         test_image.touch()
         test_color_match.touch()
 
@@ -51,8 +50,8 @@ class TestVideoRecipeFile:
         assert recipe.video_data[0][0].seed == 12345
 
         # Verify file was created with correct structure
-        assert recipe_path.exists()
-        with open(recipe_path, "r", encoding="utf-8") as f:
+        assert paths.sub_video_recipe_file.exists()
+        with open(paths.sub_video_recipe_file, "r", encoding="utf-8") as f:
             saved_data = json.load(f)
 
         # Check basic structure and key values
@@ -67,19 +66,20 @@ class TestVideoRecipeFile:
 
         recipe_data = video["recipe_list"][0]
         assert recipe_data["prompt"] == "Test video prompt"
-        # Path should be stored as relative in JSON
-        assert recipe_data["media_path"] == "image.jpg"
-        assert recipe_data["color_match_media_path"] == "color_match_image.jpg"
+        # Path should be stored as relative in JSON using the mask prefix
+        assert recipe_data["media_path"] == "assets/sub_videos/image.jpg"
+        assert recipe_data["color_match_media_path"] == "assets/sub_videos/color_match_image.jpg"
         assert recipe_data["seed"] == 12345
         assert recipe_data["recipe_type"] == "WanI2VRecipeType"
 
     def test_recipe_loading_from_file(self, tmp_path):
         """Test loading recipe from existing file."""
-        recipe_path = tmp_path / "existing_recipe.json"
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
 
-        # Create test files within the tmp_path to satisfy path validation
-        test_image = tmp_path / "image.jpg"
-        test_color_match = tmp_path / "color_match.jpg"
+        # Create test files within the story assets folder
+        test_image = paths.sub_videos_asset_folder / "image.jpg"
+        test_color_match = paths.sub_videos_asset_folder / "color_match.jpg"
+        test_image.parent.mkdir(parents=True, exist_ok=True)
         test_image.touch()
         test_color_match.touch()
 
@@ -91,8 +91,8 @@ class TestVideoRecipeFile:
                     "recipe_list": [
                         {
                             "prompt": "Loaded video prompt",
-                            "media_path": "image.jpg",  # Relative path
-                            "color_match_media_path": "color_match.jpg",  # Relative path
+                            "media_path": "assets/sub_videos/image.jpg",
+                            "color_match_media_path": "assets/sub_videos/color_match.jpg",
                             "high_lora": [],  # Required field
                             "seed": 99999,
                             "recipe_type": "WanI2VRecipeType",
@@ -103,11 +103,12 @@ class TestVideoRecipeFile:
             ]
         }
 
-        with open(recipe_path, "w", encoding="utf-8") as f:
+        paths.sub_video_recipe_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(paths.sub_video_recipe_file, "w", encoding="utf-8") as f:
             json.dump(test_data, f)
 
         # Load the recipe
-        recipe = SubVideoRecipe(recipe_path)
+        recipe = SubVideoRecipe(paths)
 
         # Verify data was loaded correctly
         assert len(recipe.video_data) == 1
@@ -116,23 +117,22 @@ class TestVideoRecipeFile:
         assert recipe.video_data[0][0].prompt == "Loaded video prompt"
         # Internal paths should be absolute after loading
         assert str(recipe.video_data[0][0].media_path) == str(test_image)
-        assert str(recipe.video_data[0][0].color_match_media_path) == str(
-            test_color_match
-        )
+        assert str(recipe.video_data[0][0].color_match_media_path) == str(test_color_match)
         assert recipe.video_data[0][0].seed == 99999
 
     def test_recipe_loading_with_invalid_json(self, tmp_path):
         """Test graceful handling when JSON file is corrupted."""
-        recipe_path = tmp_path / "corrupted_recipe.json"
-        old_recipe_path = tmp_path / "corrupted_recipe.json.old"
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        paths.sub_video_recipe_file.parent.mkdir(parents=True, exist_ok=True)
+        old_recipe_path = paths.sub_video_recipe_file.with_suffix(".json.old")
 
         # Create a corrupted JSON file
         corrupted_content = "{ invalid json content"
-        with open(recipe_path, "w", encoding="utf-8") as f:
+        with open(paths.sub_video_recipe_file, "w", encoding="utf-8") as f:
             f.write(corrupted_content)
 
         # Load the recipe - should handle error gracefully
-        recipe = SubVideoRecipe(recipe_path)
+        recipe = SubVideoRecipe(paths)
 
         # Should start with empty data
         assert not recipe.video_data
@@ -143,22 +143,23 @@ class TestVideoRecipeFile:
             assert f.read() == corrupted_content
 
         # A new empty file should be created or the file should be valid JSON
-        if recipe_path.exists():
-            with open(recipe_path, "r", encoding="utf-8") as f:
+        if paths.sub_video_recipe_file.exists():
+            with open(paths.sub_video_recipe_file, "r", encoding="utf-8") as f:
                 # Should be valid JSON now
                 data = json.load(f)
                 assert "video_data" in data
 
     def test_recipe_with_multiple_video_scenes(self, tmp_path):
         """Test recipe with multiple video scenes."""
-        recipe_path = tmp_path / "multi_scene_recipe.json"
-        recipe = SubVideoRecipe(recipe_path)
+        paths = VideoCreatorPaths(tmp_path, "test_story", 0)
+        recipe = SubVideoRecipe(paths)
 
-        # Create test files for multiple scenes
+        # Create test files for multiple scenes in story assets folder
         scene_files = []
+        paths.sub_videos_asset_folder.mkdir(parents=True, exist_ok=True)
         for scene in range(3):
-            color_match_file = tmp_path / f"scene_{scene}_color_match.jpg"
-            image_file = tmp_path / f"scene_{scene}_image.jpg"
+            color_match_file = paths.sub_videos_asset_folder / f"scene_{scene}_color_match.jpg"
+            image_file = paths.sub_videos_asset_folder / f"scene_{scene}_image.jpg"
             color_match_file.touch()
             image_file.touch()
             scene_files.append((image_file, color_match_file))
@@ -196,7 +197,7 @@ class TestVideoRecipeFile:
             assert recipe.video_data[scene][1].prompt == f"Scene {scene} sub-video 1"
 
         # Verify file structure
-        with open(recipe_path, "r", encoding="utf-8") as f:
+        with open(paths.sub_video_recipe_file, "r", encoding="utf-8") as f:
             saved_data = json.load(f)
 
         assert len(saved_data["video_data"]) == 3

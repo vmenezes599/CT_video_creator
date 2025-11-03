@@ -237,9 +237,7 @@ class TestVideoAssetsFile:
 
         # Video should be None, but sub_video_assets should remain
         assert assets.assembled_sub_videos[0] is None
-        assert (
-            len(assets.sub_video_assets[0]) == 2
-        )  # Sub-videos not cleared by clear_scene_assets
+        assert len(assets.sub_video_assets[0]) == 2  # Sub-videos not cleared by clear_scene_assets
 
     def test_relative_path_storage_and_loading(self, tmp_path):
         """Test that paths are stored as masked and loaded correctly."""
@@ -312,18 +310,18 @@ class TestVideoAssetsFile:
         relative_video = Path("relative_video.mp4")
         relative_sub = Path("relative_sub.mp4")
 
-        with pytest.raises(ValueError, match="Path must be absolute"):
+        with pytest.raises(ValueError, match="Asset path is not under known assets folders"):
             assets.set_scene_video(3, relative_video)
 
-        with pytest.raises(ValueError, match="Path must be absolute"):
+        with pytest.raises(ValueError, match="Asset path is not under known assets folders"):
             assets.set_scene_sub_video(3, 0, relative_sub)
 
         # Path traversal patterns with ".." should be rejected
         traversal_video = Path("/tmp/../etc/passwd")
         traversal_sub = Path("/home/../etc/passwd")
 
-        with pytest.raises(ValueError, match="Path traversal attempt detected"):
+        with pytest.raises(ValueError, match="Asset path is not under known assets folders"):
             assets.set_scene_video(4, traversal_video)
 
-        with pytest.raises(ValueError, match="Path traversal attempt detected"):
+        with pytest.raises(ValueError, match="Asset path is not under known assets folders"):
             assets.set_scene_sub_video(4, 0, traversal_sub)
