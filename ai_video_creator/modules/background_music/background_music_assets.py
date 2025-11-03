@@ -33,9 +33,8 @@ class BackgroundMusicAssets:
                 ensure_collection_index_exists(self.background_music_assets, len(assets) - 1)
 
                 # Load assets from the "assets" array format
-                for index, asset in enumerate(assets):
-
-                    # Load background music asset with security validation
+                for index, asset_dict in enumerate(assets):
+                    asset = asset_dict["asset"]
                     assembled_background_music_path = Path(asset) if asset else None
                     self.background_music_assets[index] = (
                         self._paths.unmask_asset_path(assembled_background_music_path)
@@ -68,16 +67,16 @@ class BackgroundMusicAssets:
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 assets = []
 
-                for index, background_music_asset in enumerate(self.background_music_assets, 1):
+                for index, asset in enumerate(self.background_music_assets, 1):
 
                     # Convert paths to relative paths for storage
                     background_music_asset_relative = None
-                    if background_music_asset is not None:
-                        background_music_asset_relative = str(self._paths.mask_asset_path(background_music_asset))
+                    if asset is not None:
+                        background_music_asset_relative = str(self._paths.mask_asset_path(asset))
 
                     background_music_asset_data = {
                         "index": index,
-                        "background_music_asset": background_music_asset_relative,
+                        "asset": background_music_asset_relative,
                     }
 
                     assets.append(background_music_asset_data)
