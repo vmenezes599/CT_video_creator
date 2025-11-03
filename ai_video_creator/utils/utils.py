@@ -25,9 +25,7 @@ def get_next_available_filename(file_path: str) -> str:
     return file_path
 
 
-def ensure_collection_index_exists(
-    collection: list, index: int, empty_value=None
-) -> None:
+def ensure_collection_index_exists(collection: list, index: int, empty_value=None) -> None:
     """
     Ensure that the collection has enough elements to include the specified index.
 
@@ -109,3 +107,24 @@ def safe_copy(src, dst):
 
     shutil.copy2(src, dst)
     return dst
+
+
+def backup_file_to_old(file_path: Path) -> None:
+    """
+    Back up a file by copying it to a .old version before it gets overwritten.
+
+    This is useful when a file has validation errors (JSON decode, value, type errors)
+    and needs to be replaced with a fresh version, but you want to preserve the
+    corrupted content for debugging.
+
+    :param file_path: Path to the file to back up.
+    """
+    if not file_path.exists():
+        return
+
+    old_file_path = Path(str(file_path) + ".old")
+
+    # Copy corrupted content to .old (overwrite if exists)
+    with open(file_path, "rb") as src:
+        with open(old_file_path, "wb") as dst:
+            dst.write(src.read())

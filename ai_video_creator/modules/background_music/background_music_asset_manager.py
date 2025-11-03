@@ -3,7 +3,7 @@ Background music asset manager for creating background music assets from recipes
 """
 
 from logging_utils import logger
-from ai_video_creator.generators import IAudioGenerator
+from ai_video_creator.generators import IBackgroundMusicGenerator
 from ai_video_creator.utils import VideoCreatorPaths
 
 from .background_music_assets import BackgroundMusicAssets
@@ -58,19 +58,12 @@ class BackgroundMusicAssetManager:
         """Generate background music asset for a scene."""
         try:
             logger.info(f"Generating background music asset for scene {scene_index + 1}")
-            music_info = self.recipe.music_recipes[scene_index]
-            audio_generator: IAudioGenerator = music_info.get("generator_type", IAudioGenerator)()
-            output_audio_file_path = (
-                self._paths.background_music_asset_folder / f"{self.output_file_prefix}_bgmusic_{scene_index+1:03}.mp3"
-            )
-            logger.debug(
-                f"Using audio generator: {type(audio_generator).__name__} for file: {output_audio_file_path.name}"
-            )
+            recipe = self.recipe.music_recipes[scene_index]
+            audio_generator: IBackgroundMusicGenerator = recipe["generator_type"]()
+            output_folder = self._paths.background_music_asset_folder
+            logger.debug(f"Using audio generator: {type(audio_generator).__name__} for folder: {output_folder.name}")
 
-            output_audio = audio_generator.generate_music(
-                music_info=music_info,
-                output_file_path=output_audio_file_path,
-            )
+            output_audio = audio_generator.text_to_music(recipe=recipe, output_folder=output_folder)
 
             self.background_music_assets.background_music_assets[scene_index] = output_audio
             self.background_music_assets.save_assets_to_file()

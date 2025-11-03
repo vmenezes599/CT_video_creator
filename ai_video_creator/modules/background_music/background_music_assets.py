@@ -5,7 +5,7 @@ from pathlib import Path
 
 from logging_utils import logger
 from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
-from ai_video_creator.utils import ensure_collection_index_exists
+from ai_video_creator.utils import ensure_collection_index_exists, backup_file_to_old
 
 
 class BackgroundMusicAssets:
@@ -47,14 +47,15 @@ class BackgroundMusicAssets:
 
         except json.JSONDecodeError:
             logger.error(
-                f"Error decoding JSON from {self.asset_file_path.name} - renaming to .old and starting with empty assets"
+                f"Error decoding JSON from {self.asset_file_path.name} - saving to .old and starting with empty assets"
             )
-            # Rename corrupted file to .old for backup
-            old_file_path = Path(str(self.asset_file_path) + ".old")
-            if self.asset_file_path.exists():
-                self.asset_file_path.rename(old_file_path)
             self.background_music_assets = []
-            # Create a new empty file
+
+            # Back up the corrupted file before overwriting
+            backup_file_to_old(self.asset_file_path)
+            logger.debug(f"Backed up corrupted file to: {self.asset_file_path.name}.old")
+
+            # Now safe to create new empty file
             self.save_assets_to_file()
 
         except FileNotFoundError:

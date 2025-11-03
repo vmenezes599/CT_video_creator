@@ -3,6 +3,7 @@
 from .utils import (
     ensure_collection_index_exists,
     get_next_available_filename,
+    backup_file_to_old,
     safe_copy,
     safe_move,
 )
@@ -41,6 +42,7 @@ __all__ = [
     "extract_video_last_frame",
     "burn_subtitles_to_video",
     "get_audio_duration",
+    "backup_file_to_old",
     "VideoCreatorPaths",
     "VideoBlitPosition",
     "safe_copy",

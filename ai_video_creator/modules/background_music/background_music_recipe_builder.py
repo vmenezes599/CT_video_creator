@@ -140,7 +140,7 @@ class BackgroundMusicRecipeBuilder:
                 ),
                 "Always background/underscore, not a full song.",
                 "Always say: “no vocals”.",
-                "Always say: “loopable 40 seconds”.",
+                "Always say: “loopable 30 seconds”.",
                 "Add one short “inspired by …” phrase from the narrator text.",
             ]
         )

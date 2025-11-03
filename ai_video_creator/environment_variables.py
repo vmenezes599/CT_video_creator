@@ -26,3 +26,5 @@ if not COMFYUI_OUTPUT_FOLDER:
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://127.0.0.1:8188")
 
 TTS_SERVER_URL = os.getenv("TTS_SERVER_URL", "http://127.0.0.1:8189")
+
+TTM_SERVER_URL = os.getenv("TTM_SERVER_URL", "http://127.0.0.1:8190")

@@ -20,15 +20,23 @@ from .audio_generator import (
     IAudioGenerator,
     AudioRecipeBase,
 )
+from .background_music_generator import (
+    IBackgroundMusicGenerator,
+    MusicGenGenerator,
+    MusicGenRecipe,
+)
+
 from .description_generator import SceneScriptGenerator, FlorenceGenerator
 from .subtitle_generator import SubtitleGenerator
 
 __all__ = [
+    "IBackgroundMusicGenerator",
     "ZonosTTSAudioGenerator",
     "FluxAIImageGenerator",
     "SceneScriptGenerator",
     "SubtitleGenerator",
     "FlorenceGenerator",
+    "MusicGenGenerator",
     "FluxImageRecipe",
     "IAudioGenerator",
     "IImageGenerator",
@@ -36,6 +44,7 @@ __all__ = [
     "VideoRecipeBase",
     "ImageRecipeBase",
     "AudioRecipeBase",
+    "MusicGenRecipe",
     "ZonosTTSRecipe",
     "WanRecipeBase",
     "WanI2VRecipe",

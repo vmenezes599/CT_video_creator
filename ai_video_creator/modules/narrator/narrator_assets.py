@@ -5,7 +5,7 @@ Narrator assets for managing narrator-specific asset data and persistence.
 import json
 from pathlib import Path
 
-from ai_video_creator.utils import VideoCreatorPaths, ensure_collection_index_exists
+from ai_video_creator.utils import VideoCreatorPaths, ensure_collection_index_exists, backup_file_to_old
 from logging_utils import logger
 
 
@@ -44,11 +44,12 @@ class NarratorAssets:
             logger.error(
                 f"Error decoding JSON from {self._asset_file_path.name} - renaming to .old and starting with empty assets"
             )
-            # Rename corrupted file to .old for backup
-            old_file_path = Path(str(self._asset_file_path) + ".old")
-            if self._asset_file_path.exists():
-                self._asset_file_path.rename(old_file_path)
             self.narrator_assets = []
+
+            # Back up the corrupted file before overwriting
+            backup_file_to_old(self._asset_file_path)
+            logger.debug(f"Backed up corrupted file to: {self._asset_file_path.name}.old")
+
             # Create a new empty file
             self.save_assets_to_file()
 

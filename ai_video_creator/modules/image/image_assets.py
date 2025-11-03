@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
+from ai_video_creator.utils import backup_file_to_old
 from logging_utils import logger
 
 
@@ -36,11 +37,7 @@ class ImageAssets:
                     self.image_assets.append(None)
                 else:
                     asset_path = asset_data.get("image", "")
-                    absolute_path = (
-                        self._paths.unmask_asset_path(Path(asset_path))
-                        if asset_path
-                        else None
-                    )
+                    absolute_path = self._paths.unmask_asset_path(Path(asset_path)) if asset_path else None
                     self.image_assets.append(absolute_path)
 
             logger.debug(f"Successfully loaded {len(self.image_assets)} image assets")
@@ -49,18 +46,17 @@ class ImageAssets:
             logger.error(
                 f"Error decoding JSON from {self.asset_file_path.name} - renaming to .old and starting with empty assets"
             )
-            # Rename corrupted file to .old for backup
-            old_file_path = Path(str(self.asset_file_path) + ".old")
-            if self.asset_file_path.exists():
-                self.asset_file_path.rename(old_file_path)
             self.image_assets = []
+
+            # Back up the corrupted file before overwriting
+            backup_file_to_old(self.asset_file_path)
+            logger.debug(f"Backed up corrupted file to: {self.asset_file_path.name}.old")
+
             # Create a new empty file
             self.save_assets_to_file()
 
         except FileNotFoundError:
-            logger.debug(
-                f"Image asset file not found: {self.asset_file_path.name} - starting with empty assets"
-            )
+            logger.debug(f"Image asset file not found: {self.asset_file_path.name} - starting with empty assets")
             self.image_assets = []
 
     def save_assets_to_file(self) -> None:
@@ -72,18 +68,14 @@ class ImageAssets:
                     image_assets_data.append({"index": index, "image": None})
                 else:
                     relative_path = self._paths.mask_asset_path(image_asset)
-                    image_assets_data.append(
-                        {"index": index, "image": str(relative_path)}
-                    )
+                    image_assets_data.append({"index": index, "image": str(relative_path)})
 
             data = {"assets": image_assets_data}
             with open(self.asset_file_path, "w", encoding="utf-8") as file:
                 json.dump(data, file, ensure_ascii=False, indent=4)
             logger.trace(f"Image assets saved with {len(image_assets_data)} items")
         except IOError as e:
-            logger.error(
-                f"Error saving image assets to {self.asset_file_path.name}: {e}"
-            )
+            logger.error(f"Error saving image assets to {self.asset_file_path.name}: {e}")
 
     def ensure_index_exists(self, scene_index: int) -> None:
         """Extend list to ensure the scene_index exists."""

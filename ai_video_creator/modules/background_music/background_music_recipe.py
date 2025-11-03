@@ -7,7 +7,7 @@ from pathlib import Path
 
 from logging_utils import logger
 
-from ai_video_creator.utils import VideoCreatorPaths
+from ai_video_creator.utils import VideoCreatorPaths, backup_file_to_old
 
 
 class MusicRecipe:
@@ -83,10 +83,10 @@ class BackgroundMusicRecipe:
                 f"Error decoding JSON from {file_path.name} - renaming to .old and starting with empty recipe\n\nDetails: {e}"
             )
 
-            # Rename corrupted file to .old for backup
-            old_file_path = Path(str(file_path) + ".old")
-            if file_path.exists():
-                file_path.rename(old_file_path)
+            # Back up the corrupted file before overwriting
+            backup_file_to_old(file_path)
+            logger.debug(f"Backed up corrupted file to: {file_path.name}.old")
+
             # Create a new empty file
             self.save_current_state()
         except IOError as e:
