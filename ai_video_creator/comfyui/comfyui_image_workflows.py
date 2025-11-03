@@ -24,9 +24,7 @@ class StableDiffusionWorkflowBase(ComfyUIWorkflowBase):
         """
         super().__init__(base_workflow=base_workflow)
 
-    def _set_stable_diffusion_model(
-        self, stable_diffusion_node_index: int, model_name: str
-    ) -> None:
+    def _set_stable_diffusion_model(self, stable_diffusion_node_index: int, model_name: str) -> None:
         """
         Set the model sweeper to the JSON configuration.
         """
@@ -34,9 +32,7 @@ class StableDiffusionWorkflowBase(ComfyUIWorkflowBase):
         models_parameters = {stable_diffusion_node_index: {"ckpt_name": model_name}}
 
         super()._set_fields(models_parameters)
-        workflow_summary = (
-            f"StableDiffusionModel({model_name})/{self.get_workflow_summary()}"
-        )
+        workflow_summary = f"StableDiffusionModel({model_name})/{self.get_workflow_summary()}"
         self._set_workflow_summary(workflow_summary)
 
     def _set_models(self, model_index: list[int], model_names: list[str]) -> None:
@@ -129,9 +125,7 @@ class StableDiffusionWorkflowBase(ComfyUIWorkflowBase):
             }
         }
         super()._set_fields(parameters)
-        workflow_summary = (
-            f"Resolution({resolution[0]},{resolution[1]})/{self.get_workflow_summary()}"
-        )
+        workflow_summary = f"Resolution({resolution[0]},{resolution[1]})/{self.get_workflow_summary()}"
         self._set_workflow_summary(workflow_summary)
 
     def _set_batch_size(
@@ -173,9 +167,7 @@ class StableDiffusionWorkflowBase(ComfyUIWorkflowBase):
             }
         }
         super()._set_fields(parameters)
-        workflow_summary = (
-            f"{'/'.join(self.get_workflow_summary().split('/')[:-1])}/{filename}"
-        )
+        workflow_summary = f"{'/'.join(self.get_workflow_summary().split('/')[:-1])}/{filename}"
         self._set_workflow_summary(workflow_summary)
 
 
@@ -184,9 +176,7 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
     Class to handle the workflow for Stable Diffusion in ComfyUI.
     """
 
-    STABLE_DIFFUSION_WORKFLOW_PATH = (
-        f"{CURRENT_DIR}/workflows/StableDiffusion1.5_API.json"
-    )
+    STABLE_DIFFUSION_WORKFLOW_PATH = f"{CURRENT_DIR}/workflows/StableDiffusion1.5_API.json"
     POSITIVE_PROMPT_NODE_INDEX = 13
     NEGATIVE_PROMPT_NODE_INDEX = 14
     KSAMPLER_NODE_INDEX = 15
@@ -207,7 +197,7 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
     def _load_default_configurations(self) -> None:
         self.set_latent_image([1024, 768], 1)
         self.set_ksampler(
-            seed=random.randint(0, 2**32 - 1),
+            seed=random.randint(0, 2**31 - 1),
             steps=25,
             cfg=7.5,
             sampler_name="dpmpp_sde",
@@ -219,9 +209,7 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
         """
         Set the model sweeper to the JSON configuration.
         """
-        super()._set_stable_diffusion_model(
-            self.STABLE_DIFFUSION_LOADER_NODE_INDEX, model_name
-        )
+        super()._set_stable_diffusion_model(self.STABLE_DIFFUSION_LOADER_NODE_INDEX, model_name)
 
     def set_models(self, model_names: list[str]) -> None:
         """
@@ -279,9 +267,7 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
         """
         Set the batch size sweeper to the JSON configuration.
         """
-        super()._set_image_resolution(
-            self.LATENT_IMAGE_NODE_INDEX, resolution=resolution
-        )
+        super()._set_image_resolution(self.LATENT_IMAGE_NODE_INDEX, resolution=resolution)
 
     def set_batch_size(
         self,
@@ -308,9 +294,7 @@ class StableDiffusionWorkflow(StableDiffusionWorkflowBase):
         """
         Set the output filename for the generated image.
         """
-        super()._set_output_filename(
-            output_file_node_index=self.SAVE_IMAGE_NODE_INDEX, filename=filename
-        )
+        super()._set_output_filename(output_file_node_index=self.SAVE_IMAGE_NODE_INDEX, filename=filename)
 
 
 class UnetWorkflowBase(ComfyUIWorkflowBase):
@@ -324,9 +308,7 @@ class UnetWorkflowBase(ComfyUIWorkflowBase):
         """
         super().__init__(base_workflow)
 
-    def _set_dual_clip_loader(
-        self, node_index: int, clip_name1: str, clip_name2: str
-    ) -> None:
+    def _set_dual_clip_loader(self, node_index: int, clip_name1: str, clip_name2: str) -> None:
         """
         Set the dual clip loader.
         """
@@ -338,9 +320,7 @@ class UnetWorkflowBase(ComfyUIWorkflowBase):
         }
 
         super()._set_fields(models_parameters)
-        workflow_summary = (
-            f"DualClipLoader({clip_name1},{clip_name2})/{self.get_workflow_summary()}"
-        )
+        workflow_summary = f"DualClipLoader({clip_name1},{clip_name2})/{self.get_workflow_summary()}"
         self._set_workflow_summary(workflow_summary)
 
     def _set_unet_model(self, node_index: int, model_name: str) -> None:
@@ -404,9 +384,7 @@ class UnetWorkflowBase(ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
 
-    def _set_image_resolution(
-        self, node_index: tuple[int, int], resolution: tuple[int, int]
-    ) -> None:
+    def _set_image_resolution(self, node_index: tuple[int, int], resolution: tuple[int, int]) -> None:
         """
         Set the image resolution.
         """
@@ -420,9 +398,7 @@ class UnetWorkflowBase(ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
 
-        workflow_summary = (
-            f"Resolution({resolution[0]},{resolution[1]})/{self.get_workflow_summary()}"
-        )
+        workflow_summary = f"Resolution({resolution[0]},{resolution[1]})/{self.get_workflow_summary()}"
         self._set_workflow_summary(workflow_summary)
 
     def _set_random_noise(self, node_index: int, random_noise: int) -> None:
@@ -482,7 +458,7 @@ class FluxWorkflow(UnetWorkflowBase):
             self._load_default_configurations()
 
     def _load_default_configurations(self) -> None:
-        self.set_seed(random.randint(0, 2**64 - 1))
+        self.set_seed(random.randint(0, 2**31 - 1))
         self.set_lora("")
         self.set_output_filename("output")
         self.set_image_resolution((832, 480))
@@ -517,9 +493,7 @@ class FluxWorkflow(UnetWorkflowBase):
         """
         Set the dual clip loader.
         """
-        super()._set_dual_clip_loader(
-            self.DUAL_CLIP_NODE_INDEX, clip_name1=clip_name1, clip_name2=clip_name2
-        )
+        super()._set_dual_clip_loader(self.DUAL_CLIP_NODE_INDEX, clip_name1=clip_name1, clip_name2=clip_name2)
 
     def set_models(self, model_names: list[str]) -> None:
         """
@@ -555,9 +529,7 @@ class FluxWorkflow(UnetWorkflowBase):
         """
         Set the image resolution.
         """
-        super()._set_image_resolution(
-            (self.WIDTH_NODE_INDEX, self.HEIGHT_NODE_INDEX), resolution=resolution
-        )
+        super()._set_image_resolution((self.WIDTH_NODE_INDEX, self.HEIGHT_NODE_INDEX), resolution=resolution)
 
     def set_seed(
         self,
@@ -566,9 +538,7 @@ class FluxWorkflow(UnetWorkflowBase):
         """
         Set the random noise.
         """
-        super()._set_random_noise(
-            self.RANDOM_NOISE_NODE_INDEX, random_noise=random_noise
-        )
+        super()._set_random_noise(self.RANDOM_NOISE_NODE_INDEX, random_noise=random_noise)
 
     def set_batch_size(self, batch_size: int) -> None:
         """

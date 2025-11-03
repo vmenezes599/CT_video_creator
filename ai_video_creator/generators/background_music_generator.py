@@ -105,10 +105,11 @@ class MusicGenRecipe(BackgroundMusicRecipeBase):
 
     GENERATOR_TYPE = MusicGenGenerator
 
+    mood: str
+    seed: int
     recipe_type = "MusicGenRecipeType"
-    seed = 0
 
-    def __init__(self, prompt: str, seed: int | None = None):
+    def __init__(self, prompt: str, mood: str, seed: int | None = None):
         """
         Initialize MusicGenRecipe with music generation parameters.
 
@@ -117,7 +118,22 @@ class MusicGenRecipe(BackgroundMusicRecipeBase):
             seed: Random seed for reproducibility (auto-generated if None)
         """
         super().__init__(prompt, recipe_type=self.recipe_type)
-        self.seed = random.randint(0, 2**64 - 1) if seed is None else seed
+        self.mood = mood
+        self.seed = random.randint(0, 2**31 - 1) if seed is None else seed
+
+    def __eq__(self, other) -> bool:
+        """
+        Compare two MusicGenRecipe instances for equality based on their values.
+
+        Args:
+            other: Another object to compare with
+
+        Returns:
+            True if recipes have the same prompt, mood, and seed, False otherwise
+        """
+        if not isinstance(other, MusicGenRecipe):
+            return False
+        return self.prompt == other.prompt and self.mood == other.mood and self.seed == other.seed
 
     def to_dict(self) -> dict:
         """
@@ -128,8 +144,9 @@ class MusicGenRecipe(BackgroundMusicRecipeBase):
         """
         return {
             "prompt": self.prompt,
-            "recipe_type": self.recipe_type,
+            "mood": self.mood,
             "seed": self.seed,
+            "recipe_type": self.recipe_type,
         }
 
     @classmethod
@@ -148,13 +165,17 @@ class MusicGenRecipe(BackgroundMusicRecipeBase):
             ValueError: If data format is invalid
         """
         # Validate required keys
-        required_keys = ["prompt", "recipe_type"]
+        required_keys = ["prompt", "mood", "seed", "recipe_type"]
         missing_fields = set(required_keys) - data.keys()
         for field in missing_fields:
             raise KeyError(f"Missing required key: {field}")
 
         if not isinstance(data["prompt"], str):
             raise ValueError("prompt must be a string")
+        if not isinstance(data["mood"], str):
+            raise ValueError("mood must be a string")
+        if not isinstance(data["seed"], int):
+            raise ValueError("seed must be an integer")
         if not isinstance(data["recipe_type"], str):
             raise ValueError("recipe_type must be a string")
 
@@ -163,5 +184,6 @@ class MusicGenRecipe(BackgroundMusicRecipeBase):
 
         return cls(
             prompt=data["prompt"],
-            seed=data.get("seed", None),
+            mood=data["mood"],
+            seed=data["seed"],
         )

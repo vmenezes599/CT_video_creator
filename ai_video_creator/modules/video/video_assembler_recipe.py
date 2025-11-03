@@ -129,7 +129,7 @@ class VideoEndingRecipe:
         self._paths = video_creator_paths
         self.narrator_text_list: list[str] = []
         self.narrator_clone_voice: Path | None = None
-        self.seed: int = random.randint(0, (2**64) - 1)
+        self.seed: int = random.randint(0, (2**31) - 1)
         self.ending_overlay_start_narrator_index: int | None = None
         self.ending_start_delay_seconds: float | None = None
         self.ending_overlay_asset: Path | None = None

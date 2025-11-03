@@ -20,9 +20,7 @@ class ImageRecipeBase:
     seed: int
     recipe_type = "ImageRecipeBase"
 
-    def __init__(
-        self, prompt: str, lora: str, seed: int, batch_size: int, recipe_type: str
-    ):
+    def __init__(self, prompt: str, lora: str, seed: int, batch_size: int, recipe_type: str):
         """Initialize ImageRecipeBase with a name."""
         self.prompt = prompt
         self.lora = lora
@@ -79,9 +77,7 @@ class FluxAIImageGenerator(IImageGenerator):
         workflow.set_batch_size(recipe.batch_size)
         workflow.set_seed(recipe.seed)
 
-        result_files = self.requests.ensure_send_all_prompts(
-            [workflow], output_file_path.parent
-        )
+        result_files = self.requests.ensure_send_all_prompts([workflow], output_file_path.parent)
 
         return Path(result_files[0]) if result_files else None
 
@@ -116,7 +112,7 @@ class FluxImageRecipe(ImageRecipeBase):
             recipe_type=self.recipe_type,
             lora=validated_lora,
             batch_size=batch_size if batch_size is not None else 1,
-            seed=random.randint(0, 2**64 - 1) if seed is None else seed,
+            seed=random.randint(0, 2**31 - 1) if seed is None else seed,
         )
 
     def to_dict(self) -> dict:
@@ -126,9 +122,7 @@ class FluxImageRecipe(ImageRecipeBase):
             Dictionary representation of the ImageRecipe
         """
         requests = ComfyUIRequests()
-        comfyui_available_loras = [
-            Path(lora) for lora in requests.get_available_loras()
-        ]
+        comfyui_available_loras = [Path(lora) for lora in requests.get_available_loras()]
 
         available_loras = []
         for lora in comfyui_available_loras:
@@ -146,9 +140,7 @@ class FluxImageRecipe(ImageRecipeBase):
         }
 
     @classmethod
-    def from_dict(
-        cls, data: dict
-    ) -> "ImageRecipe":  # pyright: ignore[reportUndefinedVariable]
+    def from_dict(cls, data: dict) -> "ImageRecipe":  # pyright: ignore[reportUndefinedVariable]
         """Create ImageRecipe from dictionary.
 
         Args:

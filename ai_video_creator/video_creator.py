@@ -19,7 +19,7 @@ from .utils import VideoCreatorPaths
 from .utils.garbage_collector import internal_clean_unused_assets
 
 
-def create_narrator_and_image_recipe_from_prompt(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_narrator_and_image_recipe(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create a video from a video prompt file.
 
@@ -50,7 +50,7 @@ def create_narrator_and_image_recipe_from_prompt(user_folder: Path, story_name: 
     cleanup_logging(file_log_id)
 
 
-def create_narrators_and_images_from_recipe(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_narrators_and_images_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create video assets from the recipe.
     """
@@ -74,7 +74,7 @@ def create_narrators_and_images_from_recipe(user_folder: Path, story_name: str, 
     cleanup_logging(file_log_id)
 
 
-def create_background_music_recipe_from_prompt(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_background_music_recipe(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create background music from the recipe.
     """
@@ -99,7 +99,7 @@ def create_background_music_recipe_from_prompt(user_folder: Path, story_name: st
     cleanup_logging(file_log_id)
 
 
-def create_background_music_from_recipe(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_background_music_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create background music from the recipe.
     """
@@ -123,7 +123,7 @@ def create_background_music_from_recipe(user_folder: Path, story_name: str, chap
     cleanup_logging(file_log_id)
 
 
-def create_sub_video_recipes_from_images(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_sub_video_recipes(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create a video recipe from existing images and narrator audio files.
     """
@@ -146,7 +146,7 @@ def create_sub_video_recipes_from_images(user_folder: Path, story_name: str, cha
     cleanup_logging(file_log_id)
 
 
-def create_sub_videos_from_sub_video_recipes(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_sub_videos_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create videos from the images in the recipe.
     """
@@ -166,13 +166,34 @@ def create_sub_videos_from_sub_video_recipes(user_folder: Path, story_name: str,
     video_asset_manager = SubVideoAssetManager(paths)
     video_asset_manager.generate_video_assets()
 
+    cleanup_logging(log_id)
+    cleanup_logging(file_log_id)
+
+
+def create_assemble_video_recipe(user_folder: Path, story_name: str, chapter_index: int) -> None:
+    """
+    Create assemble video recipe from sub-videos.
+    """
+    log_id = setup_console_logging("create_assemble_video_recipe", log_level="TRACE")
+
+    paths = VideoCreatorPaths(
+        user_folder=user_folder,
+        story_name=story_name,
+        chapter_index=chapter_index,
+    )
+    file_log_id = setup_file_logging(
+        "create_assemble_video_recipe",
+        log_level="TRACE",
+        base_folder=paths.video_chapter_folder,
+    )
+
     _ = VideoAssemblerRecipeBuilder(paths)
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)
 
 
-def assemble_final_video(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def assemble_video(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Assemble a chapter video from the recipe.
 

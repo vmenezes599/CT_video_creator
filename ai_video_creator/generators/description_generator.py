@@ -48,9 +48,9 @@ class FlorenceGenerator:
             logger.error(f"Unsupported asset type: {asset.suffix}")
             raise ValueError(f"Unsupported asset type: {asset.suffix}")
 
-        temp_file_name = Path(f"florence_output_{random.randint(0, 2**32 - 1)}.txt")
+        temp_file_name = Path(f"florence_output_{random.randint(0, 2**31 - 1)}.txt")
 
-        workflow.set_seed(random.randint(0, 2**64 - 1))
+        workflow.set_seed(random.randint(0, 2**31 - 1))
         workflow.set_output_filename(temp_file_name.stem)
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -91,9 +91,7 @@ class SceneScriptGenerator:
 
         self._scene_subdivisions: list[str] = []
 
-        self.florence2_description = FlorenceGenerator().generate_description(
-            scene_initial_image
-        )
+        self.florence2_description = FlorenceGenerator().generate_description(scene_initial_image)
 
     def _generate_scene_script_prompt(self, index: int) -> LLMPromptBuilder:
         """
@@ -137,9 +135,7 @@ class SceneScriptGenerator:
 
         # --- USER PROMPT ---
         scene_description = self._scene_subdivisions[index]
-        previous_description = (
-            self._scene_subdivisions[index - 1] if index > 0 else None
-        )
+        previous_description = self._scene_subdivisions[index - 1] if index > 0 else None
         original_visual_prompt = self._sub_video_prompt.visual_description
 
         user_prompt = (
@@ -271,9 +267,7 @@ class SceneScriptGenerator:
         if self._number_of_subdivisions <= len(example_lines):
             example = "\n".join(example_lines[: self._number_of_subdivisions])
         else:
-            additional = [example_lines[-1]] * (
-                self._number_of_subdivisions - len(example_lines)
-            )
+            additional = [example_lines[-1]] * (self._number_of_subdivisions - len(example_lines))
             example = "\n".join(example_lines + additional)
 
         prompt_builder.set_example(example)
@@ -307,9 +301,7 @@ class SceneScriptGenerator:
             self._subdivide_scene_validator,
             self._subdivide_scene_post_process,
         )
-        self._scene_subdivisions = [
-            line.strip() for line in response.split("\n") if line.strip()
-        ]
+        self._scene_subdivisions = [line.strip() for line in response.split("\n") if line.strip()]
 
     def generate_scenes_script(self) -> list[str]:
         """
@@ -335,10 +327,12 @@ def main():
         "",
         "",
         "",
+        "",
     )
     current_prompt = Prompt(
         "With each utterance, He crafted the sky above—a vast expanse of deep blues and soft whites—and the waters below, their surfaces shimmering like gemstones under the newborn sun. Establishing boundaries that formed a delicate balance, He watched as the stars flickered to life like celestial messengers sent to herald this new creation. Mountains rose majestically from the earth, their jagged peaks touching the heavens while valleys nestled in their embrace, filled with vibrant greens that danced in the gentle breeze.",
         "In a breathtaking widescreen panorama, the sky unfurls in deep blues and soft whites, while the waters below sparkle like scattered gemstones, reflecting the golden hue of the newborn sun. God stands at the edge of a rugged mountain peak, arms outstretched as he shapes the celestial canvas above, while humanity gathers in awe at the valley's edge, their silhouettes framed against the vibrant greens of swaying grass and blooming wildflowers. The atmosphere is imbued with a sense of sublime creation, as gentle breezes carry whispers of life through this newly formed world, where every element vibrates with harmony and potential.",
+        "",
         "",
         "",
     )

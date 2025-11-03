@@ -43,9 +43,7 @@ class IAudioGenerator(ABC):
         """
 
     @abstractmethod
-    def clone_text_to_speech(
-        self, recipe: AudioRecipeBase, output_file_path: Path
-    ) -> Path:
+    def clone_text_to_speech(self, recipe: AudioRecipeBase, output_file_path: Path) -> Path:
         """
         Convert the given text to audio and save it to the specified file.
 
@@ -91,9 +89,7 @@ class ZonosTTSAudioGenerator(IAudioGenerator):
         raise NotImplementedError("Zonos TTS only supports voice cloning.")
 
     @override
-    def clone_text_to_speech(
-        self, recipe: "ZonosTTSRecipe", output_file_path: Path
-    ) -> Path:
+    def clone_text_to_speech(self, recipe: "ZonosTTSRecipe", output_file_path: Path) -> Path:
         """
         Clone the voice from the given recipe and save it to the specified file.
         """
@@ -130,9 +126,7 @@ class ZonosTTSAudioGenerator(IAudioGenerator):
 
         :param text: The text to play as audio.
         """
-        raise NotImplementedError(
-            "Playing audio directly is not implemented in ElevenLabsAudioGenerator."
-        )
+        raise NotImplementedError("Playing audio directly is not implemented in ElevenLabsAudioGenerator.")
 
 
 class ZonosTTSRecipe(AudioRecipeBase):
@@ -153,7 +147,7 @@ class ZonosTTSRecipe(AudioRecipeBase):
         """
         super().__init__(prompt, recipe_type=self.recipe_type)
         self.clone_voice_path = clone_voice_path
-        self.seed = random.randint(0, 2**64 - 1) if seed is None else seed
+        self.seed = random.randint(0, 2**31 - 1) if seed is None else seed
 
     def to_dict(self) -> dict:
         """
@@ -170,9 +164,7 @@ class ZonosTTSRecipe(AudioRecipeBase):
         }
 
     @classmethod
-    def from_dict(
-        cls, data: dict
-    ) -> "AudioRecipe":  # pyright: ignore[reportUndefinedVariable]
+    def from_dict(cls, data: dict) -> "AudioRecipe":  # pyright: ignore[reportUndefinedVariable]
         """
         Create AudioRecipe from dictionary.
 

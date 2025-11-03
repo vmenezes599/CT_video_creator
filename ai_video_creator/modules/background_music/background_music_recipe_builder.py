@@ -7,9 +7,10 @@ from ai_video_creator.environment_variables import BACKGROUND_MUSIC_PROMPT_LLM_M
 from ai_llm import LLMManager, LLMPromptBuilder
 
 from ai_video_creator.utils import VideoCreatorPaths
+from ai_video_creator.generators import MusicGenRecipe
 
 from ai_video_creator.modules.narrator import NarratorAssets
-from .background_music_recipe import BackgroundMusicRecipe, MusicRecipe
+from .background_music_recipe import BackgroundMusicRecipe
 
 
 class BackgroundMusicRecipeBuilder:
@@ -45,7 +46,8 @@ class BackgroundMusicRecipeBuilder:
     def _generate_music_mood_extraction_prompt(self, moods: list[str], index: int) -> LLMPromptBuilder:
         """Generate prompt for extracting music mood from scene description."""
 
-        previous_3_moods = moods[max(0, index - 3) : index]
+        mood_index = index - 1
+        previous_3_moods = moods[max(0, mood_index - 3) : mood_index]
 
         system = "You are a music-mood classifier for narrator scenes. You always pick exactly one mood from a fixed list. You optimize for background underscore, not song writing. Prefer to REUSE moods already used in this chapter unless the current story clearly shifts tone."
         prompt_builder = LLMPromptBuilder(system=system)
@@ -167,8 +169,6 @@ class BackgroundMusicRecipeBuilder:
         result = True
         response = response.strip()
 
-        result = result and response.startswith("MUSIC PROMPT:")
-
         if not result:
             logger.warning(f"Invalid music generation prompt response: {response}")
 
@@ -177,7 +177,7 @@ class BackgroundMusicRecipeBuilder:
     def _music_prompt_post_process(self, response: str) -> str:
         """Post-process music generation prompt response."""
         response = response.strip()
-        prompt = response[len("MUSIC PROMPT:") :].strip() if response.startswith("MUSIC PROMPT:") else response
+        prompt = response[len("PROMPT:") :].strip() if response.startswith("PROMPT:") else response
         return prompt
 
     def _generate_music_prompts_from_moods(self, mood_list: list[str]) -> list[str]:
@@ -221,11 +221,10 @@ class BackgroundMusicRecipeBuilder:
                 number_of_repeats = 1
 
             if previous_mood is None or number_of_repeats >= self.DEFAULT_MAXIMUM_SCENE_MUSIC_REPETITIONS:
-                seed = random.randint(0, 2**64 - 1)
+                seed = random.randint(0, 2**31 - 1)
                 number_of_repeats = 1
 
-            music_recipe = MusicRecipe(
-                narrator=video_prompt.narrator,
+            music_recipe = MusicGenRecipe(
                 mood=mood,
                 prompt=music_prompt,
                 seed=seed,

@@ -8,39 +8,7 @@ from pathlib import Path
 from logging_utils import logger
 
 from ai_video_creator.utils import VideoCreatorPaths, backup_file_to_old
-
-
-class MusicRecipe:
-    """Class to represent music data for a scene."""
-
-    def __init__(self, narrator: str, prompt: str, mood: str, seed: int):
-        self.narrator = narrator
-        self.prompt = prompt
-        self.mood = mood
-        self.seed = seed
-
-    def to_dict(self) -> dict:
-        """Convert MusicRecipe to dictionary."""
-        return {
-            "narrator": self.narrator,
-            "prompt": self.prompt,
-            "mood": self.mood,
-        }
-
-    @staticmethod
-    def from_dict(data: dict) -> "MusicRecipe":
-        """Create MusicRecipe from dictionary."""
-        required_fields = ["narrator", "prompt", "mood", "volume_level"]
-        missing_fields = set(required_fields - data.keys())
-        if missing_fields:
-            raise ValueError(f"Missing fields in MusicRecipe data: {missing_fields}")
-
-        return MusicRecipe(
-            narrator=data["narrator"],
-            prompt=data["prompt"],
-            mood=data["mood"],
-            seed=data["seed"],
-        )
+from ai_video_creator.generators import MusicGenRecipe
 
 
 class BackgroundMusicRecipe:
@@ -54,11 +22,11 @@ class BackgroundMusicRecipe:
         self.recipe_file_parent = recipe_path.parent
         self.recipe_path = recipe_path
 
-        self.music_recipes: list[MusicRecipe] = []
+        self.music_recipes: list[MusicGenRecipe] = []
 
         self._from_dict(recipe_path)
 
-    def add_music_recipe(self, music_recipe: MusicRecipe) -> None:
+    def add_music_recipe(self, music_recipe: MusicGenRecipe) -> None:
         """Add music data to the recipe."""
         self.music_recipes.append(music_recipe)
         self.save_current_state()
@@ -71,7 +39,7 @@ class BackgroundMusicRecipe:
                 music_recipes = data.get("music_recipes", [])
 
                 for item in music_recipes:
-                    self.music_recipes.append(MusicRecipe.from_dict(item))
+                    self.music_recipes.append(MusicGenRecipe.from_dict(item))
 
                 logger.info(f"Successfully loaded {len(self.music_recipes)} background music recipes")
                 self.save_current_state()

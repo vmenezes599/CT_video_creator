@@ -232,7 +232,7 @@ class WanRecipeBase(VideoRecipeBase):
         """
         super().__init__(
             prompt=prompt if prompt else "",
-            seed=random.randint(0, 2**64 - 1) if seed is None else seed,
+            seed=random.randint(0, 2**31 - 1) if seed is None else seed,
             recipe_type=self.recipe_type,
         )
         requests = ComfyUIRequests()
