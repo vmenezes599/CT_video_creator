@@ -117,8 +117,8 @@ class VideoAssemblerAssets:
     def set_video_ending(self, video_file_path: Path) -> None:
         """Set the video ending asset with security validation."""
         try:
-
             logger.debug(f"Set video ending: {video_file_path.name}")
+            self.video_ending = video_file_path
             self.save_assets_to_file()
         except ValueError as e:
             logger.error(f"Failed to set video ending: {e}")
@@ -156,4 +156,9 @@ class VideoAssemblerAssets:
         for video in self.final_sub_videos:
             if video is not None and video.exists() and video.is_file():
                 used_assets.append(video)
+
+        # Include the video ending asset if it exists
+        if self.video_ending is not None and self.video_ending.exists() and self.video_ending.is_file():
+            used_assets.append(self.video_ending)
+
         return used_assets

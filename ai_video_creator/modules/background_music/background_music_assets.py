@@ -8,6 +8,42 @@ from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from ai_video_creator.utils import ensure_collection_index_exists, backup_file_to_old
 
 
+class BackgroundMusicAsset:
+    """Class representing a single background music asset."""
+
+    def __init__(self, asset: Path, volume: float, ignore: bool):
+        """Initialize BackgroundMusicAsset with index and file path."""
+        self.asset = asset
+        self.volume = volume
+        self.ignore = ignore
+
+        if volume < 0.0 or volume > 1.0:
+            raise ValueError("Volume must be between 0.0 and 1.0")
+
+    def to_dict(self) -> dict:
+        """Convert the BackgroundMusicAsset to a dictionary for JSON serialization."""
+        return {
+            "asset": str(self.asset) if self.asset else None,
+            "volume": self.volume,
+            "ignore": self.ignore,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "BackgroundMusicAsset":
+        """Create a BackgroundMusicAsset from a dictionary."""
+
+        required_fields = ["asset", "volume", "ignore"]
+        missing_fields = set(data.keys() - required_fields)
+        if missing_fields:
+            raise ValueError(f"Missing fields in BackgroundMusicAsset data: {missing_fields}")
+
+        asset_path = Path(data["asset"]) if data["asset"] else None
+        volume = data["volume"]
+        ignore = data["ignore"]
+
+        return cls(asset=asset_path, volume=volume, ignore=ignore)
+
+
 class BackgroundMusicAssets:
     """Class to manage background music data and persistence only."""
 
@@ -18,7 +54,7 @@ class BackgroundMusicAssets:
         self.asset_file_path = self._paths.background_music_asset_file
         self.asset_file_parent = self.asset_file_path.parent.resolve()
 
-        self.background_music_assets: list[Path] = []
+        self.background_music_assets: list[BackgroundMusicAsset] = []
 
         self._load_assets_from_file()
 
@@ -36,10 +72,16 @@ class BackgroundMusicAssets:
                 for index, asset_dict in enumerate(assets):
                     asset = asset_dict["asset"]
                     assembled_background_music_path = Path(asset) if asset else None
-                    self.background_music_assets[index] = (
+                    assembled_background_music_path = (
                         self._paths.unmask_asset_path(assembled_background_music_path)
                         if assembled_background_music_path
                         else None
+                    )
+                    volume = asset_dict["volume"]
+                    ignore = asset_dict["ignore"]
+
+                    self.background_music_assets[index] = BackgroundMusicAsset(
+                        asset=assembled_background_music_path, volume=volume, ignore=ignore
                     )
 
                 self.save_assets_to_file()
@@ -69,15 +111,20 @@ class BackgroundMusicAssets:
 
                 for index, asset in enumerate(self.background_music_assets, 1):
 
-                    # Convert paths to relative paths for storage
-                    background_music_asset_relative = None
-                    if asset is not None:
-                        background_music_asset_relative = str(self._paths.mask_asset_path(asset))
+                    asset_dict = asset.to_dict() if asset is not None else None
+                    if asset_dict:
+                        asset_dict["asset"] = (
+                            str(self._paths.mask_asset_path(asset.asset)) if asset and asset.asset else None
+                        )
 
                     background_music_asset_data = {
                         "index": index,
-                        "asset": background_music_asset_relative,
+                        "asset": "",
+                        "volume": 0.0,
+                        "ignore": False,
                     }
+                    if asset_dict:
+                        background_music_asset_data.update(asset_dict)
 
                     assets.append(background_music_asset_data)
 
@@ -107,7 +154,6 @@ class BackgroundMusicAssets:
 
     def is_complete(self) -> bool:
         """Check if all scenes have background music assets."""
-
         return len(self.get_missing_background_music()) == 0
 
     def get_used_assets_list(self) -> list[Path]:

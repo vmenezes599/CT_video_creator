@@ -6,12 +6,15 @@ from logging_utils import logger
 from ai_video_creator.generators import IBackgroundMusicGenerator
 from ai_video_creator.utils import VideoCreatorPaths
 
-from .background_music_assets import BackgroundMusicAssets
+from .background_music_assets import BackgroundMusicAssets, BackgroundMusicAsset
 from .background_music_recipe import BackgroundMusicRecipe
 
 
 class BackgroundMusicAssetManager:
     """Class to build background music assets from recipes."""
+
+    DEFAULT_BACKGROUND_MUSIC_VOLUME = 0.3
+    DEFAULT_IGNORE_MUSIC = False
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize BackgroundMusicAssetManager with story folder and chapter index."""
@@ -35,6 +38,7 @@ class BackgroundMusicAssetManager:
 
         # Ensure background_music_assets list has the same size as recipe
         self._synchronize_assets_with_recipe()
+        self.background_music_assets.save_assets_to_file()
 
         logger.debug(f"BackgroundMusicAssetManager initialized with {len(self.recipe.music_recipes)} scenes")
 
@@ -50,26 +54,21 @@ class BackgroundMusicAssetManager:
             :recipe_size
         ]
 
-        logger.debug(
-            f"Background music asset synchronization completed - music assets: {len(self.background_music_assets.background_music_assets)}"
-        )
-
     def generate_background_music_asset(self, scene_index: int):
         """Generate background music asset for a scene."""
         try:
-            logger.info(f"Generating background music asset for scene {scene_index + 1}")
             recipe = self.recipe.music_recipes[scene_index]
             previous_recipe = self.recipe.music_recipes[scene_index - 1] if scene_index > 0 else None
             if recipe != previous_recipe:
                 audio_generator: IBackgroundMusicGenerator = recipe.GENERATOR_TYPE()
                 output_folder = self._paths.background_music_asset_folder
-                logger.debug(
-                    f"Using audio generator: {type(audio_generator).__name__} for folder: {output_folder.name}"
-                )
+                logger.debug(f"Using audio generator: {type(audio_generator).__name__}")
 
                 output_audio = audio_generator.text_to_music(recipe=recipe, output_folder=output_folder)
 
-                self.background_music_assets.background_music_assets[scene_index] = output_audio
+                self.background_music_assets.background_music_assets[scene_index] = BackgroundMusicAsset(
+                    asset=output_audio, volume=self.DEFAULT_BACKGROUND_MUSIC_VOLUME, ignore=self.DEFAULT_IGNORE_MUSIC
+                )
                 self.background_music_assets.save_assets_to_file()
                 logger.info(f"Successfully generated background music for scene {scene_index + 1}: {output_audio.name}")
             else:
@@ -92,7 +91,6 @@ class BackgroundMusicAssetManager:
         logger.info(f"Found {len(missing)} scenes missing background music assets")
 
         for scene_index in missing:
-            logger.info(f"Processing background music for scene {scene_index + 1}...")
             self.generate_background_music_asset(scene_index)
 
         logger.info("Background music asset generation process completed successfully")

@@ -13,7 +13,7 @@ from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.prompt import Prompt
-from ai_video_creator.utils import get_audio_duration
+from ai_video_creator.utils import get_media_duration
 
 from .sub_video_recipe import SubVideoRecipe
 
@@ -74,7 +74,7 @@ class SubVideoRecipeBuilder:
             # Return default count if no narrator asset is available
             return self._min_sub_videos
 
-        audio_duration = get_audio_duration(
+        audio_duration = get_media_duration(
             str(self.__narrator_assets.narrator_assets[sub_video_index])
         )
 

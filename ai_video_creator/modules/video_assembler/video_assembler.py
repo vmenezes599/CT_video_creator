@@ -10,6 +10,7 @@ from pathlib import Path
 from logging_utils import logger
 
 from ai_video_creator.comfyui import ComfyUIRequests
+from ai_video_creator.modules.background_music import BackgroundMusicAssets, BackgroundMusicAsset
 from ai_video_creator.modules.sub_video import SubVideoAssets
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
@@ -26,8 +27,9 @@ from ai_video_creator.utils import (  # pylint: disable=unused-import
     concatenate_videos_with_reencoding,
     blit_overlay_video_onto_main_video,
     concatenate_videos_no_reencoding,
+    add_background_music_to_video,
     reencode_to_reference_basic,
-    get_audio_duration,
+    get_media_duration,
     safe_move,
     VideoCreatorPaths,
     VideoBlitPosition,
@@ -52,6 +54,7 @@ class VideoAssembler:
         self._subtitle_generator = SubtitleGenerator()
 
         # Load separate narrator and image assets
+        self.background_music_assets = BackgroundMusicAssets(video_creator_paths)
         self.narrator_assets = NarratorAssets(video_creator_paths)
         self.image_assets = ImageAssets(video_creator_paths)
 
@@ -318,7 +321,7 @@ class VideoAssembler:
         self._temp_files.append(ending_sub_video)
 
         start_time_seconds = (
-            get_audio_duration(ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index]) + 1.5
+            get_media_duration(ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index]) + 1.5
         )
 
         output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
@@ -338,6 +341,118 @@ class VideoAssembler:
 
         return [*video_segments, ending_sub_video]
 
+    def _add_overlay_to_video(self, video_path: Path) -> Path:
+        """
+        Apply post-compose effects to the final video.
+        """
+
+        overlay_recipe = self.video_assembler_recipe.get_video_overlay_recipe()
+        if not overlay_recipe:
+            logger.info("No outro effects defined, skipping post-compose effects.")
+            return video_path
+
+        overlay_asset_path = overlay_recipe.overlay_asset
+        if not overlay_asset_path or not overlay_asset_path.exists():
+            logger.warning("Overlay video path is invalid or does not exist.")
+            return video_path
+
+        logger.info(f"Adding outro video segment: {overlay_asset_path.name}")
+        output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_final")
+
+        self._temp_files.append(video_path)
+
+        output_path = blit_overlay_video_onto_main_video(
+            overlay_video=overlay_asset_path,
+            main_video=video_path,
+            output_path=output_video_path,
+        )
+
+        return output_path
+
+    def _generate_background_music_duration_dict(self, video_segments: list[Path]) -> list[dict]:
+        """
+        Get a dictionary of background music asset paths and their durations.
+        """
+        background_music_assets = self.background_music_assets.background_music_assets
+
+        if video_segments[0] == self.video_assembler_recipe.get_video_intro_recipe().intro_asset:
+            # Intro has no background music
+            background_music_assets = [BackgroundMusicAsset("", 0.0, True), *background_music_assets]
+
+        if video_segments[-1] == self.video_assembler_assets.video_ending:
+            background_music_assets = [*background_music_assets, background_music_assets[-1]]
+
+        assert len(background_music_assets) == len(
+            video_segments
+        ), "Background music and video_segments length mismatch."
+
+        duration_dict: list[tuple[BackgroundMusicAsset, float]] = []
+        previous_bgm_asset = None
+        for bgm_asset, video_segment in zip(background_music_assets, video_segments):
+
+            if bgm_asset.ignore:
+                active_bgm_asset = None
+            else:
+                active_bgm_asset = bgm_asset.asset
+
+            if active_bgm_asset is None:
+                active_bgm_asset = ""
+
+            if previous_bgm_asset == active_bgm_asset:
+                duration_dict[-1] = (duration_dict[-1][0], duration_dict[-1][1] + get_media_duration(video_segment))
+            else:
+                duration_dict.append((bgm_asset, get_media_duration(video_segment)))
+                previous_bgm_asset = active_bgm_asset
+
+        result = []
+        beginning = 0.0
+        for item in duration_dict:
+            if item[0].asset:
+                result.append(
+                    {
+                        "asset": item[0].asset,
+                        "start_time": beginning,
+                        "duration": item[1],
+                        "end_time": beginning + item[1],
+                        "volume": item[0].volume,
+                    }
+                )
+            beginning += item[1]
+
+        return result
+
+    def _add_background_music_to_video(self, video_path: Path, video_segments: list[Path]) -> Path:
+        """
+        Add background music to the final video.
+        """
+        background_music_assets = self.background_music_assets.background_music_assets
+        if not background_music_assets:
+            logger.info("No background music recipe defined, skipping background music addition.")
+            return video_path
+
+        music_duration_dict = self._generate_background_music_duration_dict(video_segments)
+
+        output_path = self.output_path.with_stem(f"{self.output_path.stem}_bgm")
+
+        music_assets = [segment["asset"] for segment in music_duration_dict]
+        start_times = [segment["start_time"] for segment in music_duration_dict]
+        durations = [segment["duration"] for segment in music_duration_dict]
+        volumes = [segment["volume"] for segment in music_duration_dict]
+
+        output_path = add_background_music_to_video(
+            video_path=video_path,
+            music_assets=music_assets,
+            start_times=start_times,
+            durations=durations,
+            volumes=volumes,
+            output_path=output_path,
+            main_audio_volume=1.0,
+        )
+
+        self._temp_files.append(video_path)
+
+        return output_path
+
     def _pre_process(self) -> list[Path]:
         """
         Pre-process video segments before composition.
@@ -352,36 +467,20 @@ class VideoAssembler:
         video_segments_without_audio = video_segments.copy()
         video_segments = self._combine_video_with_audio(video_segments, audio_segments)
 
-        # Intro and ending are already in the right format
         video_segments = self._add_ending_video_segment(video_segments, video_segments_without_audio)
         video_segments = self._add_intro_video_segment(video_segments)
 
         return video_segments
 
-    def _post_process(self, main_video_path: Path) -> Path:
+    def _post_process(self, video_path: Path, video_segments: list[Path]) -> Path:
         """
         Apply post-compose effects to the final video.
         """
-        overlay_recipe = self.video_assembler_recipe.get_video_overlay_recipe()
-        if not overlay_recipe:
-            logger.info("No outro effects defined, skipping post-compose effects.")
-            return main_video_path
+        output_path = video_path
 
-        overlay_asset_path = overlay_recipe.overlay_asset
-        if not overlay_asset_path or not overlay_asset_path.exists():
-            logger.warning("Overlay video path is invalid or does not exist.")
-            return main_video_path
+        output_path = self._add_background_music_to_video(video_path, video_segments)
 
-        logger.info(f"Adding outro video segment: {overlay_asset_path.name}")
-        output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_final")
-
-        self._temp_files.append(main_video_path)
-
-        output_path = blit_overlay_video_onto_main_video(
-            overlay_video=overlay_asset_path,
-            main_video=main_video_path,
-            output_path=output_video_path,
-        )
+        output_path = self._add_overlay_to_video(output_path)
 
         return output_path
 
@@ -400,7 +499,7 @@ class VideoAssembler:
 
         output_file = self._compose(video_segments)
 
-        output_file = self._post_process(output_file)
+        output_file = self._post_process(output_file, video_segments)
 
         output_file = output_file.rename(self.output_path)
 
@@ -409,16 +508,3 @@ class VideoAssembler:
         self._cleanup()
 
         logger.info(f"Video assembly completed successfully: {output_file.name}")
-
-    def _clean_assembler_assets(self) -> None:
-        """
-        Clean up video assembler assets.
-        """
-        assets_to_keep = [asset for asset in self.video_assembler_assets.final_sub_videos if asset is not None]
-
-        for file in self._paths.video_assembler_asset_folder.glob("*"):
-            if file.is_file():
-                if file in assets_to_keep:
-                    continue
-                file.unlink()
-                logger.info(f"Deleted asset file: {file}")

@@ -8,12 +8,8 @@ from logging_utils import setup_console_logging, setup_file_logging, cleanup_log
 
 from .modules.narrator_and_image import NarratorAndImageAssetManager
 from .modules.background_music import BackgroundMusicRecipeBuilder, BackgroundMusicAssetManager
-from .modules.video_assembler import (
-    VideoAssemblerRecipeBuilder,
-    SubVideoRecipeBuilder,
-    SubVideoAssetManager,
-    VideoAssembler,
-)
+from .modules.sub_video import SubVideoRecipeBuilder, SubVideoAssetManager
+from .modules.video_assembler import VideoAssemblerRecipeBuilder, VideoAssembler
 
 from .utils import VideoCreatorPaths
 from .utils.garbage_collector import internal_clean_unused_assets
