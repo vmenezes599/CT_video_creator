@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ai_video_creator.modules.video import SubVideoAssetManager
+from ai_video_creator.modules.sub_video import SubVideoAssetManager
 from ai_video_creator.utils import VideoCreatorPaths
 
 
@@ -133,9 +133,7 @@ class TestVideoAssetManager:
         manager = SubVideoAssetManager(video_creator_paths)
 
         # Create assets folder and test files within the allowed directory
-        assets_folder = (
-            video_creator_paths.video_chapter_folder / "assets" / "sub_videos"
-        )
+        assets_folder = video_creator_paths.video_chapter_folder / "assets" / "sub_videos"
         assets_folder.mkdir(parents=True, exist_ok=True)
 
         test_video = assets_folder / "video_001.mp4"
@@ -158,18 +156,10 @@ class TestVideoAssetManager:
 
         assert "assets" in saved_data
         assert len(saved_data["assets"]) == 2
-        assert (
-            saved_data["assets"][0]["video_asset"] == "assets/sub_videos/video_001.mp4"
-        )
+        assert saved_data["assets"][0]["video_asset"] == "assets/sub_videos/video_001.mp4"
         assert len(saved_data["assets"][0]["sub_video_assets"]) == 2
-        assert (
-            saved_data["assets"][0]["sub_video_assets"][0]
-            == "assets/sub_videos/sub_video_001_01.mp4"
-        )
-        assert (
-            saved_data["assets"][0]["sub_video_assets"][1]
-            == "assets/sub_videos/sub_video_001_02.mp4"
-        )
+        assert saved_data["assets"][0]["sub_video_assets"][0] == "assets/sub_videos/sub_video_001_01.mp4"
+        assert saved_data["assets"][0]["sub_video_assets"][1] == "assets/sub_videos/sub_video_001_02.mp4"
         assert saved_data["assets"][1]["video_asset"] is None
         assert saved_data["assets"][1]["sub_video_assets"] == []
 
@@ -335,11 +325,11 @@ class TestVideoAssetManager:
         # Also mock the concatenation function and FFmpeg operations since they require real video files
         # Mock FlorenceGenerator to avoid AI/LLM calls
         with patch(
-            "ai_video_creator.modules.video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
+            "ai_video_creator.modules.sub_video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
         ) as mock_concat, patch(
-            "ai_video_creator.modules.video.sub_video_asset_manager.extract_video_last_frame"
+            "ai_video_creator.modules.sub_video.sub_video_asset_manager.extract_video_last_frame"
         ) as mock_extract, patch(
-            "ai_video_creator.modules.video.sub_video_asset_manager.FlorenceGenerator"
+            "ai_video_creator.modules.sub_video.sub_video_asset_manager.FlorenceGenerator"
         ) as MockFlorenceGenerator:
 
             def fake_concat(input_videos, output_path):
@@ -352,9 +342,7 @@ class TestVideoAssetManager:
                 Path(last_frame_output_folder).mkdir(parents=True, exist_ok=True)
                 # Create the actual output file path (like the real function does)
                 video_stem = Path(video_path).stem
-                last_frame_output_path = (
-                    Path(last_frame_output_folder) / f"{video_stem}_last_frame.png"
-                )
+                last_frame_output_path = Path(last_frame_output_folder) / f"{video_stem}_last_frame.png"
                 last_frame_output_path.write_text("fake frame image")
                 return last_frame_output_path
 
@@ -363,9 +351,7 @@ class TestVideoAssetManager:
 
             # Mock FlorenceGenerator.generate_description to return test data
             mock_florence_instance = MockFlorenceGenerator.return_value
-            mock_florence_instance.generate_description.return_value = (
-                "Generated description from Florence"
-            )
+            mock_florence_instance.generate_description.return_value = "Generated description from Florence"
 
             # Test the actual workflow
             manager.generate_video_assets()
@@ -394,23 +380,17 @@ class TestVideoAssetManager:
                 assert "_last_frame.png" in str(second_recipe.media_path)
 
             # Test that asset synchronization worked
-            assert len(manager.video_assets.sub_video_assets) == len(
-                manager.recipe.video_data
-            )
+            assert len(manager.video_assets.sub_video_assets) == len(manager.recipe.video_data)
 
             # Test that the asset files were created and have proper structure
             for scene_idx in range(2):
                 scene_assets = manager.video_assets.sub_video_assets[scene_idx]
-                assert (
-                    len(scene_assets) > 0
-                ), f"Scene {scene_idx} should have sub-video assets"
+                assert len(scene_assets) > 0, f"Scene {scene_idx} should have sub-video assets"
 
             # Test that assembled videos were created
             for scene_idx in range(2):
                 assembled_video = manager.video_assets.assembled_sub_videos[scene_idx]
-                assert (
-                    assembled_video is not None
-                ), f"Scene {scene_idx} should have assembled video"
+                assert assembled_video is not None, f"Scene {scene_idx} should have assembled video"
 
     def test_generate_video_assets_skips_when_assets_missing(self, video_creator_paths):
         """Test that video generation is skipped when narrator or image assets are missing."""

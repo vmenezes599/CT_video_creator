@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ai_video_creator.modules.video import SubVideoAssets
+from ai_video_creator.modules.sub_video import SubVideoAssets
 from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 
 

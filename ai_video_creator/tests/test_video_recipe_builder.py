@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ai_video_creator.modules.video import SubVideoRecipeBuilder
+from ai_video_creator.modules.sub_video import SubVideoRecipeBuilder
 from ai_video_creator.utils import VideoCreatorPaths
 
 
@@ -91,11 +91,11 @@ class TestVideoRecipeBuilder:
         # Mock only external dependencies - get_audio_duration is external
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
         )
 
         with patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -137,11 +137,11 @@ class TestVideoRecipeBuilder:
         """Test that builder doesn't recreate valid existing recipes."""
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
         )
 
         with patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -257,11 +257,11 @@ class TestVideoRecipeBuilder:
 
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
         )
 
         with patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -320,11 +320,11 @@ class TestVideoRecipeBuilder:
 
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
         )
 
         with patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -354,11 +354,11 @@ class TestVideoRecipeBuilder:
         # Mock get_audio_duration to raise an exception
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
         )
 
         with patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
             side_effect=Exception("Audio file not found"),
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -395,7 +395,7 @@ class TestVideoRecipeBuilder:
         video_creator_paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
 
         with patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
             return_value=10.0,
         ):
             builder = SubVideoRecipeBuilder(video_creator_paths)

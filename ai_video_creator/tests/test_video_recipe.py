@@ -5,7 +5,7 @@ Unit tests for video_recipe module.
 import json
 
 from ai_video_creator.generators import WanI2VRecipe, WanT2VRecipe
-from ai_video_creator.modules.video import SubVideoRecipe
+from ai_video_creator.modules.sub_video import SubVideoRecipe
 from ai_video_creator.utils import VideoCreatorPaths
 
 

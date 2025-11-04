@@ -10,6 +10,7 @@ from pathlib import Path
 from logging_utils import logger
 
 from ai_video_creator.comfyui import ComfyUIRequests
+from ai_video_creator.modules.sub_video import SubVideoAssets
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
 from ai_video_creator.generators import ZonosTTSRecipe
@@ -32,7 +33,6 @@ from ai_video_creator.utils import (  # pylint: disable=unused-import
     VideoBlitPosition,
 )
 
-from .sub_video_assets import SubVideoAssets
 from .video_assembler_recipe import VideoAssemblerRecipe, VideoEndingRecipe
 from .video_assembler_assets import VideoAssemblerAssets
 

@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pytest
 
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssetManager
-from ai_video_creator.modules.video import SubVideoAssetManager, SubVideoRecipeBuilder
+from ai_video_creator.modules.sub_video import SubVideoAssetManager, SubVideoRecipeBuilder
 from ai_video_creator.utils import VideoCreatorPaths
 from .test_fakes import TrackingFakeGenerators
 
@@ -225,11 +225,11 @@ class TestVideoCreationWorkflow:
         # Test recipe builder
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.SceneScriptGenerator"
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
         )
 
         with patch(
-            "ai_video_creator.modules.video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
             return_value=5.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -264,11 +264,11 @@ class TestVideoCreationWorkflow:
         # Mock the concatenation function and FFmpeg operations since they require real video files
         # Mock FlorenceGenerator to avoid AI/LLM calls
         with patch(
-            "ai_video_creator.modules.video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
+            "ai_video_creator.modules.sub_video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
         ) as mock_concat, patch(
-            "ai_video_creator.modules.video.sub_video_asset_manager.extract_video_last_frame"
+            "ai_video_creator.modules.sub_video.sub_video_asset_manager.extract_video_last_frame"
         ) as mock_extract, patch(
-            "ai_video_creator.modules.video.sub_video_asset_manager.FlorenceGenerator"
+            "ai_video_creator.modules.sub_video.sub_video_asset_manager.FlorenceGenerator"
         ) as MockFlorenceGenerator:
 
             def fake_concat(input_videos, output_path):

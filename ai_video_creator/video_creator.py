@@ -8,7 +8,7 @@ from logging_utils import setup_console_logging, setup_file_logging, cleanup_log
 
 from .modules.narrator_and_image import NarratorAndImageAssetManager
 from .modules.background_music import BackgroundMusicRecipeBuilder, BackgroundMusicAssetManager
-from .modules.video import (
+from .modules.video_assembler import (
     VideoAssemblerRecipeBuilder,
     SubVideoRecipeBuilder,
     SubVideoAssetManager,
