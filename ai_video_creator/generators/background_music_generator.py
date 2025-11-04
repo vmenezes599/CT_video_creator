@@ -174,8 +174,6 @@ class MusicGenRecipe(BackgroundMusicRecipeBase):
             raise ValueError("prompt must be a string")
         if not isinstance(data["mood"], str):
             raise ValueError("mood must be a string")
-        if not isinstance(data["seed"], int):
-            raise ValueError("seed must be an integer")
         if not isinstance(data["recipe_type"], str):
             raise ValueError("recipe_type must be a string")
 
