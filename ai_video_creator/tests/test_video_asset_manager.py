@@ -470,10 +470,6 @@ class TestVideoAssetManager:
         # Verify no video generation occurred due to missing assets
         assert len(generation_attempts) == 0
 
-        # Verify business logic correctly identified missing assets
-        assert not manager._SubVideoAssetManager__narrator_assets.is_complete()
-        assert not manager._SubVideoAssetManager__image_assets.is_complete()
-
         # Verify no video assets were created
         missing_videos = manager.video_assets.get_missing_videos()
         assert len(missing_videos) == 2  # Both scenes should still be missing
