@@ -3,8 +3,7 @@ Subtitle Generation Module
 """
 
 from pathlib import Path
-
-import whisper
+import stable_whisper
 from logging_utils import logger
 
 
@@ -13,7 +12,7 @@ class SubtitleGenerator:
     A class to generate subtitles from video files and add them to videos.
     """
 
-    def __init__(self, model_size: str = "turbo"):
+    def __init__(self, model_size: str = "medium"):
         """
         Initialize the SubtitleGenerator class.
 
@@ -27,11 +26,21 @@ class SubtitleGenerator:
         """Load the Whisper model if not already loaded."""
         if self._model is None:
             logger.info(f"Loading Whisper model: {self.model_size}")
-            self._model = whisper.load_model(self.model_size)
+            self._model = stable_whisper.load_model(self.model_size)
             logger.info("Whisper model loaded successfully")
         else:
             logger.debug("Whisper model already loaded, reusing existing model")
         return self._model
+
+    def _unload_model(self):
+        """Unload the Whisper model to free up resources."""
+        if self._model is not None:
+            logger.info("Unloading Whisper model to free up resources")
+            del self._model
+            self._model = None
+            logger.info("Whisper model unloaded successfully")
+        else:
+            logger.debug("No Whisper model loaded to unload")
 
     def _format_timestamp(self, seconds: float) -> str:
         """
@@ -48,9 +57,7 @@ class SubtitleGenerator:
 
     def write_srt(self, segments, output_path: Path):
         """Write subtitles to an SRT file."""
-        logger.info(
-            f"Writing SRT file: {output_path.name} with {len(segments)} segments"
-        )
+        logger.info(f"Writing SRT file: {output_path.name} with {len(segments)} segments")
 
         def format_time(t):
             hours = int(t // 3600)
@@ -68,7 +75,7 @@ class SubtitleGenerator:
 
         logger.info(f"SRT file written successfully: {output_path.name}")
 
-    def generate_subtitles_from_audio(self, video_path: Path) -> Path:
+    def generate_subtitles_from_audio(self, video_path: Path, word_level: bool = False) -> Path:
         """
         Generate an SRT file from the audio track of a video.
 
@@ -78,15 +85,17 @@ class SubtitleGenerator:
         """
         logger.info(f"Generating SRT file for video: {video_path.name}")
         output_srt_path = video_path.with_suffix(".srt")
-        logger.info(
-            f"SRT file doesn't exist, transcribing audio from: {video_path.name}"
-        )
+        logger.info(f"SRT file doesn't exist, transcribing audio from: {video_path.name}")
         model = self._load_model()
 
         logger.info("Starting audio transcription with Whisper")
-        result = model.transcribe(str(video_path), word_timestamps=True)
-        logger.info(f"Transcription completed with {len(result['segments'])} segments")
+        result = model.transcribe(str(video_path), vad=True)
+        logger.info("Transcription completed.")
+
+        result.to_srt_vtt(str(output_srt_path), word_level=word_level)
 
         self.write_srt(segments=result["segments"], output_path=output_srt_path)
+
+        self._unload_model()
 
         return output_srt_path

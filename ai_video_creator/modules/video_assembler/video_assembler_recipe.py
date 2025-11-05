@@ -266,6 +266,30 @@ class VideoOverlayRecipe:
         self.start_time_seconds = self.DEFAULT_START_TIME_SECONDS
 
 
+class SubtitleRecipe:
+    """Class to hold subtitle recipe data."""
+
+    def __init__(self):
+        """Initialize SubtitleRecipe with default values."""
+        self.skip: bool = False
+        self.burn_subtitles_into_video: bool = False
+        self.word_level_timestamps: bool = False
+
+    def to_dict(self) -> dict:
+        """Serialize subtitle recipe to a dictionary."""
+        return {
+            "skip": self.skip,
+            "burn_subtitles_into_video": self.burn_subtitles_into_video,
+            "word_level_timestamps": self.word_level_timestamps,
+        }
+
+    def from_dict(self, data: dict) -> None:
+        """Load subtitle recipe from a dictionary."""
+        self.burn_subtitles_into_video = data.get("burn_subtitles_into_video", False)
+        self.word_level_timestamps = data.get("word_level_timestamps", False)
+        self.skip = data.get("skip", False)
+
+
 class VideoAssemblerRecipe:
     """Class to manage video assembler recipe data and persistence only."""
 
@@ -276,6 +300,7 @@ class VideoAssemblerRecipe:
         self._video_intro_recipe = VideoIntroRecipe(video_creator_paths)
         self._video_ending_recipe = VideoEndingRecipe(video_creator_paths)
         self._video_overlay_recipe = VideoOverlayRecipe(video_creator_paths)
+        self._subtitle_recipe = SubtitleRecipe()
 
         self._load_effects_from_file()
 
@@ -291,6 +316,7 @@ class VideoAssemblerRecipe:
                 "video_ending_recipe",
                 "video_overlay_recipe",
                 "video_intro_recipe",
+                "subtitle_recipe",
             ]
             missing_fields = set(data.keys()) - set(required_fields)
             if missing_fields:
@@ -300,6 +326,7 @@ class VideoAssemblerRecipe:
             self._video_ending_recipe.from_dict(data["video_ending_recipe"])
             self._video_intro_recipe.from_dict(data["video_intro_recipe"])
             self._video_overlay_recipe.from_dict(data["video_overlay_recipe"])
+            self._subtitle_recipe.from_dict(data["subtitle_recipe"])
 
             logger.info("Successfully loaded video assembler recipe.")
         except FileNotFoundError:
@@ -324,6 +351,7 @@ class VideoAssemblerRecipe:
                 "video_ending_recipe": self._video_ending_recipe.to_dict(),
                 "video_overlay_recipe": self._video_overlay_recipe.to_dict(),
                 "narrator_asset_effects": self._narrator_asset_effects.to_dict(),
+                "subtitle_recipe": self._subtitle_recipe.to_dict(),
             }
             with open(self.effects_file_path, "w", encoding="utf-8") as file_handler:
                 json.dump(result, file_handler, indent=4)
@@ -400,6 +428,10 @@ class VideoAssemblerRecipe:
         """Set video ending subvideo."""
         self._video_ending_recipe.sub_video = subvideo
         self.save_to_file()
+
+    def get_subtitle_recipe(self) -> SubtitleRecipe:
+        """Get subtitle recipe."""
+        return self._subtitle_recipe
 
     def get_used_assets_list(self) -> list[Path]:
         """Get a list of all used video asset file paths."""
