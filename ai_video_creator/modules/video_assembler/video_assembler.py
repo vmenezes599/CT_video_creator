@@ -511,17 +511,17 @@ class VideoAssembler:
             output_file, subtitle_recipe.word_level_timestamps
         )
 
-        output_with_subtitles = self.output_path.with_stem(f"{self.output_path.stem}_subtitled")
+        if subtitle_recipe.burn_subtitles_into_video:
+            self._temp_files.append(output_file)
 
-        burn_subtitles_to_video(
-            video_path=output_file,
-            srt_path=subtitle_file,
-            output_path=output_with_subtitles,
-        )
+            output_file = self.output_path.with_stem(f"{self.output_path.stem}_subtitled")
+            burn_subtitles_to_video(
+                video_path=output_file,
+                srt_path=subtitle_file,
+                output_path=output_file,
+            )
 
-        self._temp_files.append(output_file)
-
-        return output_with_subtitles
+        return output_file
 
     def assemble_video(self) -> None:
         """
