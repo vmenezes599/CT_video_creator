@@ -365,6 +365,7 @@ class VideoAssembler:
             overlay_video=overlay_asset_path,
             main_video=video_path,
             output_path=output_video_path,
+            repeat_every_seconds=overlay_recipe.interval_seconds,
         )
 
         return output_path
@@ -467,8 +468,11 @@ class VideoAssembler:
         video_segments_without_audio = video_segments.copy()
         video_segments = self._combine_video_with_audio(video_segments, audio_segments)
 
-        video_segments = self._add_ending_video_segment(video_segments, video_segments_without_audio)
-        video_segments = self._add_intro_video_segment(video_segments)
+        if not self.video_assembler_recipe.get_video_ending_recipe().skip:
+            video_segments = self._add_ending_video_segment(video_segments, video_segments_without_audio)
+
+        if not self.video_assembler_recipe.get_video_intro_recipe().skip:
+            video_segments = self._add_intro_video_segment(video_segments)
 
         return video_segments
 
@@ -480,7 +484,8 @@ class VideoAssembler:
 
         output_path = self._add_background_music_to_video(video_path, video_segments)
 
-        output_path = self._add_overlay_to_video(output_path)
+        if not self.video_assembler_recipe.get_video_overlay_recipe().skip:
+            output_path = self._add_overlay_to_video(output_path)
 
         return output_path
 

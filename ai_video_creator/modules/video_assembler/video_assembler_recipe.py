@@ -72,15 +72,16 @@ class VideoIntroRecipe:
     def __init__(self, paths: VideoCreatorPaths):
         """Initialize IntroEffects with empty lists."""
         self._paths = paths
+        self.skip: bool = False
         self.intro_asset: Path | None = None
         self.intro_effects: list[EffectBase | None] = []
 
     def from_dict(self, data: dict) -> None:
         """Load effects from a dictionary."""
-        intro_asset_masked = data.get("intro_asset", None)
-
+        self.skip = data.get("skip", False)
         self.intro_effects = data.get("intro_effects", [])
 
+        intro_asset_masked = data.get("intro_asset", None)
         self.intro_asset = self._paths.unmask_asset_path(intro_asset_masked) if intro_asset_masked else None
 
     def to_dict(self) -> dict:
@@ -100,6 +101,7 @@ class VideoIntroRecipe:
             intro_asset_masked = None
 
         result = {
+            "skip": self.skip,
             "intro_asset": intro_asset_masked,
             "available_intros": available_intros,
             "intro_effects": [effect.to_dict() if effect else None for effect in self.intro_effects],
@@ -113,6 +115,7 @@ class VideoIntroRecipe:
 
     def clear(self) -> None:
         """Clear intro asset and effects."""
+        self.skip = False
         self.intro_asset = None
         self.intro_effects = []
 
@@ -127,6 +130,7 @@ class VideoEndingRecipe:
     def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize EndingEffects with empty lists."""
         self._paths = video_creator_paths
+        self.skip: bool = False
         self.narrator_text_list: list[str] = []
         self.narrator_clone_voice: Path | None = None
         self.seed: int = random.randint(0, (2**31) - 1)
@@ -137,6 +141,7 @@ class VideoEndingRecipe:
 
     def from_dict(self, data: dict) -> None:
         """Load effects from a dictionary."""
+        self.skip = data.get("skip", False)
         self.narrator_text_list = data.get("narrator_list", [])
         narrator_clone_voice = data.get("narrator_clone_voice", None)
         self.narrator_clone_voice = (
@@ -167,6 +172,7 @@ class VideoEndingRecipe:
         sub_video_str = str(self._paths.mask_asset_path(self.sub_video)) if self.sub_video else None
 
         result = {
+            "skip": self.skip,
             "narrator_list": self.narrator_text_list,
             "narrator_clone_voice": narrator_clone_voice_str,
             "seed": self.seed,
@@ -184,6 +190,7 @@ class VideoEndingRecipe:
 
     def clear(self) -> None:
         """Clear ending asset and effects."""
+        self.skip = False
         self.ending_overlay_asset = None
         self.narrator_clone_voice = None
         self.seed = random.randint(0, 1**64 - 1)
@@ -199,18 +206,23 @@ class VideoOverlayRecipe:
     """
 
     DEFAULT_OVERLAY_ASSET = Path(f"{DEFAULT_ASSETS_FOLDER}/outros/CTA_YOUTUBE_INGLES.mov")
+    DEFAULT_INTERVAL_SECONDS = 60
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize OutroEffects with empty lists."""
         self._paths = video_creator_paths
+        self.skip: bool = False
         self.overlay_asset: Path | None = None
+        self.interval_seconds: int = self.DEFAULT_INTERVAL_SECONDS
         self.overlay_effects: list[EffectBase] = []
 
     def from_dict(self, data: dict) -> None:
         """Load effects from a dictionary."""
-        outro_asset_masked = data.get("outro_asset", None)
-
+        self.skip = data.get("skip", False)
         self.overlay_effects = data.get("outro_effects", [])
+        self.interval_seconds = data.get("interval_seconds", self.DEFAULT_INTERVAL_SECONDS)
+
+        outro_asset_masked = data.get("outro_asset", None)
         self.overlay_asset = self._paths.unmask_asset_path(outro_asset_masked) if outro_asset_masked else None
 
     def to_dict(self) -> dict:
@@ -230,8 +242,10 @@ class VideoOverlayRecipe:
             masked_outro_asset = None
 
         return {
+            "skip": self.skip,
             "outro_asset": masked_outro_asset,
             "available_outros": available_outros,
+            "interval_seconds": self.interval_seconds,
             "outro_effects": [effect.to_dict() if effect else None for effect in self.overlay_effects],
         }
 
@@ -241,8 +255,10 @@ class VideoOverlayRecipe:
 
     def clear(self) -> None:
         """Clear outro asset and effects."""
+        self.skip = False
         self.overlay_asset = None
         self.overlay_effects = []
+        self.interval_seconds = self.DEFAULT_INTERVAL_SECONDS
 
 
 class VideoAssemblerRecipe:
