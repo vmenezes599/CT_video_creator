@@ -233,7 +233,7 @@
     },
     "15": {
         "inputs": {
-            "width": 832,
+            "width": 848,
             "height": 480,
             "upscale_method": "nearest-exact",
             "keep_proportion": "crop",
@@ -336,7 +336,7 @@
     },
     "30": {
         "inputs": {
-            "width": 832,
+            "width": 848,
             "height": 480,
             "upscale_method": "nearest-exact",
             "keep_proportion": "crop",

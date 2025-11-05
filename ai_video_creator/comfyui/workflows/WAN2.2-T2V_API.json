@@ -232,7 +232,7 @@
     },
     "30": {
         "inputs": {
-            "width": 832,
+            "width": 848,
             "height": 480,
             "length": 61,
             "batch_size": 1

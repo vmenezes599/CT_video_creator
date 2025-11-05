@@ -3,44 +3,11 @@
 import json
 import shutil
 import subprocess
-import time
 from enum import Enum
 from pathlib import Path
 
 import ffmpeg
 from logging_utils import logger
-
-
-def _check_gpu_memory():
-    """Check GPU memory usage to diagnose NVENC issues."""
-    try:
-        result = subprocess.run(
-            [
-                "nvidia-smi",
-                "--query-gpu=memory.used,memory.total",
-                "--format=csv,noheader,nounits",
-            ],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-
-        if result.returncode == 0:
-            lines = result.stdout.strip().split("\n")
-            gpu_info = []
-            for i, line in enumerate(lines):
-                if line.strip():
-                    used, total = map(int, line.split(", "))
-                    usage_percent = (used / total) * 100
-                    gpu_info.append(f"GPU {i}: {used}MB/{total}MB ({usage_percent:.1f}%)")
-                    logger.debug(f"GPU {i} memory: {used}MB/{total}MB ({usage_percent:.1f}%)")
-            return gpu_info
-        else:
-            logger.debug("nvidia-smi not available or failed")
-            return None
-    except (FileNotFoundError, OSError):
-        logger.debug("Could not check GPU memory")
-        return None
 
 
 def _run_ffmpeg_trace(ffmpeg_compiled: str | list[str]):
@@ -98,38 +65,6 @@ def _fps_and_duration(probe: dict) -> tuple[float, float]:
     return fps, duration
 
 
-def _reencode_with_optional_trim(src: Path, dst: Path, trim_seconds: float | None):
-    """Re-encode video with optional trimming."""
-    cmd = ["ffmpeg", "-y", "-i", str(src)]
-    if trim_seconds is not None:
-        cmd += ["-t", f"{trim_seconds:.6f}"]
-    cmd += [
-        "-c:v",
-        "h264_nvenc",
-        "-preset",
-        "p5",
-        "-crf",
-        "23",
-        "-c:a",
-        "aac",
-        "-movflags",
-        "+faststart",
-        "-pix_fmt",
-        "yuv420p",
-        str(dst),
-    ]
-
-    try:
-        logger.debug(f"Starting re-encode: {src.name} -> {dst.name}")
-        _run_ffmpeg_trace(cmd)
-        logger.debug(f"Successfully processed {src.name} -> {dst.name}")
-    except RuntimeError as e:
-        logger.error(f"FFmpeg failed processing {src.name}: {e}")
-        if dst.exists():
-            dst.unlink()
-        raise
-
-
 def get_media_duration(path: str) -> float:
     """Get media file duration in seconds using ffmpeg.probe."""
     try:
@@ -146,38 +81,77 @@ def extend_audio_to_duration(
     extra_time_front: float = 0.0,
     extra_time_back: float = 0.0,
 ) -> Path:
-    """Extend audio by prepending/appending silence."""
-    if extra_time_front == 0.0 and extra_time_back == 0.0:
+    """Extend audio by prepending/appending *true-time* silence. Outputs AAC .m4a."""
+
+    output_path = output_path.with_suffix(".m4a")
+    if extra_time_front <= 0 and extra_time_back <= 0:
         shutil.copy2(input_path, output_path)
         return output_path
 
-    current_duration = get_media_duration(str(input_path))
+    sr = 48000  # normalize sample rate for pipeline stability
 
-    audio_stream = ffmpeg.input(str(input_path))
+    # sanity
+    if not input_path.exists():
+        raise FileNotFoundError(f"Audio not found: {input_path}")
 
+    # Build ffmpeg command
+    cmd = ["ffmpeg", "-y", "-i", str(input_path)]
+
+    fparts = []
+
+    # 1) normalize input to 48k stereo and reset PTS
+    fparts.append(f"[0:a]aresample=resampler=soxr:osr={sr},aformat=channel_layouts=stereo,asetpts=PTS-STARTPTS[ain]")
+
+    seq = []
+
+    # 2) optional front silence
     if extra_time_front > 0:
-        audio_stream = audio_stream.filter("adelay", f"{int(extra_time_front * 1000)}|{int(extra_time_front * 1000)}")
+        fparts.append(
+            f"anullsrc=channel_layout=stereo:sample_rate={sr},"
+            f"atrim=0:{extra_time_front:.6f},asetpts=PTS-STARTPTS[sfront]"
+        )
+        seq.append("[sfront]")
 
+    # input
+    seq.append("[ain]")
+
+    # 3) optional back silence
     if extra_time_back > 0:
-        target_duration = current_duration + extra_time_front + extra_time_back
-        audio_stream = audio_stream.filter("apad")
-        output_args = {
-            "t": target_duration,
-            "acodec": "libmp3lame",
-            "format": "mp3",
-        }
-    else:
-        target_duration = current_duration + extra_time_front
-        output_args = {
-            "t": target_duration,
-            "acodec": "libmp3lame",
-            "format": "mp3",
-        }
+        fparts.append(
+            f"anullsrc=channel_layout=stereo:sample_rate={sr},"
+            f"atrim=0:{extra_time_back:.6f},asetpts=PTS-STARTPTS[sback]"
+        )
+        seq.append("[sback]")
 
-    cmd = audio_stream.output(str(output_path), **output_args).overwrite_output().compile()
+    # 4) concat them all (N labels → one audio)
+    n = len(seq)
+    fparts.append("".join(seq) + f"concat=n={n}:v=0:a=1[outa]")
 
+    filter_complex = ";".join(fparts)
+
+    # Choose AAC in M4A by default
+    codec = "aac"
+    mux_faststart = ["-movflags", "+faststart"] if output_path.suffix.lower() in {".mp4", ".m4a"} else []
+
+    cmd += [
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[outa]",
+        "-ar",
+        f"{sr}",
+        "-ac",
+        "2",
+        "-c:a",
+        codec,
+        "-b:a",
+        "192k",
+        *mux_faststart,
+        str(output_path),
+    ]
+
+    logger.debug("Extend-audio cmd: " + " ".join(cmd))
     _run_ffmpeg_trace(cmd)
-
     return output_path
 
 
@@ -371,16 +345,22 @@ def create_video_segment_from_sub_video_and_audio_freeze_last_frame(
         video_input = ffmpeg.input(str(sub_video_path))
         audio_input = ffmpeg.input(str(audio_path))
 
+        base_1080p = (
+            "scale=1920:1080:flags=lanczos:force_original_aspect_ratio=decrease,"
+            "pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1"
+        )
+
         if audio_duration > video_duration:
             extra_duration = audio_duration - video_duration
             logger.debug(f"Extending video by {extra_duration:.2f}s (freezing last frame)")
-
-            video_filter = f"scale={target_resolution},tpad=stop_mode=clone:stop_duration={extra_duration}"
-        elif video_duration > audio_duration:
-            logger.debug(f"Video is longer than audio, will be cut from {video_duration:.2f}s to {audio_duration:.2f}s")
-            video_filter = f"scale={target_resolution}"
+            # freeze last frame AFTER we’ve normalized to 1080p
+            video_filter = f"{base_1080p},tpad=stop_mode=clone:stop_duration={extra_duration}"
         else:
-            video_filter = f"scale={target_resolution}"
+            if video_duration > audio_duration:
+                logger.debug(
+                    f"Video is longer than audio, will be cut from {video_duration:.2f}s to {audio_duration:.2f}s"
+                )
+            video_filter = base_1080p
 
         cmd = (
             ffmpeg.output(
@@ -392,15 +372,23 @@ def create_video_segment_from_sub_video_and_audio_freeze_last_frame(
                 format="mp4",
                 t=audio_duration,
                 **{
-                    "c:v": "h264_nvenc",
-                    "preset": "p5",
-                    "crf": "23",
+                    "c:v": "libx264",
+                    "preset": "slow",
+                    "profile:v": "high",
+                    "level:v": "4.2",
+                    "crf": "20",  # 19=crisper / 21=smaller
+                    # FIXED GOP: no scene cuts
+                    "x264-params": "keyint=48:min-keyint=48:scenecut=0:bframes=3:aq-mode=2:aq-strength=1.0:psy-rd=1.0,0.0",
+                    # color + audio
+                    "color_primaries": "bt709",
+                    "color_trc": "bt709",
+                    "colorspace": "bt709",
                     "c:a": "aac",
                     "b:a": "192k",
                     "ar": "48000",
                     "ac": "2",
-                    "pix_fmt": "yuv420p",
                     "movflags": "+faststart",
+                    "pix_fmt": "yuv420p",
                 },
             )
             .overwrite_output()
@@ -533,100 +521,121 @@ def concatenate_videos_with_fade_in_out(
     fade_duration: float = 0.4,
 ) -> Path:
     """
-    Concatenate video segments with fade-in/fade-out effects.
-    Note: If fade_duration is too long, it can appear sluggish.
+    Preprocess each segment to 1920x1080@24 CFR with matched audio,
+    apply fade-in/out (video+audio), then concat losslessly with -c copy.
+    Uses libx264 CRF (better than NVENC at this res/bitrate).
     """
-    video_segments = [Path(segment) for segment in video_segments]
+    video_segments = [Path(p) for p in video_segments]
     output_path = Path(output_path)
-
-    logger.info(f"Concatenating {len(video_segments)} video segments with fade effects")
-
     temp_dir = output_path.parent / "temp_fade_segments"
-    temp_dir.mkdir(exist_ok=True)
+    temp_dir.mkdir(parents=True, exist_ok=True)
+
+    logger.info(f"Concatenating {len(video_segments)} segments with {fade_duration:.2f}s fades")
+
+    processed_segments: list[Path] = []
+    concat_list_path = output_path.parent / "concat_list_fade.txt"
 
     try:
-        processed_segments = []
-
-        for i, segment in enumerate(video_segments):
-            logger.debug(f"Processing segment {i+1}/{len(video_segments)}: {segment.name}")
-
-            probe = _probe(segment)
+        for i, seg in enumerate(video_segments):
+            if not seg.exists():
+                raise FileNotFoundError(f"Segment not found: {seg}")
+            probe = _probe(seg)
             fps, duration = _fps_and_duration(probe)
+            vstream = next((s for s in probe["streams"] if s["codec_type"] == "video"), None)
+            if not vstream:
+                raise RuntimeError(f"No video stream in {seg}")
+            has_audio = any(s["codec_type"] == "audio" for s in probe["streams"])
 
-            actual_fade_duration = min(fade_duration, duration / 3.0)
+            # lock fades to sane fraction of clip
+            d_fade = min(fade_duration, max(0.0, duration) / 3.0)
+            fade_start = max(0.0, duration - d_fade)
 
-            temp_output = temp_dir / f"fade_segment_{i:03d}.mp4"
-
-            fade_start = max(0, duration - actual_fade_duration)
-
-            video_filter = (
-                f"scale={width}:{height},"
-                f"fade=t=in:st=0:d={actual_fade_duration},"
-                f"fade=t=out:st={fade_start}:d={actual_fade_duration}"
+            # normalize to true 1080p without stretch; CFR 24; deband lightly
+            base_vf = (
+                f"scale={width}:{height}:flags=lanczos:force_original_aspect_ratio=decrease,"
+                f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,format=yuv420p,"
+                f"fps=24,gradfun=strength=0.6,"
+                f"fade=t=in:st=0:d={d_fade},"
+                f"fade=t=out:st={fade_start}:d={d_fade}"
             )
 
-            cmd = (
-                ffmpeg.input(str(segment))
+            # audio path: ensure stereo 48k, fade in/out
+            # if clip has no audio, synth silent track to keep concat stable
+            if has_audio:
+                a_in = ffmpeg.input(str(seg))
+                a_chain = (
+                    ffmpeg.input(str(seg))
+                    .audio.filter_("aresample", resampler="soxr", osr=48000)
+                    .filter_("aformat", channel_layouts="stereo")
+                    .filter_("volume", 1.0)
+                    .filter_("afade", t="in", st=0, d=d_fade)
+                    .filter_("afade", t="out", st=fade_start, d=d_fade)
+                )
+                a_kwargs = {"c:a": "aac", "b:a": "192k", "ar": "48000", "ac": "2"}
+            else:
+                # synth silence exactly clip duration
+                a_chain = ffmpeg.input("anullsrc=channel_layout=stereo:sample_rate=48000", f="lavfi", t=duration)
+                a_kwargs = {"c:a": "aac", "b:a": "128k", "ar": "48000", "ac": "2"}
+
+            tmp = temp_dir / f"fade_segment_{i:03d}.mp4"
+            logger.debug(f"Processing segment {i+1}/{len(video_segments)}: {seg.name} → {tmp.name}")
+
+            # build command: one input, two streams, reencode video with x264 CRF
+            (
+                ffmpeg.input(str(seg))
                 .output(
-                    str(temp_output),
-                    r=fps,
-                    vf=video_filter,
+                    str(tmp),
+                    vf=base_vf,
+                    r=24,  # CFR 24
+                    c_v="libx264",
+                    preset="slow",
+                    profile_v="high",
                     **{
-                        "c:v": "h264_nvenc",
-                        "preset": "p5",
-                        "crf": "23",
-                        "c:a": "aac",
-                        "b:a": "192k",
-                        "ar": "48000",
-                        "ac": "2",
+                        "level:v": "4.2",
+                        "crf": "20",
+                        # allow smart keyframes around fades/cuts
+                        "x264-params": "keyint=48:min-keyint=24:scenecut=40:bframes=3:aq-mode=2:aq-strength=1.0:psy-rd=1.0,0.0",
                         "pix_fmt": "yuv420p",
+                        "color_primaries": "bt709",
+                        "color_trc": "bt709",
+                        "colorspace": "bt709",
                         "movflags": "+faststart",
                     },
+                    **a_kwargs,
                 )
                 .overwrite_output()
-                .compile()
+                .global_args("-loglevel", "error")
+                .run(cmd=["ffmpeg"])  # your _run_ffmpeg_trace wrapper is fine too
             )
 
-            _run_ffmpeg_trace(cmd)
-            processed_segments.append(temp_output)
-            logger.debug(f"Successfully processed segment {i+1} with fade effects")
+            processed_segments.append(tmp)
+            logger.debug(f"Segment {i+1} OK ({duration:.2f}s, fade {d_fade:.2f}s)")
 
-        concat_list_path = output_path.parent / "concat_list_fade.txt"
+        # concat with -c copy (streams match now)
         with open(concat_list_path, "w", encoding="utf-8") as f:
-            for segment in processed_segments:
-                f.write(f"file '{segment.resolve()}'\n")
+            for p in processed_segments:
+                f.write(f"file '{p.resolve()}'\n")
 
-        logger.info("Concatenating processed segments with fade effects")
-        cmd = (
+        logger.info("Concatenating normalized segments")
+        (
             ffmpeg.input(str(concat_list_path), format="concat", safe=0)
-            .output(
-                str(output_path),
-                **{
-                    "c:v": "copy",
-                    "c:a": "copy",
-                },
-            )
+            .output(str(output_path), c="copy", movflags="+faststart")
             .overwrite_output()
-            .compile()
+            .global_args("-loglevel", "error")
+            .run(cmd=["ffmpeg"])
         )
-        _run_ffmpeg_trace(cmd)
 
-        logger.info(f"Video concatenation with fade effects completed successfully: {output_path.name}")
+        logger.info(f"Concat done: {output_path.name}")
 
     finally:
-        concat_list_path = output_path.parent / "concat_list_fade.txt"
-        if concat_list_path.exists():
-            logger.debug(f"Removing temporary file: {concat_list_path.name}")
-            concat_list_path.unlink()
-
-        if temp_dir.exists():
-            for temp_file in temp_dir.glob("*"):
-                logger.debug(f"Removing temporary file: {temp_file.name}")
-                temp_file.unlink(missing_ok=True)
-            try:
-                temp_dir.rmdir()
-            except OSError:
-                pass
+        try:
+            if concat_list_path.exists():
+                concat_list_path.unlink()
+            for p in temp_dir.glob("*"):
+                p.unlink(missing_ok=True)
+            temp_dir.rmdir()
+        except Exception:
+            pass
 
     return output_path
 
@@ -634,266 +643,210 @@ def concatenate_videos_with_fade_in_out(
 def concatenate_videos_remove_last_frame_except_last(
     video_segments: list[str | Path],
     output_path: str | Path,
-    max_retries: int = 3,
 ) -> Path:
     """
     Remove exactly one frame from the end of every segment except the final one,
-    re-encode to uniform settings, then concatenate via concat demuxer (copy).
-
-    Common reasons FFmpeg can get stuck:
-    1. GPU Memory Issues: h264_nvenc can hang if GPU memory is exhausted
-    2. Input File Corruption: Corrupted input files can cause infinite loops
-    3. Frame Rate Issues: Unusual frame rates or variable frame rates
-    4. Audio/Video Sync Problems: Mismatched audio/video streams
-    5. Hardware Acceleration Failures: NVENC encoder failures
-    6. Resource Contention: Multiple FFmpeg processes competing for GPU
-    7. Input/Output Path Issues: Network storage or permission problems
-    8. Memory Leaks: Large files causing memory exhaustion
-    9. Codec Incompatibilities: Unusual codecs or formats
-    10. Infinite Seeking: Seeking issues with damaged files
-
-    Args:
-        video_segments: List of video segment paths
-        output_path: Output path for concatenated video
-        max_retries: Maximum number of retry attempts if processing fails
-
-    Returns:
-        Path to the concatenated video file
+    then concat in a single pass and encode once.
+    Assumes all segments share identical stream settings (codec, fps, SAR, audio config).
     """
     video_segments = [Path(s) for s in video_segments]
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # basic checks
     for i, seg in enumerate(video_segments):
         if not seg.exists():
-            raise FileNotFoundError(f"Video segment {i+1} not found: {seg}")
+            raise FileNotFoundError(f"Segment {i+1} not found: {seg}")
         if seg.stat().st_size < 1000:
-            raise ValueError(f"Video segment {i+1} is too small ({seg.stat().st_size} bytes): {seg}")
+            raise ValueError(f"Segment {i+1} too small: {seg}")
 
-        try:
-            probe = _probe(seg)
-            video_streams = [s for s in probe["streams"] if s["codec_type"] == "video"]
-            if not video_streams:
-                raise ValueError(f"No video stream found in segment {i+1}: {seg}")
-        except Exception as e:
-            logger.error(f"Failed to probe segment {i+1} ({seg}): {e}")
-            raise ValueError(f"Invalid video segment {i+1}: {seg}") from e
+    # Probe first segment for fps (assumed identical across all)
+    first_probe = _probe(video_segments[0])
+    fps, _ = _fps_and_duration(first_probe)
+    if fps <= 0:
+        raise RuntimeError("Could not determine FPS from first segment")
 
-    temp_dir = output_path.parent / "temp_concat_segments"
+    # Build ffmpeg command
+    cmd = ["ffmpeg", "-y"]
 
-    gpu_info = _check_gpu_memory()
-    if gpu_info:
-        logger.debug(f"GPU memory status: {', '.join(gpu_info)}")
+    # Inputs
+    for seg in video_segments:
+        cmd += ["-i", str(seg)]
 
-    for attempt in range(max_retries):
-        try:
-            logger.info(f"Concatenation attempt {attempt + 1}/{max_retries}")
+    # Build filter graph
+    # For each input i:
+    #   - get duration via lavfi metadata (we already have a helper, but we’ll rely on probe for duration)
+    #   - trim end by 1/fps for all but last
+    fparts = []
+    v_labels = []
+    a_labels = []
+    for idx, seg in enumerate(video_segments):
+        probe = _probe(seg)
+        _, dur = _fps_and_duration(probe)
+        end_trim = dur - (1.0 / fps) if idx != len(video_segments) - 1 else dur
+        if end_trim < 0:
+            end_trim = 0.0
 
-            if temp_dir.exists():
-                logger.debug("Cleaning up previous temp files")
-                for temp_file in temp_dir.glob("*"):
-                    temp_file.unlink(missing_ok=True)
-                try:
-                    temp_dir.rmdir()
-                except OSError:
-                    pass
+        # video path: ensure pts reset; keep as-is (segments are already normalized)
+        fparts.append(f"[{idx}:v]trim=start=0:end={end_trim:.6f},setpts=PTS-STARTPTS[v{idx}]")
+        v_labels.append(f"[v{idx}]")
 
-            temp_dir.mkdir(exist_ok=True)
-            processed: list[Path] = []
+        # audio path: if present, trim to same end, resample 48k/stereo
+        has_audio = any(s["codec_type"] == "audio" for s in probe["streams"])
+        if has_audio:
+            fparts.append(
+                f"[{idx}:a]atrim=start=0:end={end_trim:.6f},asetpts=PTS-STARTPTS,"
+                f"aresample=resampler=soxr:osr=48000,aformat=channel_layouts=stereo[a{idx}]"
+            )
+            a_labels.append(f"[a{idx}]")
+        else:
+            # synth silence to keep concat stable
+            fparts.append(
+                f"anullsrc=channel_layout=stereo:sample_rate=48000,atrim=0:{end_trim:.6f},asetpts=PTS-STARTPTS[a{idx}]"
+            )
+            a_labels.append(f"[a{idx}]")
 
-            for i, seg in enumerate(video_segments):
-                logger.debug(f"Processing segment {i+1}/{len(video_segments)}: {seg.name}")
+    # concat
+    fparts.append("".join(v_labels + a_labels) + f"concat=n={len(video_segments)}:v=1:a=1[vout][aout]")
+    filter_complex = ";".join(fparts)
 
-                try:
-                    probe = _probe(seg)
-                    fps, duration = _fps_and_duration(probe)
+    # Final encode (24 CFR, x264 CRF 20, fixed GOP 2s; no scenecut)
+    cmd += [
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[vout]",
+        "-map",
+        "[aout]",
+        "-r",
+        "24",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "slow",
+        "-profile:v",
+        "high",
+        "-level:v",
+        "4.2",
+        "-crf",
+        "20",
+        "-x264-params",
+        "keyint=48:min-keyint=48:scenecut=0:bframes=3:aq-mode=2:aq-strength=1.0:psy-rd=1.0,0.0",
+        # If you prefer smarter keyframes at joins, use this instead:
+        # "-x264-params", "keyint=48:min-keyint=24:scenecut=40:bframes=3:aq-mode=2:aq-strength=1.0:psy-rd=1.0,0.0",
+        "-pix_fmt",
+        "yuv420p",
+        "-color_primaries",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-colorspace",
+        "bt709",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ar",
+        "48000",
+        "-ac",
+        "2",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
 
-                    video_stream = next(s for s in probe["streams"] if s["codec_type"] == "video")
-                    logger.debug(
-                        f"Segment {i+1} info: codec={video_stream.get('codec_name')}, "
-                        f"fps={fps:.2f}, duration={duration:.3f}s, "
-                        f"resolution={video_stream.get('width')}x{video_stream.get('height')}"
-                    )
+    logger.debug("FFmpeg command: " + " ".join(cmd))
+    try:
+        _run_ffmpeg_trace(cmd)
+    except RuntimeError as e:
+        if output_path.exists():
+            output_path.unlink()
+        raise
 
-                    is_last = i == len(video_segments) - 1
-                    if not is_last:
-                        target = max(0.001, duration - (1.0 / fps))
-                        logger.debug(
-                            f"Trimming {seg.name}: {duration:.3f}s -> {target:.3f}s (removing 1 frame at {fps:.2f} fps)"
-                        )
-                    else:
-                        target = None
-                        logger.debug(f"Keeping last segment {seg.name} intact: {duration:.3f}s")
+    if not output_path.exists() or output_path.stat().st_size < 10000:
+        raise RuntimeError("Final video missing or too small")
 
-                    out = temp_dir / f"seg_{i:03d}.mp4"
-                    _reencode_with_optional_trim(seg, out, target)
-
-                    if not out.exists() or out.stat().st_size < 1000:
-                        raise RuntimeError(
-                            f"Output segment {out.name} is missing or too small ({out.stat().st_size if out.exists() else 0} bytes)"
-                        )
-
-                    processed.append(out)
-                    logger.debug(f"Successfully processed segment {i+1}: {out.name} ({out.stat().st_size} bytes)")
-
-                except (
-                    subprocess.CalledProcessError,
-                    RuntimeError,
-                    OSError,
-                ) as e:
-                    logger.error(f"Failed to process segment {i+1} ({seg.name}): {e}")
-                    logger.error(f"Segment {i+1} path: {seg}")
-                    logger.error(f"Segment {i+1} size: {seg.stat().st_size if seg.exists() else 'N/A'} bytes")
-                    logger.error(f"Temp output path: {temp_dir / f'seg_{i:03d}.mp4'}")
-                    if (temp_dir / f"seg_{i:03d}.mp4").exists():
-                        logger.error(f"Partial output size: {(temp_dir / f'seg_{i:03d}.mp4').stat().st_size} bytes")
-                    raise
-
-            list_file = output_path.parent / "concat_list.txt"
-            with open(list_file, "w", encoding="utf-8") as f:
-                for p in processed:
-                    f.write(f"file '{p.resolve()}'\n")
-
-            logger.info(f"Concatenating {len(processed)} processed segments")
-
-            concat_cmd = [
-                "ffmpeg",
-                "-y",
-                "-f",
-                "concat",
-                "-safe",
-                "0",
-                "-i",
-                str(list_file),
-                "-c",
-                "copy",
-                "-bsf:a",
-                "aac_adtstoasc",
-                str(output_path),
-            ]
-
-            try:
-                logger.debug(f"Starting concatenation of {len(processed)} segments")
-                _run_ffmpeg_trace(concat_cmd)
-                logger.info(f"Successfully concatenated video: {output_path.name}")
-            except RuntimeError as e:
-                logger.error(f"Concatenation failed: {e}")
-                if output_path.exists():
-                    output_path.unlink()
-                raise
-
-            if not output_path.exists() or output_path.stat().st_size < 10000:
-                raise RuntimeError(
-                    f"Final video is missing or too small ({output_path.stat().st_size if output_path.exists() else 0} bytes)"
-                )
-
-            list_file.unlink(missing_ok=True)
-            for p in processed:
-                p.unlink(missing_ok=True)
-            try:
-                temp_dir.rmdir()
-            except OSError:
-                pass
-
-            logger.info(f"Video concatenation completed successfully: {output_path.name}")
-            return output_path.resolve()
-
-        except (
-            subprocess.CalledProcessError,
-            RuntimeError,
-            OSError,
-        ) as e:
-            logger.error(f"Concatenation attempt {attempt + 1} failed: {e}")
-
-            if output_path.exists():
-                output_path.unlink()
-                logger.debug("Removed partial output file")
-
-            list_file = output_path.parent / "concat_list.txt"
-            if list_file.exists():
-                list_file.unlink()
-
-            if temp_dir.exists():
-                for temp_file in temp_dir.glob("*"):
-                    temp_file.unlink(missing_ok=True)
-                try:
-                    temp_dir.rmdir()
-                except OSError:
-                    pass
-
-            if attempt == max_retries - 1:
-                logger.error(f"All {max_retries} concatenation attempts failed")
-                raise
-            else:
-                wait_time = (attempt + 1) * 2
-                logger.info(f"Waiting {wait_time}s before retry...")
-                time.sleep(wait_time)
-
-    raise RuntimeError("Concatenation failed after all retries")
+    logger.info(f"Concat (drop last frame on all but last) OK: {output_path.name}")
+    return output_path
 
 
 def concatenate_audio_with_silence_inbetween(
     audio_chunks: list[str | Path],
     output_path: str | Path,
     silence_duration_seconds: float = 1.0,
+    fade_ms: float = 0.005,  # 5 ms micro-fades to prevent clicks
+    codec: str = "aac",
+    bitrate: str = "192k",
 ) -> Path:
-    """Concatenate audio chunks with silence between them."""
+    """Concatenate audio chunks with true-time silence blocks between them."""
     if not audio_chunks:
         raise ValueError("audio_chunks cannot be empty")
 
-    audio_chunks = [Path(chunk) for chunk in audio_chunks]
+    audio_chunks = [Path(p) for p in audio_chunks]
     output_path = Path(output_path)
+    for i, p in enumerate(audio_chunks):
+        if not p.exists():
+            raise FileNotFoundError(f"Audio chunk {i+1} not found: {p}")
 
-    for i, chunk in enumerate(audio_chunks):
-        if not chunk.exists():
-            raise FileNotFoundError(f"Audio chunk {i+1} not found: {chunk}")
+    # Build inputs
+    cmd = ["ffmpeg", "-y"]
+    for p in audio_chunks:
+        cmd += ["-i", str(p)]
 
-    if len(audio_chunks) == 1:
-        logger.info("Only one audio chunk, copying to output")
-        shutil.copy2(audio_chunks[0], output_path)
-        return output_path
-
-    logger.info(f"Concatenating {len(audio_chunks)} audio chunks with {silence_duration_seconds}s silence")
-
-    filter_parts = []
+    # Build filtergraph
+    # For each input i:
+    #   [i:a] -> aresample 48k, stereo -> afade in/out tiny -> [an{i}]
+    # Insert N-1 silence nodes: anullsrc -> atrim=0:silence_dur -> [sil{k}]
+    fparts = []
+    norm_labels = []
+    sr = 48000
+    fade_d = max(0.0, fade_ms / 1000.0)
 
     for i in range(len(audio_chunks)):
+        fparts.append(
+            f"[{i}:a]aresample=resampler=soxr:osr={sr},"
+            f"aformat=channel_layouts=stereo"
+            + (f",afade=t=in:st=0:d={fade_d}" if fade_d > 0 else "")
+            + (f",afade=t=out:st=END-{fade_d}:d={fade_d}" if fade_d > 0 else "")
+            + f"[an{i}]"
+        )
+        norm_labels.append(f"[an{i}]")
         if i < len(audio_chunks) - 1:
-            filter_parts.append(f"[{i}:a]apad=pad_dur={silence_duration_seconds}[a{i}]")
-        else:
-            filter_parts.append(f"[{i}:a]anull[a{i}]")
+            # precise-time silence block
+            fparts.append(
+                f"anullsrc=channel_layout=stereo:sample_rate={sr},"
+                f"atrim=0:{silence_duration_seconds:.6f},asetpts=PTS-STARTPTS[sil{i}]"
+            )
 
-    concat_inputs = "".join([f"[a{i}]" for i in range(len(audio_chunks))])
-    filter_parts.append(f"{concat_inputs}concat=n={len(audio_chunks)}:v=0:a=1[outa]")
+    # Interleave: a0, sil0, a1, sil1, ..., aN
+    seq_labels = []
+    for i in range(len(audio_chunks)):
+        seq_labels.append(f"[an{i}]")
+        if i < len(audio_chunks) - 1:
+            seq_labels.append(f"[sil{i}]")
 
-    filter_complex = ";".join(filter_parts)
+    fparts.append("".join(seq_labels) + f"concat=n={len(seq_labels)}:v=0:a=1[outa]")
+    filter_complex = ";".join(fparts)
 
-    cmd = ["ffmpeg", "-y"]
+    # Output
+    cmd += [
+        "-filter_complex",
+        filter_complex,
+        "-map",
+        "[outa]",
+        "-ar",
+        f"{sr}",
+        "-ac",
+        "2",
+        "-c:a",
+        codec,
+        "-b:a",
+        bitrate,
+        str(output_path),
+    ]
 
-    for chunk in audio_chunks:
-        cmd.extend(["-i", str(chunk)])
-
-    cmd.extend(["-filter_complex", filter_complex])
-
-    cmd.extend(
-        [
-            "-map",
-            "[outa]",
-            "-c:a",
-            "libmp3lame",
-            "-b:a",
-            "192k",
-            "-ar",
-            "48000",
-            "-ac",
-            "2",
-            str(output_path),
-        ]
-    )
-
-    logger.debug(f"Running audio concatenation: {' '.join(cmd)}")
+    logger.debug("Audio concat cmd: " + " ".join(cmd))
     _run_ffmpeg_trace(cmd)
-
     logger.info(f"Audio concatenation completed: {output_path.name}")
     return output_path
 
