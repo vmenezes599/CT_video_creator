@@ -1,8 +1,0 @@
-elevenlabs
-ffmpeg-python
-pytest
-python-dotenv
-pyttsx3
-Requests
-typing_extensions
-stable-ts
