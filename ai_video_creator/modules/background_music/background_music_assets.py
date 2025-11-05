@@ -142,7 +142,17 @@ class BackgroundMusicAssets:
 
     def has_background_music(self, scene_index: int) -> bool:
         """Check if a specific scene has background music assets."""
-        return scene_index < len(self.background_music_assets) and self.background_music_assets[scene_index] is not None
+        if scene_index < 0 or scene_index < len(self.background_music_assets):
+            return False
+
+        music_asset_path = self.background_music_assets[scene_index]
+        if music_asset_path is None:
+            return False
+
+        if music_asset_path.skip:
+            return True
+
+        return music_asset_path.asset.exists() and music_asset_path.asset.is_file()
 
     def get_missing_background_music(self) -> list[int]:
         """Get a summary of missing background music assets per scene."""
