@@ -206,6 +206,7 @@ class VideoOverlayRecipe:
     """
 
     DEFAULT_OVERLAY_ASSET = Path(f"{DEFAULT_ASSETS_FOLDER}/outros/CTA_YOUTUBE_INGLES.mov")
+    DEFAULT_START_TIME_SECONDS = 10
     DEFAULT_INTERVAL_SECONDS = 60
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
@@ -213,6 +214,7 @@ class VideoOverlayRecipe:
         self._paths = video_creator_paths
         self.skip: bool = False
         self.overlay_asset: Path | None = None
+        self.start_time_seconds: int = self.DEFAULT_START_TIME_SECONDS
         self.interval_seconds: int = self.DEFAULT_INTERVAL_SECONDS
         self.overlay_effects: list[EffectBase] = []
 
@@ -221,6 +223,7 @@ class VideoOverlayRecipe:
         self.skip = data.get("skip", False)
         self.overlay_effects = data.get("outro_effects", [])
         self.interval_seconds = data.get("interval_seconds", self.DEFAULT_INTERVAL_SECONDS)
+        self.start_time_seconds = data.get("start_time_seconds", self.DEFAULT_START_TIME_SECONDS)
 
         outro_asset_masked = data.get("outro_asset", None)
         self.overlay_asset = self._paths.unmask_asset_path(Path(outro_asset_masked)) if outro_asset_masked else None
@@ -246,6 +249,7 @@ class VideoOverlayRecipe:
             "outro_asset": masked_outro_asset,
             "available_outros": available_outros,
             "interval_seconds": self.interval_seconds,
+            "start_time_seconds": self.start_time_seconds,
             "outro_effects": [effect.to_dict() if effect else None for effect in self.overlay_effects],
         }
 
@@ -259,6 +263,7 @@ class VideoOverlayRecipe:
         self.overlay_asset = None
         self.overlay_effects = []
         self.interval_seconds = self.DEFAULT_INTERVAL_SECONDS
+        self.start_time_seconds = self.DEFAULT_START_TIME_SECONDS
 
 
 class VideoAssemblerRecipe:
