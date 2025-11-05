@@ -94,8 +94,6 @@ class SubtitleGenerator:
 
         result.to_srt_vtt(str(output_srt_path), word_level=word_level)
 
-        self.write_srt(segments=result["segments"], output_path=output_srt_path)
-
         self._unload_model()
 
         return output_srt_path
