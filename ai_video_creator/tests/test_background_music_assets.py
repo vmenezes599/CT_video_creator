@@ -6,6 +6,7 @@ import json
 
 from ai_video_creator.modules.background_music.background_music_assets import (
     BackgroundMusicAssets,
+    BackgroundMusicAsset,
 )
 from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 
@@ -33,8 +34,8 @@ class TestBackgroundMusicAssets:
 
         test_data = {
             "background_music_assets": [
-                {"index": 1, "asset": str(paths.mask_asset_path(test_music1))},
-                {"index": 2, "asset": str(paths.mask_asset_path(test_music2))},
+                {"index": 1, "asset": str(paths.mask_asset_path(test_music1)), "volume": 0.8, "skip": False},
+                {"index": 2, "asset": str(paths.mask_asset_path(test_music2)), "volume": 0.6, "skip": False},
             ]
         }
 
@@ -44,8 +45,10 @@ class TestBackgroundMusicAssets:
         assets = BackgroundMusicAssets(paths)
 
         assert len(assets.background_music_assets) == 2
-        assert assets.background_music_assets[0] == test_music1
-        assert assets.background_music_assets[1] == test_music2
+        assert assets.background_music_assets[0].asset == test_music1
+        assert assets.background_music_assets[0].volume == 0.8
+        assert assets.background_music_assets[1].asset == test_music2
+        assert assets.background_music_assets[1].volume == 0.6
 
     def test_background_music_assets_set_scene_music(self, tmp_path):
         """Test setting background music asset for a scene."""
@@ -56,12 +59,14 @@ class TestBackgroundMusicAssets:
         test_music = paths.background_music_asset_folder / "music_001.mp3"
         test_music.touch()
 
-        # Set music using direct list manipulation
-        assets.background_music_assets.append(test_music)
+        # Set music using BackgroundMusicAsset object
+        music_asset = BackgroundMusicAsset(asset=test_music, volume=0.7, skip=False)
+        assets.background_music_assets.append(music_asset)
         assets.save_assets_to_file()
 
         assert len(assets.background_music_assets) == 1
-        assert assets.background_music_assets[0] == test_music
+        assert assets.background_music_assets[0].asset == test_music
+        assert assets.background_music_assets[0].volume == 0.7
 
     def test_background_music_assets_has_music(self, tmp_path):
         """Test checking if background music exists for a scene."""
@@ -76,7 +81,7 @@ class TestBackgroundMusicAssets:
         assert not assets.has_background_music(0)
 
         # After setting music
-        assets.background_music_assets.append(test_music)
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music, volume=0.5, skip=False))
         assets.save_assets_to_file()
         assert assets.has_background_music(0)
 
@@ -94,7 +99,7 @@ class TestBackgroundMusicAssets:
         test_music1.touch()
 
         # Set up mixed scenario - has_background_music only checks for None, not file existence
-        assets.background_music_assets.append(test_music1)  # Exists - not missing
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music1, volume=0.5, skip=False))  # Exists - not missing
         assets.background_music_assets.append(None)  # No asset set - missing
 
         missing = assets.get_missing_background_music()
@@ -114,8 +119,8 @@ class TestBackgroundMusicAssets:
         test_music2.touch()
 
         # Complete scenario - all files exist
-        assets.background_music_assets.append(test_music1)
-        assets.background_music_assets.append(test_music2)
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music1, volume=0.5, skip=False))
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music2, volume=0.5, skip=False))
         assert assets.is_complete()
 
         # Incomplete scenario - missing file
@@ -133,8 +138,8 @@ class TestBackgroundMusicAssets:
         test_music1.touch()
         test_music2.touch()
 
-        assets1.background_music_assets.append(test_music1)
-        assets1.background_music_assets.append(test_music2)
+        assets1.background_music_assets.append(BackgroundMusicAsset(asset=test_music1, volume=0.5, skip=False))
+        assets1.background_music_assets.append(BackgroundMusicAsset(asset=test_music2, volume=0.5, skip=False))
         assets1.save_assets_to_file()
 
         # Load new instance
@@ -142,8 +147,8 @@ class TestBackgroundMusicAssets:
 
         # Verify data was loaded
         assert len(assets2.background_music_assets) == 2
-        assert assets2.background_music_assets[0] == test_music1
-        assert assets2.background_music_assets[1] == test_music2
+        assert assets2.background_music_assets[0].asset == test_music1
+        assert assets2.background_music_assets[1].asset == test_music2
 
     def test_background_music_assets_corrupted_file_handling(self, tmp_path):
         """Test handling of corrupted asset files."""
@@ -187,8 +192,8 @@ class TestBackgroundMusicAssets:
         test_music1.touch()
         test_music2.touch()
 
-        assets.background_music_assets.append(test_music1)
-        assets.background_music_assets.append(test_music2)
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music1, volume=0.5, skip=False))
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music2, volume=0.5, skip=False))
         assets.background_music_assets.append(None)  # Unused slot
 
         used_assets = assets.get_used_assets_list()
@@ -206,7 +211,7 @@ class TestBackgroundMusicAssets:
         test_music = paths.background_music_asset_folder / "music_001.mp3"
         test_music.touch()
 
-        assets.background_music_assets.append(test_music)
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music, volume=0.5, skip=False))
         assets.save_assets_to_file()
 
         # Read saved file directly
@@ -241,12 +246,12 @@ class TestBackgroundMusicAssets:
         test_music.touch()
 
         # Use same file for multiple scenes
-        assets.background_music_assets.append(test_music)
-        assets.background_music_assets.append(test_music)
-        assets.background_music_assets.append(test_music)
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music, volume=0.5, skip=False))
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music, volume=0.5, skip=False))
+        assets.background_music_assets.append(BackgroundMusicAsset(asset=test_music, volume=0.5, skip=False))
 
         assert len(assets.background_music_assets) == 3
-        assert assets.background_music_assets[0] == test_music
-        assert assets.background_music_assets[1] == test_music
-        assert assets.background_music_assets[2] == test_music
+        assert assets.background_music_assets[0].asset == test_music
+        assert assets.background_music_assets[1].asset == test_music
+        assert assets.background_music_assets[2].asset == test_music
         assert assets.is_complete()

@@ -229,7 +229,7 @@ class TestVideoCreationWorkflow:
         )
 
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             return_value=5.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data

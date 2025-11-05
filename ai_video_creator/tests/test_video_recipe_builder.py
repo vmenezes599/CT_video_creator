@@ -88,14 +88,14 @@ class TestVideoRecipeBuilder:
 
     def test_recipe_builder_creates_correct_file(self, video_creator_paths):
         """Test that VideoRecipeBuilder creates the correct JSON file structure."""
-        # Mock only external dependencies - get_audio_duration is external
+        # Mock only external dependencies - get_media_duration is external
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
             "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
         )
 
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -141,7 +141,7 @@ class TestVideoRecipeBuilder:
         )
 
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -261,7 +261,7 @@ class TestVideoRecipeBuilder:
         )
 
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -324,7 +324,7 @@ class TestVideoRecipeBuilder:
         )
 
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -351,14 +351,14 @@ class TestVideoRecipeBuilder:
 
     def test_recipe_builder_handles_audio_duration_errors(self, video_creator_paths):
         """Test recipe builder handles audio duration errors gracefully."""
-        # Mock get_audio_duration to raise an exception
+        # Mock get_media_duration to raise an exception
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
             "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
         )
 
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             side_effect=Exception("Audio file not found"),
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -395,7 +395,7 @@ class TestVideoRecipeBuilder:
         video_creator_paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
 
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_audio_duration",
+            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             return_value=10.0,
         ):
             builder = SubVideoRecipeBuilder(video_creator_paths)

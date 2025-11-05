@@ -32,8 +32,8 @@ class BackgroundMusicAsset:
     def from_dict(cls, data: dict) -> "BackgroundMusicAsset":
         """Create a BackgroundMusicAsset from a dictionary."""
 
-        required_fields = ["asset", "volume", "skip"]
-        missing_fields = set(data.keys() - required_fields)
+        required_fields = {"asset", "volume", "skip"}
+        missing_fields = required_fields - set(data.keys())
         if missing_fields:
             raise ValueError(f"Missing fields in BackgroundMusicAsset data: {missing_fields}")
 
@@ -70,15 +70,15 @@ class BackgroundMusicAssets:
 
                 # Load assets from the "assets" array format
                 for index, asset_dict in enumerate(assets):
-                    asset = asset_dict["asset"]
+                    asset = asset_dict.get("asset")
                     assembled_background_music_path = Path(asset) if asset else None
                     assembled_background_music_path = (
                         self._paths.unmask_asset_path(assembled_background_music_path)
                         if assembled_background_music_path
                         else None
                     )
-                    volume = asset_dict["volume"]
-                    skip = asset_dict["skip"]
+                    volume = asset_dict.get("volume", 0.5)
+                    skip = asset_dict.get("skip", False)
 
                     self.background_music_assets[index] = BackgroundMusicAsset(
                         asset=assembled_background_music_path, volume=volume, skip=skip
@@ -142,7 +142,7 @@ class BackgroundMusicAssets:
 
     def has_background_music(self, scene_index: int) -> bool:
         """Check if a specific scene has background music assets."""
-        if scene_index < 0 or scene_index < len(self.background_music_assets):
+        if scene_index < 0 or scene_index >= len(self.background_music_assets):
             return False
 
         music_asset_path = self.background_music_assets[scene_index]
@@ -171,7 +171,7 @@ class BackgroundMusicAssets:
         used_assets = []
 
         for asset in self.background_music_assets:
-            if asset is not None:
-                used_assets.append(asset)
+            if asset is not None and asset.asset is not None:
+                used_assets.append(asset.asset)
 
         return used_assets
