@@ -14,7 +14,7 @@ class BackgroundMusicAssetManager:
     """Class to build background music assets from recipes."""
 
     DEFAULT_BACKGROUND_MUSIC_VOLUME = 0.3
-    DEFAULT_IGNORE_MUSIC = False
+    DEFAULT_SKIP_MUSIC = False
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize BackgroundMusicAssetManager with story folder and chapter index."""
@@ -67,7 +67,7 @@ class BackgroundMusicAssetManager:
                 output_audio = audio_generator.text_to_music(recipe=recipe, output_folder=output_folder)
 
                 self.background_music_assets.background_music_assets[scene_index] = BackgroundMusicAsset(
-                    asset=output_audio, volume=self.DEFAULT_BACKGROUND_MUSIC_VOLUME, ignore=self.DEFAULT_IGNORE_MUSIC
+                    asset=output_audio, volume=self.DEFAULT_BACKGROUND_MUSIC_VOLUME, skip=self.DEFAULT_SKIP_MUSIC
                 )
                 self.background_music_assets.save_assets_to_file()
                 logger.info(f"Successfully generated background music for scene {scene_index + 1}: {output_audio.name}")
