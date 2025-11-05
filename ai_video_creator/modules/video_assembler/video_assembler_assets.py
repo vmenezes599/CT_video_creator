@@ -74,16 +74,12 @@ class VideoAssemblerAssets:
                 max_length = len(self.final_sub_videos)
 
                 for i in range(max_length):
-                    video_asset = (
-                        str(self.final_sub_videos[i])
-                        if i < len(self.final_sub_videos)
-                        else None if i < len(self.final_sub_videos) else None
-                    )
+                    video_asset = self.final_sub_videos[i] if i < len(self.final_sub_videos) else None
 
                     # Convert paths to relative paths for storage
                     video_asset_relative = None
                     if video_asset:
-                        video_asset_relative = str(self._paths.mask_asset_path(Path(video_asset)))
+                        video_asset_relative = str(self._paths.mask_asset_path(video_asset))
 
                     videos = {
                         "index": i + 1,
