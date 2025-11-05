@@ -82,7 +82,7 @@ class VideoIntroRecipe:
         self.intro_effects = data.get("intro_effects", [])
 
         intro_asset_masked = data.get("intro_asset", None)
-        self.intro_asset = self._paths.unmask_asset_path(intro_asset_masked) if intro_asset_masked else None
+        self.intro_asset = self._paths.unmask_asset_path(Path(intro_asset_masked)) if intro_asset_masked else None
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
@@ -223,7 +223,7 @@ class VideoOverlayRecipe:
         self.interval_seconds = data.get("interval_seconds", self.DEFAULT_INTERVAL_SECONDS)
 
         outro_asset_masked = data.get("outro_asset", None)
-        self.overlay_asset = self._paths.unmask_asset_path(outro_asset_masked) if outro_asset_masked else None
+        self.overlay_asset = self._paths.unmask_asset_path(Path(outro_asset_masked)) if outro_asset_masked else None
 
     def to_dict(self) -> dict:
         """Serialize effects to a dictionary."""
