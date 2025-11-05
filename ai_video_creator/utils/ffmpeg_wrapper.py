@@ -1096,9 +1096,14 @@ def blit_overlay_video_onto_main_video(
 
     starts = []
     if repeat_every_seconds < 0:
-        if start_time_seconds < main_duration:
+        if start_time_seconds < main_duration and (start_time_seconds + intro_duration) <= main_duration:
             starts = [start_time_seconds]
-            logger.debug(f"Single overlay at t={start_time_seconds}s")
+            logger.debug(f"Single overlay at t={start_time_seconds}s (duration: {intro_duration:.2f}s)")
+        elif start_time_seconds < main_duration:
+            logger.warning(
+                f"Start time {start_time_seconds}s would extend overlay beyond main video "
+                f"({start_time_seconds + intro_duration:.2f}s > {main_duration:.2f}s), skipping overlay"
+            )
         else:
             logger.warning(
                 f"Start time {start_time_seconds}s >= main duration {main_duration:.2f}s, intro won't appear"
@@ -1111,7 +1116,14 @@ def blit_overlay_video_onto_main_video(
                 break  # Stop generating windows
             if max_repeats is not None and repeat_count >= max_repeats:
                 break  # Capped by max_repeats
-            starts.append(t_start)
+            # Only add overlay if it fits completely within the main video duration
+            if (t_start + intro_duration) <= main_duration:
+                starts.append(t_start)
+            else:
+                logger.debug(
+                    f"Skipping overlay at t={t_start:.2f}s (would extend to {t_start + intro_duration:.2f}s, "
+                    f"beyond main duration {main_duration:.2f}s)"
+                )
             repeat_count += 1
 
         logger.debug(f"Repeated overlay: {len(starts)} appearances at times: {starts}")
