@@ -6,10 +6,9 @@ from .video_creator import (
     create_narrator_and_image_recipe,
     create_background_music_assets,
     create_background_music_recipe,
-    create_background_music_recipe,
-    create_background_music_assets,
     create_sub_videos_assets,
     create_sub_video_recipes,
+    create_assemble_video_recipe,
     assemble_video,
     clean_unused_assets,
 )
@@ -30,6 +29,7 @@ def main():
     create_background_music_assets(user_folder, story_path, chapter_index)
     create_sub_video_recipes(user_folder, story_path, chapter_index)
     create_sub_videos_assets(user_folder, story_path, chapter_index)
+    create_assemble_video_recipe(user_folder, story_path, chapter_index)
     assemble_video(user_folder, story_path, chapter_index)
 
     clean_unused_assets(user_folder, story_path, chapter_index)
