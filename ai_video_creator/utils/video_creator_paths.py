@@ -65,6 +65,10 @@ class VideoCreatorPaths:
 
     def mask_asset_path(self, asset_path: Path):
         """Get the masked asset path for this instance."""
+
+        if asset_path.is_dir():
+            raise ValueError("Can not resolve folders.")
+
         user_assets_folder = self.get_user_assets_folder()
         default_assets_folder = self.get_default_assets_folder()
 
@@ -91,6 +95,10 @@ class VideoCreatorPaths:
 
     def unmask_asset_path(self, asset_path: Path):
         """Get the unmasked asset path for this instance."""
+
+        if asset_path.is_dir():
+            raise ValueError("Can not resolve folders.")
+
         user_folder = self.get_user_assets_folder()
         default_assets_folder = self.get_default_assets_folder()
 

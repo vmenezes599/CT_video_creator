@@ -6,14 +6,9 @@ from loguru import logger
 from ai_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.modules.image import ImageAssets
-from ai_video_creator.modules.sub_video import (
-    SubVideoAssets,
-    SubVideoRecipe,
-)
-from ai_video_creator.modules.video_assembler import (
-    VideoAssemblerAssets,
-    VideoAssemblerRecipe,
-)
+from ai_video_creator.modules.background_music import BackgroundMusicAssets
+from ai_video_creator.modules.sub_video import SubVideoAssets, SubVideoRecipe
+from ai_video_creator.modules.video_assembler import VideoAssemblerAssets, VideoAssemblerRecipe
 
 
 def internal_clean_unused_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
@@ -25,6 +20,7 @@ def internal_clean_unused_assets(user_folder: Path, story_name: str, chapter_ind
 
     narrator_assets = NarratorAssets(paths)
     image_assets = ImageAssets(paths)
+    background_music_assets = BackgroundMusicAssets(paths)
     sub_video_assets = SubVideoAssets(paths)
     sub_video_recipe = SubVideoRecipe(paths)
     video_assembler_assets = VideoAssemblerAssets(paths)
@@ -33,6 +29,7 @@ def internal_clean_unused_assets(user_folder: Path, story_name: str, chapter_ind
     assets_to_keep = set()
     assets_to_keep.update(narrator_assets.get_used_assets_list())
     assets_to_keep.update(image_assets.get_used_assets_list())
+    assets_to_keep.update(background_music_assets.get_used_assets_list())
     assets_to_keep.update(sub_video_assets.get_used_assets_list())
     assets_to_keep.update(sub_video_recipe.get_used_assets_list())
     assets_to_keep.update(video_assembler_assets.get_used_assets_list())
@@ -41,6 +38,7 @@ def internal_clean_unused_assets(user_folder: Path, story_name: str, chapter_ind
     all_folders_to_clean = [
         paths.narrator_asset_folder,
         paths.image_asset_folder,
+        paths.background_music_asset_folder,
         paths.sub_videos_asset_folder,
         paths.video_assembler_asset_folder,
     ]

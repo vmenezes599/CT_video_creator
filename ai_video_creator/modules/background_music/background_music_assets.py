@@ -11,11 +11,11 @@ from ai_video_creator.utils import ensure_collection_index_exists, backup_file_t
 class BackgroundMusicAsset:
     """Class representing a single background music asset."""
 
-    def __init__(self, asset: Path, volume: float, ignore: bool):
+    def __init__(self, asset: Path, volume: float, skip: bool):
         """Initialize BackgroundMusicAsset with index and file path."""
         self.asset = asset
         self.volume = volume
-        self.ignore = ignore
+        self.skip = skip
 
         if volume < 0.0 or volume > 1.0:
             raise ValueError("Volume must be between 0.0 and 1.0")
@@ -25,23 +25,23 @@ class BackgroundMusicAsset:
         return {
             "asset": str(self.asset) if self.asset else None,
             "volume": self.volume,
-            "ignore": self.ignore,
+            "skip": self.skip,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "BackgroundMusicAsset":
         """Create a BackgroundMusicAsset from a dictionary."""
 
-        required_fields = ["asset", "volume", "ignore"]
+        required_fields = ["asset", "volume", "skip"]
         missing_fields = set(data.keys() - required_fields)
         if missing_fields:
             raise ValueError(f"Missing fields in BackgroundMusicAsset data: {missing_fields}")
 
         asset_path = Path(data["asset"]) if data["asset"] else None
         volume = data["volume"]
-        ignore = data["ignore"]
+        skip = data["skip"]
 
-        return cls(asset=asset_path, volume=volume, ignore=ignore)
+        return cls(asset=asset_path, volume=volume, skip=skip)
 
 
 class BackgroundMusicAssets:
@@ -78,10 +78,10 @@ class BackgroundMusicAssets:
                         else None
                     )
                     volume = asset_dict["volume"]
-                    ignore = asset_dict["ignore"]
+                    skip = asset_dict["skip"]
 
                     self.background_music_assets[index] = BackgroundMusicAsset(
-                        asset=assembled_background_music_path, volume=volume, ignore=ignore
+                        asset=assembled_background_music_path, volume=volume, skip=skip
                     )
 
                 self.save_assets_to_file()
@@ -121,7 +121,7 @@ class BackgroundMusicAssets:
                         "index": index,
                         "asset": "",
                         "volume": 0.0,
-                        "ignore": False,
+                        "skip": False,
                     }
                     if asset_dict:
                         background_music_asset_data.update(asset_dict)
