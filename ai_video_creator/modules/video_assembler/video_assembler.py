@@ -365,6 +365,7 @@ class VideoAssembler:
             overlay_video=overlay_asset_path,
             main_video=video_path,
             output_path=output_video_path,
+            start_time_seconds=overlay_recipe.start_time_seconds,
             repeat_every_seconds=overlay_recipe.interval_seconds,
         )
 
