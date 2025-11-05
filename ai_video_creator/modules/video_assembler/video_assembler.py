@@ -493,7 +493,7 @@ class VideoAssembler:
 
         return output_path
 
-    def _subtitle_process(self, output_file: Path) -> Path:
+    def _subtitle_process(self, video_path: Path) -> Path:
         """
         Generate and burn subtitles into the final video.
         """
@@ -501,22 +501,23 @@ class VideoAssembler:
 
         if not subtitle_recipe:
             logger.info("No subtitle recipe defined, skipping subtitle generation.")
-            return output_file
+            return video_path
 
         if subtitle_recipe.skip:
             logger.info("Subtitle generation is skipped as per the recipe.")
-            return output_file
+            return video_path
 
         subtitle_file = self._subtitle_generator.generate_subtitles_from_audio(
-            output_file, subtitle_recipe.word_level_timestamps
+            video_path, subtitle_recipe.word_level_timestamps
         )
 
+        output_file = video_path
         if subtitle_recipe.burn_subtitles_into_video:
-            self._temp_files.append(output_file)
+            self._temp_files.append(video_path)
 
             output_file = self.output_path.with_stem(f"{self.output_path.stem}_subtitled")
-            burn_subtitles_to_video(
-                video_path=output_file,
+            output_file = burn_subtitles_to_video(
+                video_path=video_path,
                 srt_path=subtitle_file,
                 output_path=output_file,
             )
