@@ -391,7 +391,7 @@ class VideoAssembler:
         previous_bgm_asset = None
         for bgm_asset, video_segment in zip(background_music_assets, video_segments):
 
-            if bgm_asset.ignore:
+            if bgm_asset.skip:
                 active_bgm_asset = None
             else:
                 active_bgm_asset = bgm_asset.asset
