@@ -39,17 +39,11 @@ class TestFixtureGenerator:
 
         if with_audio:
             # Audio: 1000Hz sine wave
-            cmd.extend(
-                ["-f", "lavfi", "-i", f"sine=frequency=1000:duration={duration}"]
-            )
-            cmd.extend(
-                ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"]
-            )
+            cmd.extend(["-f", "lavfi", "-i", f"sine=frequency=1000:duration={duration}"])
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"])
             cmd.extend(["-c:a", "aac", "-b:a", "128k"])
         else:
-            cmd.extend(
-                ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"]
-            )
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"])
 
         cmd.append(str(output_path))
 
@@ -77,14 +71,10 @@ class TestFixtureGenerator:
 
         if with_audio:
             cmd.extend(["-f", "lavfi", "-i", f"sine=frequency=440:duration={duration}"])
-            cmd.extend(
-                ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"]
-            )
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"])
             cmd.extend(["-c:a", "aac", "-b:a", "128k"])
         else:
-            cmd.extend(
-                ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"]
-            )
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p"])
 
         cmd.append(str(output_path))
 
@@ -113,14 +103,10 @@ class TestFixtureGenerator:
 
         if with_audio:
             cmd.extend(["-f", "lavfi", "-i", f"sine=frequency=880:duration={duration}"])
-            cmd.extend(
-                ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuva420p"]
-            )
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuva420p"])
             cmd.extend(["-c:a", "aac", "-b:a", "128k"])
         else:
-            cmd.extend(
-                ["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuva420p"]
-            )
+            cmd.extend(["-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuva420p"])
 
         cmd.append(str(output_path))
 
@@ -163,9 +149,7 @@ def temp_dir():
 def main_video(temp_dir):
     """Create a standard main video fixture."""
     path = temp_dir / "main.mp4"
-    TestFixtureGenerator.create_main_video(
-        path, duration=6.0, fps=30.0, with_audio=True
-    )
+    TestFixtureGenerator.create_main_video(path, duration=6.0, fps=30.0, with_audio=True)
     return path
 
 
@@ -173,9 +157,7 @@ def main_video(temp_dir):
 def intro_chromakey(temp_dir):
     """Create a chromakey intro fixture."""
     path = temp_dir / "intro_chroma.mp4"
-    TestFixtureGenerator.create_intro_chromakey(
-        path, duration=1.0, fps=30.0, with_audio=False
-    )
+    TestFixtureGenerator.create_intro_chromakey(path, duration=1.0, fps=30.0, with_audio=False)
     return path
 
 
@@ -183,9 +165,7 @@ def intro_chromakey(temp_dir):
 def intro_alpha(temp_dir):
     """Create an alpha channel intro fixture."""
     path = temp_dir / "intro_alpha.mp4"
-    TestFixtureGenerator.create_intro_alpha(
-        path, duration=1.0, fps=30.0, with_audio=False
-    )
+    TestFixtureGenerator.create_intro_alpha(path, duration=1.0, fps=30.0, with_audio=False)
     return path
 
 
@@ -193,9 +173,7 @@ def intro_alpha(temp_dir):
 def intro_with_audio(temp_dir):
     """Create an intro with audio."""
     path = temp_dir / "intro_audio.mp4"
-    TestFixtureGenerator.create_intro_chromakey(
-        path, duration=1.0, fps=30.0, with_audio=True
-    )
+    TestFixtureGenerator.create_intro_chromakey(path, duration=1.0, fps=30.0, with_audio=True)
     return path
 
 
@@ -285,9 +263,7 @@ class TestBlitIntroVideo:
         """Test FPS matching when intro FPS != main FPS."""
         # Create intro with different FPS
         intro_24fps = temp_dir / "intro_24fps.mp4"
-        TestFixtureGenerator.create_intro_chromakey(
-            intro_24fps, duration=1.0, fps=24.0, with_audio=False
-        )
+        TestFixtureGenerator.create_intro_chromakey(intro_24fps, duration=1.0, fps=24.0, with_audio=False)
 
         output = temp_dir / "output_fps_match.mp4"
 
@@ -359,9 +335,7 @@ class TestBlitIntroVideo:
         """Test when neither main nor intro have audio."""
         # Create main without audio
         main_no_audio = temp_dir / "main_no_audio.mp4"
-        TestFixtureGenerator.create_main_video(
-            main_no_audio, duration=6.0, fps=30.0, with_audio=False
-        )
+        TestFixtureGenerator.create_main_video(main_no_audio, duration=6.0, fps=30.0, with_audio=False)
 
         output = temp_dir / "output_no_audio.mp4"
 
@@ -385,9 +359,7 @@ class TestBlitIntroVideo:
         """Test CENTER with intro larger than main (should clamp and preserve AR)."""
         # Create large intro (800x600)
         large_intro = temp_dir / "intro_large.mp4"
-        TestFixtureGenerator.create_intro_chromakey(
-            large_intro, width=800, height=600, duration=1.0, fps=30.0
-        )
+        TestFixtureGenerator.create_intro_chromakey(large_intro, width=800, height=600, duration=1.0, fps=30.0)
 
         output = temp_dir / "output_center_clamped.mp4"
 
@@ -538,6 +510,78 @@ class TestBlitIntroVideo:
                 repeat_every_seconds=-1,
                 position=VideoBlitPosition.CENTER,
             )
+
+    def test_allow_extend_duration_false(self, temp_dir, main_video, intro_chromakey):
+        """Test that overlay is skipped when it would extend beyond main duration (default behavior)."""
+        output = temp_dir / "output_no_extend.mp4"
+
+        # Main video is 6s, intro is 2s, starting at 5s would extend to 7s
+        result = blit_overlay_video_onto_main_video(
+            overlay_video=intro_chromakey,
+            main_video=main_video,
+            output_path=output,
+            start_time_seconds=5,  # Would extend beyond 6s
+            repeat_every_seconds=-1,
+            position=VideoBlitPosition.CENTER,
+            allow_extend_duration=False,  # Explicit (this is the default)
+        )
+
+        assert result.exists()
+
+        # Video should be copied without overlay, maintaining original duration
+        probe = _probe(result)
+        _, duration = _fps_and_duration(probe)
+        assert abs(duration - 6.0) < 0.5  # Should be ~6s (original duration)
+
+    def test_allow_extend_duration_true(self, temp_dir, main_video, intro_chromakey):
+        """Test that overlay extends beyond main duration when allowed."""
+        output = temp_dir / "output_with_extend.mp4"
+
+        # Main video is 6s, intro is 1s, starting at 5s will extend to 6s (intro ends at exactly 6s)
+        # So we need to start later to actually test extension
+        result = blit_overlay_video_onto_main_video(
+            overlay_video=intro_chromakey,
+            main_video=main_video,
+            output_path=output,
+            start_time_seconds=5.5,  # 5.5s start + 1s intro = 6.5s total
+            repeat_every_seconds=-1,
+            position=VideoBlitPosition.CENTER,
+            allow_extend_duration=True,  # Allow extending
+        )
+
+        assert result.exists()
+
+        # Video should be extended to accommodate the overlay
+        probe = _probe(result)
+        _, duration = _fps_and_duration(probe)
+        # Duration should be ~6.5s (5.5s start + 1s intro duration)
+        assert duration >= 6.3  # Should be at least 6.3s (extended)
+        assert duration <= 6.7  # But not more than 6.7s
+
+    def test_allow_extend_duration_repeated(self, temp_dir, main_video, intro_chromakey):
+        """Test allow_extend_duration with repeated overlays extending beyond main duration."""
+        output = temp_dir / "output_repeated_extend.mp4"
+
+        # Main is 6s, intro is 1s, repeat every 1.5s starting at 5.5s with max 2 repeats
+        # Overlays at 5.5s (ends at 6.5s) and 7s (ends at 8s)
+        # With allow_extend: should extend to 8s to accommodate both
+        result = blit_overlay_video_onto_main_video(
+            overlay_video=intro_chromakey,
+            main_video=main_video,
+            output_path=output,
+            start_time_seconds=5.5,
+            repeat_every_seconds=1.5,
+            position=VideoBlitPosition.CENTER,
+            allow_extend_duration=True,
+            max_repeats=2,
+        )
+
+        assert result.exists()
+
+        probe = _probe(result)
+        _, duration = _fps_and_duration(probe)
+        # Should be extended to at least 7.8s (7s start + 1s intro)
+        assert duration >= 7.8
 
 
 if __name__ == "__main__":

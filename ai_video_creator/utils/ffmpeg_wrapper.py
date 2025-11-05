@@ -874,6 +874,7 @@ def blit_overlay_video_onto_main_video(
     match_fps: bool = True,
     outro_gain: float = 1.0,
     main_gain: float = 1.0,
+    allow_extend_duration: bool = False,
 ) -> Path:
     """
     Overlay an outro video with green screen or alpha transparency onto a main video.
@@ -902,6 +903,7 @@ def blit_overlay_video_onto_main_video(
         match_fps: Match intro FPS to main FPS to avoid stutter (default: True)
         intro_gain: Audio gain for intro (0.0-2.0, default: 1.0)
         main_gain: Audio gain for main (0.0-2.0, default: 1.0)
+        allow_extend_duration: Allow overlay to extend beyond main video duration (default: False)
 
     Returns:
         Path to the output video file
@@ -1049,34 +1051,58 @@ def blit_overlay_video_onto_main_video(
 
     starts = []
     if repeat_every_seconds < 0:
-        if start_time_seconds < main_duration and (start_time_seconds + intro_duration) <= main_duration:
-            starts = [start_time_seconds]
-            logger.debug(f"Single overlay at t={start_time_seconds}s (duration: {intro_duration:.2f}s)")
-        elif start_time_seconds < main_duration:
-            logger.warning(
-                f"Start time {start_time_seconds}s would extend overlay beyond main video "
-                f"({start_time_seconds + intro_duration:.2f}s > {main_duration:.2f}s), skipping overlay"
-            )
-        else:
+        # Single overlay placement
+        if start_time_seconds >= main_duration:
             logger.warning(
                 f"Start time {start_time_seconds}s >= main duration {main_duration:.2f}s, intro won't appear"
             )
+        elif not allow_extend_duration and (start_time_seconds + intro_duration) > main_duration:
+            logger.warning(
+                f"Start time {start_time_seconds}s would extend overlay beyond main video "
+                f"({start_time_seconds + intro_duration:.2f}s > {main_duration:.2f}s), skipping overlay. "
+                f"Use allow_extend_duration=True to allow extending video duration."
+            )
+        else:
+            starts = [start_time_seconds]
+            if (start_time_seconds + intro_duration) > main_duration:
+                logger.debug(
+                    f"Single overlay at t={start_time_seconds}s (duration: {intro_duration:.2f}s) "
+                    f"will extend video to {start_time_seconds + intro_duration:.2f}s"
+                )
+            else:
+                logger.debug(f"Single overlay at t={start_time_seconds}s (duration: {intro_duration:.2f}s)")
     else:
+        # Repeated overlay placement
         repeat_count = 0
         while True:
             t_start = start_time_seconds + (repeat_count * repeat_every_seconds)
-            if t_start >= main_duration:
+
+            # When not allowing extension, stop if overlay would start at or beyond main duration
+            # When allowing extension, continue generating overlays (max_repeats or reasonable limit controls this)
+            if not allow_extend_duration and t_start >= main_duration:
                 break  # Stop generating windows
             if max_repeats is not None and repeat_count >= max_repeats:
                 break  # Capped by max_repeats
-            # Only add overlay if it fits completely within the main video duration
-            if (t_start + intro_duration) <= main_duration:
-                starts.append(t_start)
-            else:
+
+            # Safety limit: don't generate overlays that start more than 2x the main duration
+            # (this prevents infinite loops when allow_extend_duration=True and max_repeats=None)
+            if t_start > main_duration * 2:
+                logger.warning(
+                    f"Stopping overlay generation at t={t_start:.2f}s "
+                    f"(exceeds 2x main duration {main_duration * 2:.2f}s)"
+                )
+                break
+
+            # Check if overlay would extend beyond main video
+            if not allow_extend_duration and (t_start + intro_duration) > main_duration:
                 logger.debug(
                     f"Skipping overlay at t={t_start:.2f}s (would extend to {t_start + intro_duration:.2f}s, "
                     f"beyond main duration {main_duration:.2f}s)"
                 )
+            else:
+                starts.append(t_start)
+                if (t_start + intro_duration) > main_duration:
+                    logger.debug(f"Overlay at t={t_start:.2f}s will extend video to {t_start + intro_duration:.2f}s")
             repeat_count += 1
 
         logger.debug(f"Repeated overlay: {len(starts)} appearances at times: {starts}")
@@ -1129,13 +1155,30 @@ def blit_overlay_video_onto_main_video(
 
     for i, start_time in enumerate(starts):
         filter_parts.append(f"[ib{i}]setpts=PTS+{start_time}/TB[iv{i}]")
+        logger.debug(f"Overlay {i+1}: delaying video by {start_time:.2f}s using setpts=PTS+{start_time}/TB")
 
-    filter_parts.append("[0:v]format=yuv420p[base]")
+    # Calculate required output duration if extending
+    if allow_extend_duration and starts:
+        max_end_time = max(start + intro_duration for start in starts)
+        if max_end_time > main_duration:
+            extend_duration = max_end_time - main_duration
+            filter_parts.append(f"[0:v]format=yuv420p,tpad=stop_mode=clone:stop_duration={extend_duration}[base]")
+            logger.debug(f"Extending base video by {extend_duration:.2f}s to accommodate overlay")
+        else:
+            filter_parts.append("[0:v]format=yuv420p[base]")
+    else:
+        filter_parts.append("[0:v]format=yuv420p[base]")
 
     current_label = "base"
     for i in range(len(starts)):
         next_label = f"v{i+1}" if i < len(starts) - 1 else "outv"
-        filter_parts.append(f"[{current_label}][iv{i}]overlay={x_pos}:{y_pos}:format=yuv420[{next_label}]")
+        # Use eof_action=pass to allow overlay to extend beyond main video when allow_extend_duration=True
+        if allow_extend_duration:
+            filter_parts.append(
+                f"[{current_label}][iv{i}]overlay={x_pos}:{y_pos}:format=yuv420:eof_action=pass[{next_label}]"
+            )
+        else:
+            filter_parts.append(f"[{current_label}][iv{i}]overlay={x_pos}:{y_pos}:format=yuv420[{next_label}]")
         current_label = next_label
 
     video_filter = ";".join(filter_parts)
@@ -1177,6 +1220,7 @@ def blit_overlay_video_onto_main_video(
 
         for i, start_time in enumerate(starts):
             audio_parts.append(f"[iab{i}]asetpts=PTS+{start_time}/TB[ia{i}]")
+            logger.debug(f"Overlay {i+1}: delaying audio by {start_time:.2f}s using asetpts=PTS+{start_time}/TB")
 
         if main_gain != 1.0:
             audio_parts.append(f"[0:a]volume={main_gain}[ma]")
@@ -1185,8 +1229,10 @@ def blit_overlay_video_onto_main_video(
             main_audio_label = "0:a"
 
         audio_inputs = [f"[{main_audio_label}]"] + [f"[ia{i}]" for i in range(len(starts))]
+        # Use duration=longest when allow_extend_duration=True to extend audio
+        audio_duration = "longest" if allow_extend_duration else "first"
         audio_parts.append(
-            f"{''.join(audio_inputs)}amix=inputs={len(starts)+1}:duration=first:dropout_transition=2[outa]"
+            f"{''.join(audio_inputs)}amix=inputs={len(starts)+1}:duration={audio_duration}:dropout_transition=2[outa]"
         )
 
         audio_filter = ";".join(audio_parts)
@@ -1205,8 +1251,46 @@ def blit_overlay_video_onto_main_video(
         logger.debug(f"Audio mixing: {len(starts)} intro copies, intro_gain={outro_gain}, main_gain={main_gain}")
 
     elif main_has_audio and not intro_has_audio:
-        # Only main has audio: map it with optional gain
-        if main_gain != 1.0:
+        # Only main has audio: map it with optional gain and extension
+        if allow_extend_duration and starts:
+            max_end_time = max(start + intro_duration for start in starts)
+            if max_end_time > main_duration:
+                extend_duration = max_end_time - main_duration
+                if main_gain != 1.0:
+                    audio_filter = f"[0:a]volume={main_gain},apad=whole_dur={max_end_time}[outa]"
+                else:
+                    audio_filter = f"[0:a]apad=whole_dur={max_end_time}[outa]"
+                full_filter_complex = f"{video_filter};{audio_filter}"
+                cmd.extend(["-filter_complex", full_filter_complex])
+                cmd.extend(["-map", "[outv]"])
+                cmd.extend(["-map", "[outa]"])
+                output_args.update(
+                    {
+                        "c:a": "aac",
+                        "b:a": "192k",
+                        "ar": "48000",
+                    }
+                )
+                logger.debug(f"Extending main audio by {extend_duration:.2f}s with silence padding")
+            elif main_gain != 1.0:
+                audio_filter = f"[0:a]volume={main_gain}[outa]"
+                full_filter_complex = f"{video_filter};{audio_filter}"
+                cmd.extend(["-filter_complex", full_filter_complex])
+                cmd.extend(["-map", "[outv]"])
+                cmd.extend(["-map", "[outa]"])
+                output_args.update(
+                    {
+                        "c:a": "aac",
+                        "b:a": "192k",
+                        "ar": "48000",
+                    }
+                )
+            else:
+                cmd.extend(["-filter_complex", video_filter])
+                cmd.extend(["-map", "[outv]"])
+                cmd.extend(["-map", "0:a"])
+                output_args["c:a"] = "copy"
+        elif main_gain != 1.0:
             audio_filter = f"[0:a]volume={main_gain}[outa]"
             full_filter_complex = f"{video_filter};{audio_filter}"
             cmd.extend(["-filter_complex", full_filter_complex])

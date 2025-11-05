@@ -322,7 +322,8 @@ class VideoAssembler:
         self._temp_files.append(ending_sub_video)
 
         start_time_seconds = (
-            get_media_duration(ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index]) + 1.5
+            get_media_duration(ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index])
+            + ending_recipe.ending_start_delay_seconds
         )
 
         output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
@@ -334,6 +335,7 @@ class VideoAssembler:
             position=VideoBlitPosition.CENTER,
             scale_percent=1.0,
             start_time_seconds=start_time_seconds,
+            allow_extend_duration=True,
         )
 
         self.video_assembler_assets.set_video_ending(ending_sub_video)
