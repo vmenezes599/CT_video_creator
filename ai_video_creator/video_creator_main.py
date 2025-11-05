@@ -22,7 +22,6 @@ def main():
 
     create_background_music_recipe(user_folder, story_path, chapter_index)
     create_background_music_assets(user_folder, story_path, chapter_index)
-
     create_narrator_and_image_recipe(user_folder, story_path, chapter_index)
     create_narrators_and_images_assets(user_folder, story_path, chapter_index)
     create_background_music_recipe(user_folder, story_path, chapter_index)

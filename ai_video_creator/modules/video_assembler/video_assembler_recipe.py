@@ -400,7 +400,6 @@ class VideoAssemblerRecipe:
         """Set video ending subvideo."""
         self._video_ending_recipe.sub_video = subvideo
         self.save_to_file()
-        return subvideo
 
     def get_used_assets_list(self) -> list[Path]:
         """Get a list of all used video asset file paths."""

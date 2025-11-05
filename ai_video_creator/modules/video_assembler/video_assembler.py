@@ -311,7 +311,8 @@ class VideoAssembler:
         ending_video_path = ending_recipe.sub_video
         if not ending_video_path or not ending_video_path.exists():
             logger.warning("Ending video path 'None'. Setting to first video segment.")
-            ending_video_path = self.video_assembler_recipe.set_video_ending_subvideo(video_segments_without_audio[0])
+            ending_video_path = video_segments_without_audio[0]
+            self.video_assembler_recipe.set_video_ending_subvideo(ending_video_path)
 
         ending_narrator_paths = self._generate_ending_narrators(ending_recipe)
 
