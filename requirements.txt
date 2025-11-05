@@ -4,3 +4,4 @@ python-dotenv
 Requests
 typing_extensions
 stable-ts
+packaging
