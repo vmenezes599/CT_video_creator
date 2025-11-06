@@ -17,15 +17,19 @@ from .ffmpeg_wrapper import (
     concatenate_videos_with_reencoding,
     blit_overlay_video_onto_main_video,
     concatenate_videos_no_reencoding,
-    reencode_to_reference_basic,
     add_background_music_to_video,
+    reencode_to_reference_basic,
     extract_video_last_frame,
     extend_audio_to_duration,
     burn_subtitles_to_video,
+    get_media_resolution,
     get_media_duration,
     VideoBlitPosition,
+    SubtitleAlignment,
+    SubtitlePosition,
 )
 from .video_creator_paths import VideoCreatorPaths
+from .aspect_ratios import AspectRatios
 
 __all__ = [
     "concatenate_videos_remove_last_frame_except_last",
@@ -40,13 +44,18 @@ __all__ = [
     "add_background_music_to_video",
     "ensure_collection_index_exists",
     "get_next_available_filename",
+    "reencode_to_reference_basic",
     "extend_audio_to_duration",
     "extract_video_last_frame",
     "burn_subtitles_to_video",
+    "get_media_resolution",
     "get_media_duration",
     "backup_file_to_old",
     "VideoCreatorPaths",
     "VideoBlitPosition",
+    "SubtitleAlignment",
+    "SubtitlePosition",
+    "AspectRatios",
     "safe_copy",
     "safe_move",
 ]

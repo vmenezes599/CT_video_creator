@@ -11,11 +11,13 @@ from .modules.background_music import BackgroundMusicRecipeBuilder, BackgroundMu
 from .modules.sub_video import SubVideoRecipeBuilder, SubVideoAssetManager
 from .modules.video_assembler import VideoAssemblerRecipeBuilder, VideoAssembler
 
-from .utils import VideoCreatorPaths
+from .utils import VideoCreatorPaths, AspectRatios
 from .utils.garbage_collector import internal_clean_unused_assets
 
 
-def create_narrator_and_image_recipe(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_narrator_and_image_recipe(
+    user_folder: Path, story_name: str, chapter_index: int, aspect_ratio: AspectRatios
+) -> None:
     """
     Create a video from a video prompt file.
 
@@ -40,13 +42,13 @@ def create_narrator_and_image_recipe(user_folder: Path, story_name: str, chapter
     )
 
     asset_manager = NarratorAndImageAssetManager(paths)
-    asset_manager.create_narrator_and_image_recipes()
+    asset_manager.create_narrator_and_image_recipes(aspect_ratio=aspect_ratio)
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)
 
 
-def create_narrators_and_images_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_narrator_and_image_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create video assets from the recipe.
     """

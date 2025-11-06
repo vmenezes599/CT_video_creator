@@ -10,7 +10,7 @@ from logging_utils import logger, begin_file_logging
 
 from ai_video_creator.generators import WanI2VRecipe, SceneScriptGenerator
 from ai_video_creator.modules.narrator import NarratorAssets
-from ai_video_creator.modules.image import ImageAssets
+from ai_video_creator.modules.image import ImageAssets, ImageRecipe
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.prompt import Prompt
 from ai_video_creator.utils import get_media_duration
@@ -36,29 +36,26 @@ class SubVideoRecipeBuilder:
             f" {story_folder.name}, chapter: {self._paths.chapter_index + 1}"
         )
 
-        self.__chapter_prompt_path = self._paths.chapter_prompt_path
+        self._chapter_prompt_path = self._paths.chapter_prompt_path
 
         # Load video prompt
-        self.__video_prompt = Prompt.load_from_json(self.__chapter_prompt_path)
+        self._video_prompt = Prompt.load_from_json(self._chapter_prompt_path)
 
         # Load separate narrator and image assets
-        self.__narrator_assets = NarratorAssets(video_creator_paths)
-        self.__image_assets = ImageAssets(video_creator_paths)
+        self._narrator_assets = NarratorAssets(video_creator_paths)
+        self._image_recipe = ImageRecipe(video_creator_paths)
+        self._image_assets = ImageAssets(video_creator_paths)
         self._recipe = None
 
         self._min_sub_videos = 3
         self._max_sub_videos = 8
         self._default_sub_video_duration_seconds = 5
 
-    def _verify_recipe_against_prompt(self) -> None:
+    def _is_recipe_complete(self) -> None:
         """Verify the recipe against the prompt to ensure all required data is present."""
-        logger.debug("Verifying recipe against prompt data")
+        logger.debug("Verifying recipe against image assets.")
 
-        if (
-            not self._recipe.video_data
-            or len(self._recipe.video_data) != len(self.__video_prompt)
-            or len(self.__image_assets.image_assets) != len(self.__video_prompt)
-        ):
+        if not self._recipe.video_data or len(self._recipe.video_data) < len(self._image_assets.image_assets):
             return False
 
         return True
@@ -68,19 +65,15 @@ class SubVideoRecipeBuilder:
 
         # Check if narrator asset exists and is not None
         if (
-            sub_video_index >= len(self.__narrator_assets.narrator_assets)
-            or self.__narrator_assets.narrator_assets[sub_video_index] is None
+            sub_video_index >= len(self._narrator_assets.narrator_assets)
+            or self._narrator_assets.narrator_assets[sub_video_index] is None
         ):
             # Return default count if no narrator asset is available
             return self._min_sub_videos
 
-        audio_duration = get_media_duration(
-            str(self.__narrator_assets.narrator_assets[sub_video_index])
-        )
+        audio_duration = get_media_duration(str(self._narrator_assets.narrator_assets[sub_video_index]))
 
-        sub_video_count = ceil(
-            audio_duration / self._default_sub_video_duration_seconds
-        )
+        sub_video_count = ceil(audio_duration / self._default_sub_video_duration_seconds)
 
         return max(self._min_sub_videos, min(sub_video_count, self._max_sub_videos))
 
@@ -90,13 +83,9 @@ class SubVideoRecipeBuilder:
         def _generate_scene_script(i: int, prompt):
             """Helper function to generate scene script for a single prompt."""
             sub_video_count = self._calculate_sub_videos_count(i)
-            image_asset = (
-                self.__image_assets.image_assets[i]
-                if i < len(self.__image_assets.image_assets)
-                else None
-            )
+            image_asset = self._image_assets.image_assets[i] if i < len(self._image_assets.image_assets) else None
 
-            previous_prompt = self.__video_prompt[i - 1] if i > 0 else None
+            previous_prompt = self._video_prompt[i - 1] if i > 0 else None
 
             scene_script_generator = SceneScriptGenerator(
                 scene_initial_image=image_asset,
@@ -117,8 +106,7 @@ class SubVideoRecipeBuilder:
             with ThreadPoolExecutor() as executor:
                 # Submit all tasks
                 futures = {
-                    executor.submit(_generate_scene_script, i, prompt): i
-                    for i, prompt in enumerate(self.__video_prompt)
+                    executor.submit(_generate_scene_script, i, prompt): i for i, prompt in enumerate(self._video_prompt)
                 }
 
                 # Collect results as they complete
@@ -128,26 +116,24 @@ class SubVideoRecipeBuilder:
                     logger.debug(f"Completed scene script generation for prompt {i}")
 
             # Return results in original order
-            results = [results_dict[i] for i in range(len(self.__video_prompt))]
+            results = [results_dict[i] for i in range(len(self._video_prompt))]
 
         return results
 
     def _create_video_recipes(self, seed: int | None = None) -> None:
         """Create video recipe from story folder and chapter prompt index."""
-        logger.info(
-            f"Creating Wan video recipes for {len(self.__video_prompt)} prompts"
-        )
+        logger.info(f"Creating Wan video recipes for {len(self._video_prompt)} prompts")
 
         scene_scripts_results = self._run_script_generator_parallel()
 
-        for i, prompt in enumerate(self.__video_prompt):
+        for i, prompt in enumerate(self._video_prompt):
             # Get corresponding image asset if available, otherwise None
             sub_video_count = self._calculate_sub_videos_count(i)
-            image_asset = (
-                self.__image_assets.image_assets[i]
-                if i < len(self.__image_assets.image_assets)
-                else None
-            )
+            image_asset = self._image_assets.image_assets[i] if i < len(self._image_assets.image_assets) else None
+            image_recipe = self._image_recipe.image_data[i] if i < len(self._image_recipe.image_data) else None
+
+            width = image_recipe.width
+            height = image_recipe.height
 
             scene_scripts = scene_scripts_results[i]
 
@@ -157,6 +143,8 @@ class SubVideoRecipeBuilder:
                 color_match_image_asset=image_asset,
                 image_asset=image_asset,
                 seed=seed,
+                width=width,
+                height=height,
             )
             recipe_list.append(recipe)
             for j in range(sub_video_count - 1):
@@ -164,39 +152,39 @@ class SubVideoRecipeBuilder:
                     prompt=scene_scripts[1 + j],
                     seed=seed,
                     color_match_image_asset=image_asset,
+                    width=width,
+                    height=height,
                 )
                 recipe_list.append(recipe)
 
-            self._recipe.add_video_data(
-                recipe_list, {"helper_story_text": prompt.narrator}
-            )
+            self._recipe.add_video_data(recipe_list, {"helper_story_text": prompt.narrator})
 
-        logger.info(
-            f"Successfully created {len(self.__video_prompt)} Wan video recipes"
-        )
+        logger.info(f"Successfully created {len(self._video_prompt)} Wan video recipes")
 
     def _create_wan_i2v_recipe(
         self,
-        prompt: str = None,
-        color_match_image_asset: Path = None,
+        prompt: str,
+        seed: int,
+        color_match_image_asset: Path,
+        width: int,
+        height: int,
         image_asset: Path | None = None,
         high_lora: list[str] | None = None,
         high_lora_strength: list[float] | None = None,
         low_lora: list[str] | None = None,
         low_lora_strength: list[float] | None = None,
-        seed: int | None = None,
     ) -> None:
         """Create video recipe from story folder and chapter prompt index."""
         return WanI2VRecipe(
             prompt=prompt,
+            width=width,
+            height=height,
             high_lora=high_lora if high_lora else None,
             high_lora_strength=high_lora_strength if high_lora_strength else None,
             low_lora=low_lora if low_lora else None,
             low_lora_strength=low_lora_strength if low_lora_strength else None,
             media_path=str(image_asset) if image_asset else None,
-            color_match_media_path=(
-                str(color_match_image_asset) if color_match_image_asset else None
-            ),
+            color_match_media_path=(str(color_match_image_asset) if color_match_image_asset else None),
             seed=seed,
         )
 
@@ -207,7 +195,7 @@ class SubVideoRecipeBuilder:
 
         self._recipe = SubVideoRecipe(self._paths)
 
-        if not self._verify_recipe_against_prompt():
+        if not self._is_recipe_complete():
             self._recipe.clean()
             self._create_video_recipes()
 

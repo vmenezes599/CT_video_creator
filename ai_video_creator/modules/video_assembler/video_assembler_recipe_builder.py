@@ -8,9 +8,8 @@ from ai_video_creator.media_effects.effects_map import (
     AudioExtender,
 )
 
-from ai_video_creator.modules.narrator import NarratorAssets
-from ai_video_creator.modules.narrator import NarratorRecipe
-from ai_video_creator.modules.image import ImageAssets
+from ai_video_creator.modules.narrator import NarratorRecipe, NarratorAssets
+from ai_video_creator.modules.image import ImageRecipe, ImageAssets
 
 from .video_assembler_recipe import (
     VideoAssemblerRecipe,
@@ -39,20 +38,14 @@ class VideoAssemblerRecipeBuilder:
         # Load separate narrator and image assets
         self.narrator_recipe = NarratorRecipe(video_creator_paths)
         self.narrator_assets = NarratorAssets(video_creator_paths)
+        self.image_recipe = ImageRecipe(video_creator_paths)
         self.image_assets = ImageAssets(video_creator_paths)
 
-        if (
-            not self.narrator_assets.is_complete()
-            or not self.image_assets.is_complete()
-        ):
-            raise ValueError(
-                "Video assets are incomplete. Please ensure all required assets are present."
-            )
+        if not self.narrator_assets.is_complete() or not self.image_assets.is_complete():
+            raise ValueError("Video assets are incomplete. Please ensure all required assets are present.")
 
         if not self.narrator_recipe.is_complete():
-            raise ValueError(
-                "Narrator recipe is incomplete. Please ensure narrator data is present."
-            )
+            raise ValueError("Narrator recipe is incomplete. Please ensure narrator data is present.")
 
         self.video_assembler_recipe = VideoAssemblerRecipe(video_creator_paths)
 
@@ -96,6 +89,10 @@ class VideoAssemblerRecipeBuilder:
                 )
 
         intro = VideoIntroRecipe(self._paths)
+
+        image_data = self.image_recipe.image_data
+        intro.skip = image_data[0].width < image_data[0].height if len(image_data) > 0 else False
+
         intro.intro_asset = VideoIntroRecipe.DEFAULT_INTRO_ASSET
         self.video_assembler_recipe.set_video_intro_recipe(intro)
 
@@ -108,9 +105,7 @@ class VideoAssemblerRecipeBuilder:
             "Thank you so much for watching! We hope to see you in the next episode.",
             "If you enjoyed this video, please like and subscribe for more content. Leave a comment below to let us know your thoughts.",
         ]
-        ending.narrator_clone_voice = Path(
-            self.narrator_recipe.narrator_data[0].clone_voice_path
-        )
+        ending.narrator_clone_voice = Path(self.narrator_recipe.narrator_data[0].clone_voice_path)
         ending.ending_overlay_start_narrator_index = 1
         ending.ending_overlay_asset = VideoEndingRecipe.DEFAULT_ENDING_OVERLAY_ASSET
         ending.ending_start_delay_seconds = 1.0

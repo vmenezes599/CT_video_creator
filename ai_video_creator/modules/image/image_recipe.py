@@ -8,18 +8,19 @@ from pathlib import Path
 from logging_utils import logger
 
 from ai_video_creator.generators import FluxImageRecipe
-from ai_video_creator.utils import backup_file_to_old
+from ai_video_creator.utils import VideoCreatorPaths, backup_file_to_old
 
 
 class ImageRecipe:
     """Image recipe for creating images from text prompts."""
 
-    def __init__(self, recipe_path: Path):
+    def __init__(self, video_creator_paths: VideoCreatorPaths):
         """Initialize ImageRecipe with default settings."""
-        self.recipe_path = recipe_path
+        self.recipe_path = video_creator_paths.image_recipe_file
+
         self.image_data: list[FluxImageRecipe] = []
         self.extra_image_data: list[dict] = []
-        self.__load_from_file(recipe_path)
+        self.__load_from_file(self.recipe_path)
 
     def add_image_data(self, image_data: FluxImageRecipe, extra_image_data: dict = None) -> None:
         """Add image data to the recipe."""

@@ -18,17 +18,23 @@ class VideoRecipeBase:
     """Base class for video recipes."""
 
     prompt: str
+    width: int
+    height: int
     seed: int
     recipe_type = "VideoRecipeBase"
 
     def __init__(
         self,
         prompt: str,
+        width: int,
+        height: int,
         seed: int,
         recipe_type: str,
     ):
         """Initialize VideoRecipeBase with a name."""
         self.prompt = prompt
+        self.width = width
+        self.height = height
         self.seed = seed
         self.recipe_type = recipe_type
 
@@ -39,9 +45,7 @@ class IVideoGenerator(ABC):
     def _move_asset_to_output_path(self, target_path: Path, asset_path: Path) -> Path:
         """Move asset to the database folder and return the new path."""
         if not asset_path.exists():
-            logger.warning(
-                f"Asset file does not exist while trying to move it: {asset_path}"
-            )
+            logger.warning(f"Asset file does not exist while trying to move it: {asset_path}")
             logger.warning("Sometimes ComfyUI return temporary files. Ignoring...")
             return Path("")
 
@@ -67,16 +71,12 @@ class WanGenerator(IVideoGenerator):
         """
         self.requests = ComfyUIRequests()  # Initialize ComfyUI requests
 
-    def _clean_and_move_generated_files(
-        self, output_file_path: Path, output_file_names: list[str]
-    ) -> list[Path]:
+    def _clean_and_move_generated_files(self, output_file_path: Path, output_file_names: list[str]) -> list[Path]:
         moved_files = []
         for file in output_file_names:
             file_path = Path(file)
             if file_path.suffix.lower() in [".mp4", ".mov", ".avi", ".mkv"]:
-                moved_file = self._move_asset_to_output_path(
-                    output_file_path.parent, file_path
-                )
+                moved_file = self._move_asset_to_output_path(output_file_path.parent, file_path)
                 if moved_file:
                     moved_files.append(moved_file)
             else:
@@ -110,9 +110,7 @@ class WanGenerator(IVideoGenerator):
 
             return self.requests.upload_file(media_path)
 
-    def _copy_color_match_media_to_comfyui_input_folder(
-        self, media_path: Path | str
-    ) -> Path | None:
+    def _copy_color_match_media_to_comfyui_input_folder(self, media_path: Path | str) -> Path | None:
         media_path = Path(media_path)
         if media_path.exists() and media_path.is_file():
             return self.requests.upload_file(media_path)
@@ -128,20 +126,15 @@ class WanGenerator(IVideoGenerator):
 
         new_media_path = self._upload_media_to_comfyui(recipe.media_path)
 
-        new_color_match_media_path = (
-            self._copy_color_match_media_to_comfyui_input_folder(
-                recipe.color_match_media_path
-            )
-        )
+        new_color_match_media_path = self._copy_color_match_media_to_comfyui_input_folder(recipe.color_match_media_path)
 
         workflow = WanI2VWorkflow()
 
         workflow.set_positive_prompt(recipe.prompt)
+        workflow.set_resolution(recipe.width, recipe.height)
         workflow.set_output_filename(output_file_path.stem)
         workflow.set_image_path(new_media_path.name)
-        workflow.set_color_match_filename(
-            new_color_match_media_path.name if new_color_match_media_path else None
-        )
+        workflow.set_color_match_filename(new_color_match_media_path.name if new_color_match_media_path else None)
 
         for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
             workflow.add_high_lora(lora, strength)
@@ -150,9 +143,7 @@ class WanGenerator(IVideoGenerator):
             workflow.add_low_lora(lora, strength)
 
         workflow.set_seed(recipe.seed)
-        result_files = self.requests.ensure_send_all_prompts(
-            [workflow], output_file_path.parent
-        )
+        result_files = self.requests.ensure_send_all_prompts([workflow], output_file_path.parent)
 
         return result_files[0] if result_files else None
 
@@ -175,6 +166,7 @@ class WanGenerator(IVideoGenerator):
 
         workflow.set_positive_prompt(recipe.prompt)
         workflow.set_output_filename(output_file_path.stem)
+        workflow.set_resolution(recipe.width, recipe.height)
 
         for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
             workflow.add_high_lora(lora, strength)
@@ -184,9 +176,7 @@ class WanGenerator(IVideoGenerator):
 
         workflow.set_seed(recipe.seed)
 
-        result_files = self.requests.ensure_send_all_prompts(
-            [workflow], output_file_path.parent
-        )
+        result_files = self.requests.ensure_send_all_prompts([workflow], output_file_path.parent)
 
         return result_files[0] if result_files else None
 
@@ -210,7 +200,9 @@ class WanRecipeBase(VideoRecipeBase):
 
     def __init__(
         self,
-        prompt: str | None,
+        prompt: str,
+        width: int,
+        height: int,
         color_match_media_path: str | None,
         high_lora: list[str] | None = _DEFAULT,
         high_lora_strength: list[float] | None = None,
@@ -231,26 +223,20 @@ class WanRecipeBase(VideoRecipeBase):
             seed: Seed used for media generation
         """
         super().__init__(
-            prompt=prompt if prompt else "",
+            prompt=prompt,
+            width=width,
+            height=height,
             seed=random.randint(0, 2**31 - 1) if seed is None else seed,
             recipe_type=self.recipe_type,
         )
         requests = ComfyUIRequests()
         available_loras = requests.get_available_loras()
 
-        self.color_match_media_path = (
-            color_match_media_path if color_match_media_path else ""
-        )
+        self.color_match_media_path = color_match_media_path if color_match_media_path else ""
         if high_lora is None or high_lora == self._DEFAULT:
-            self.high_lora = [
-                "Wan2.2_General/Wan2.2-Fun-A14B-InP-high-noise-MPS.safetensors"
-            ]
+            self.high_lora = ["Wan2.2_General/Wan2.2-Fun-A14B-InP-high-noise-MPS.safetensors"]
         else:
-            self.high_lora = (
-                [lora for lora in high_lora if lora in available_loras]
-                if high_lora
-                else []
-            )
+            self.high_lora = [lora for lora in high_lora if lora in available_loras] if high_lora else []
 
         self.high_lora_strength = high_lora_strength if high_lora_strength else []
 
@@ -258,23 +244,15 @@ class WanRecipeBase(VideoRecipeBase):
         # high_lora is the main one, adjust high_lora_strength to match its length
         if len(self.high_lora_strength) < len(self.high_lora):
             # Extend with default value 1.0 if shorter
-            self.high_lora_strength.extend(
-                [1.0] * (len(self.high_lora) - len(self.high_lora_strength))
-            )
+            self.high_lora_strength.extend([1.0] * (len(self.high_lora) - len(self.high_lora_strength)))
         elif len(self.high_lora_strength) > len(self.high_lora):
             # Clip if longer
             self.high_lora_strength = self.high_lora_strength[: len(self.high_lora)]
 
         if low_lora is None or low_lora == self._DEFAULT:
-            self.low_lora = [
-                "Wan2.2_General/Wan2.2-Fun-A14B-InP-low-noise-HPS2.1.safetensors"
-            ]
+            self.low_lora = ["Wan2.2_General/Wan2.2-Fun-A14B-InP-low-noise-HPS2.1.safetensors"]
         else:
-            self.low_lora = (
-                [lora for lora in low_lora if lora in available_loras]
-                if low_lora
-                else []
-            )
+            self.low_lora = [lora for lora in low_lora if lora in available_loras] if low_lora else []
 
         self.low_lora_strength = low_lora_strength if low_lora_strength else []
 
@@ -282,9 +260,7 @@ class WanRecipeBase(VideoRecipeBase):
         # low_lora is the main one, adjust low_lora_strength to match its length
         if len(self.low_lora_strength) < len(self.low_lora):
             # Extend with default value 1.0 if shorter
-            self.low_lora_strength.extend(
-                [1.0] * (len(self.low_lora) - len(self.low_lora_strength))
-            )
+            self.low_lora_strength.extend([1.0] * (len(self.low_lora) - len(self.low_lora_strength)))
         elif len(self.low_lora_strength) > len(self.low_lora):
             # Clip if longer
             self.low_lora_strength = self.low_lora_strength[: len(self.low_lora)]
@@ -300,9 +276,7 @@ class WanRecipeBase(VideoRecipeBase):
         """
         # TODO: Remove this when web UI is mature?
         requests = ComfyUIRequests()
-        comfyui_available_loras = [
-            Path(lora) for lora in requests.get_available_loras()
-        ]
+        comfyui_available_loras = [Path(lora) for lora in requests.get_available_loras()]
 
         available_loras = []
         for lora in comfyui_available_loras:
@@ -313,6 +287,8 @@ class WanRecipeBase(VideoRecipeBase):
         return {
             "color_match_media_path": str(self.color_match_media_path),
             "prompt": self.prompt,
+            "width": self.width,
+            "height": self.height,
             "high_lora": [str(lora) for lora in self.high_lora],
             "high_lora_strength": [strength for strength in self.high_lora_strength],
             "low_lora": [str(lora) for lora in self.low_lora],
@@ -340,15 +316,15 @@ class WanRecipeBase(VideoRecipeBase):
         required_keys = [
             "color_match_media_path",
             "prompt",
+            "width",
+            "height",
             "recipe_type",
         ]
         missing_fields = set(required_keys) - data.keys()
         for field in missing_fields:
             raise KeyError(f"Missing required key: {field}")
 
-        if data["color_match_media_path"] is not None and not isinstance(
-            data["color_match_media_path"], str
-        ):
+        if data["color_match_media_path"] is not None and not isinstance(data["color_match_media_path"], str):
             raise ValueError("color_match_media_path must be a string")
 
         if not isinstance(data["prompt"], str):
@@ -360,6 +336,8 @@ class WanRecipeBase(VideoRecipeBase):
         return cls(
             color_match_media_path=data["color_match_media_path"],
             prompt=data["prompt"],
+            width=data["width"],
+            height=data["height"],
             high_lora=data.get("high_lora", None),
             high_lora_strength=data.get("high_lora_strength", None),
             low_lora=data.get("low_lora", None),
@@ -378,7 +356,9 @@ class WanI2VRecipe(WanRecipeBase):
 
     def __init__(
         self,
-        prompt: str | None,
+        prompt: str,
+        width: int,
+        height: int,
         color_match_media_path: str | None,
         high_lora: list[str] | None = WanRecipeBase._DEFAULT,
         high_lora_strength: list[float] | None = None,
@@ -401,6 +381,8 @@ class WanI2VRecipe(WanRecipeBase):
         """
         super().__init__(
             prompt=prompt,
+            width=width,
+            height=height,
             color_match_media_path=color_match_media_path,
             high_lora=high_lora,
             high_lora_strength=high_lora_strength,
@@ -451,9 +433,11 @@ class WanI2VRecipe(WanRecipeBase):
 
         # Create new instance with our additional media_path field
         return cls(
-            color_match_media_path=base_instance.color_match_media_path,
             prompt=base_instance.prompt,
+            width=base_instance.width,
+            height=base_instance.height,
             media_path=data["media_path"],
+            color_match_media_path=base_instance.color_match_media_path,
             high_lora=base_instance.high_lora,
             high_lora_strength=base_instance.high_lora_strength,
             low_lora=base_instance.low_lora,
@@ -471,7 +455,9 @@ class WanT2VRecipe(WanI2VRecipe):
 
     def __init__(
         self,
-        prompt: str | None,
+        prompt: str,
+        width: int,
+        height: int,
         color_match_media_path: str | None,
         high_lora: list[str] | None = WanRecipeBase._DEFAULT,
         high_lora_strength: list[float] | None = None,
@@ -495,6 +481,8 @@ class WanT2VRecipe(WanI2VRecipe):
         """
         super().__init__(
             prompt=prompt,
+            width=width,
+            height=height,
             color_match_media_path=color_match_media_path,
             high_lora=high_lora,
             high_lora_strength=high_lora_strength,

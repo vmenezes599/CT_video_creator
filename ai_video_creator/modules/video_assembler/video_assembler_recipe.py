@@ -7,7 +7,12 @@ from pathlib import Path
 from logging_utils import logger
 
 from ai_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
-from ai_video_creator.utils import VideoCreatorPaths, ensure_collection_index_exists
+from ai_video_creator.utils import (
+    VideoCreatorPaths,
+    SubtitleAlignment,
+    SubtitlePosition,
+    ensure_collection_index_exists,
+)
 from ai_video_creator.media_effects.effect_base import EffectBase
 from ai_video_creator.media_effects.effects_map import create_effect_from_data
 
@@ -274,20 +279,56 @@ class SubtitleRecipe:
         self.skip: bool = False
         self.burn_subtitles_into_video: bool = False
         self.word_level_timestamps: bool = False
+        self.segment_level_timestamps: bool = True
+        self.karaoke: bool = True
+        self.subtitle_margin: int = 25
+        self.font_size: int = 12
+        self.position: SubtitlePosition = SubtitlePosition.BOTTOM
+        self.alignment: SubtitleAlignment = SubtitleAlignment.CENTER
 
     def to_dict(self) -> dict:
         """Serialize subtitle recipe to a dictionary."""
+        available_positions = [pos.value for pos in SubtitlePosition]
+        available_alignments = [align.value for align in SubtitleAlignment]
+
         return {
             "skip": self.skip,
             "burn_subtitles_into_video": self.burn_subtitles_into_video,
             "word_level_timestamps": self.word_level_timestamps,
+            "segment_level_timestamps": self.segment_level_timestamps,
+            "karaoke": self.karaoke,
+            "margin": self.subtitle_margin,
+            "font_size": self.font_size,
+            "position": self.position.value,
+            "available_positions": available_positions,
+            "alignment": self.alignment.value,
+            "available_alignments": available_alignments,
         }
 
     def from_dict(self, data: dict) -> None:
         """Load subtitle recipe from a dictionary."""
+        self.skip = data.get("skip", False)
         self.burn_subtitles_into_video = data.get("burn_subtitles_into_video", False)
         self.word_level_timestamps = data.get("word_level_timestamps", False)
-        self.skip = data.get("skip", False)
+        self.segment_level_timestamps = data.get("segment_level_timestamps", True)
+        self.subtitle_margin = data.get("margin", 25)
+        self.font_size = data.get("font_size", 12)
+        self.karaoke = data.get("karaoke", True)
+
+        position_value = data.get("position", "bottom")
+        try:
+            self.position = SubtitlePosition(position_value.lower())
+        except ValueError:
+            logger.warning(f"Invalid position value '{position_value}', defaulting to BOTTOM")
+            self.position = SubtitlePosition.BOTTOM
+
+        # Transform alignment string to SubtitleAlignment enum
+        alignment_value = data.get("alignment", "center")
+        try:
+            self.alignment = SubtitleAlignment(alignment_value.lower())
+        except ValueError:
+            logger.warning(f"Invalid alignment value '{alignment_value}', defaulting to CENTER")
+            self.alignment = SubtitleAlignment.CENTER
 
 
 class VideoAssemblerRecipe:
@@ -350,8 +391,8 @@ class VideoAssemblerRecipe:
                 "video_intro_recipe": self._video_intro_recipe.to_dict(),
                 "video_ending_recipe": self._video_ending_recipe.to_dict(),
                 "video_overlay_recipe": self._video_overlay_recipe.to_dict(),
-                "narrator_asset_effects": self._narrator_asset_effects.to_dict(),
                 "subtitle_recipe": self._subtitle_recipe.to_dict(),
+                "narrator_asset_effects": self._narrator_asset_effects.to_dict(),
             }
             with open(self.effects_file_path, "w", encoding="utf-8") as file_handler:
                 json.dump(result, file_handler, indent=4)

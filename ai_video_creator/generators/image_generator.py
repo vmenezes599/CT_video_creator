@@ -18,14 +18,18 @@ class ImageRecipeBase:
     lora: str
     batch_size: int
     seed: int
+    width: int
+    height: int
     recipe_type = "ImageRecipeBase"
 
-    def __init__(self, prompt: str, lora: str, seed: int, batch_size: int, recipe_type: str):
+    def __init__(self, prompt: str, lora: str, seed: int, batch_size: int, width: int, height: int, recipe_type: str):
         """Initialize ImageRecipeBase with a name."""
         self.prompt = prompt
         self.lora = lora
         self.seed = seed
         self.batch_size = batch_size
+        self.width = width
+        self.height = height
         self.recipe_type = recipe_type
 
 
@@ -73,6 +77,7 @@ class FluxAIImageGenerator(IImageGenerator):
         workflow.set_positive_prompt(recipe.prompt)
         workflow.set_output_filename(output_file_path.stem)
 
+        workflow.set_image_resolution(recipe.width, recipe.height)
         workflow.set_lora(recipe.lora)
         workflow.set_batch_size(recipe.batch_size)
         workflow.set_seed(recipe.seed)
@@ -93,6 +98,8 @@ class FluxImageRecipe(ImageRecipeBase):
     def __init__(
         self,
         prompt: str,
+        width: int,
+        height: int,
         lora: str | None = None,
         batch_size: int | None = None,
         seed: int | None = None,
@@ -107,12 +114,17 @@ class FluxImageRecipe(ImageRecipeBase):
         available_loras = requests.get_available_loras()
         validated_lora = lora if lora in available_loras else ""
 
+        batch_size = batch_size if batch_size is not None else 1
+        seed = seed if seed is not None else random.randint(0, 2**31 - 1)
+
         super().__init__(
             prompt=prompt,
             recipe_type=self.recipe_type,
             lora=validated_lora,
-            batch_size=batch_size if batch_size is not None else 1,
-            seed=random.randint(0, 2**31 - 1) if seed is None else seed,
+            batch_size=batch_size,
+            seed=seed,
+            width=width,
+            height=height,
         )
 
     def to_dict(self) -> dict:
@@ -134,6 +146,8 @@ class FluxImageRecipe(ImageRecipeBase):
             "prompt": self.prompt,
             "lora": self.lora,
             "available_loras": available_loras,
+            "width": self.width,
+            "height": self.height,
             "batch_size": self.batch_size,
             "seed": self.seed,
             "recipe_type": self.recipe_type,
@@ -167,6 +181,8 @@ class FluxImageRecipe(ImageRecipeBase):
 
         return cls(
             prompt=data["prompt"],
+            width=data["width"],
+            height=data["height"],
             lora=data.get("lora", None),
             batch_size=data.get("batch_size", None),
             seed=data.get("seed", None),
