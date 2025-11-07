@@ -350,17 +350,18 @@ class VideoAssembler:
 
         start_time_seconds = previous_medias_length + ending_recipe.ending_start_delay_seconds
 
-        output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
+        if ending_recipe.ending_overlay_asset:
+            output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
 
-        ending_sub_video = blit_overlay_video_onto_main_video(
-            overlay_video=ending_recipe.ending_overlay_asset,
-            main_video=ending_sub_video,
-            output_path=output_path,
-            position=VideoBlitPosition.CENTER,
-            scale_percent=1.0,
-            start_time_seconds=start_time_seconds,
-            allow_extend_duration=True,
-        )
+            ending_sub_video = blit_overlay_video_onto_main_video(
+                overlay_video=ending_recipe.ending_overlay_asset,
+                main_video=ending_sub_video,
+                output_path=output_path,
+                position=VideoBlitPosition.CENTER,
+                scale_percent=1.0,
+                start_time_seconds=start_time_seconds,
+                allow_extend_duration=True,
+            )
 
         self.video_assembler_assets.set_video_ending(ending_sub_video)
 
