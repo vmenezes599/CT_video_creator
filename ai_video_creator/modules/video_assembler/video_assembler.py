@@ -343,7 +343,10 @@ class VideoAssembler:
         self._temp_files.append(ending_sub_video)
 
         previous_media_length = 0.0
-        if ending_recipe.ending_overlay_start_narrator_index > 0:
+        if (
+            ending_recipe.ending_overlay_start_narrator_index > 0
+            and ending_recipe.ending_overlay_start_narrator_index < len(ending_narrator_paths)
+        ):
             previous_narrator = ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index - 1]
             previous_media_length = get_media_duration(previous_narrator)
 
