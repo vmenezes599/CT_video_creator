@@ -138,7 +138,7 @@ def create_sub_video_recipes(user_folder: Path, story_name: str, chapter_index: 
     )
 
     video_recipe_builder = SubVideoRecipeBuilder(paths)
-    video_recipe_builder.create_video_recipe()
+    video_recipe_builder.create_sub_video_recipe()
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)

@@ -486,7 +486,7 @@ class TestBlitIntroVideo:
         output = temp_dir / "output_error.mp4"
         fake_intro = temp_dir / "nonexistent.mp4"
 
-        with pytest.raises(FileNotFoundError, match="Intro video not found"):
+        with pytest.raises(FileNotFoundError, match="Overlay video not found"):
             blit_overlay_video_onto_main_video(
                 overlay_video=fake_intro,
                 main_video=main_video,

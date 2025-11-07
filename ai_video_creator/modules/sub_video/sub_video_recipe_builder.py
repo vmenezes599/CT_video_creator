@@ -25,8 +25,10 @@ class SubVideoRecipeBuilder:
         """Initialize VideoRecipe with recipe data.
 
         Args:
-            video_data: List of video data dictionaries
-            seeds: List of seeds for each generation (None elements use default behavior)
+            video_creator_paths: Paths configuration for video creation.
+
+        Raises:
+            ValueError: If image recipe or image assets count exceeds video prompts.
         """
         self._paths = video_creator_paths
         story_folder = self._paths.story_folder
@@ -38,13 +40,26 @@ class SubVideoRecipeBuilder:
 
         self._chapter_prompt_path = self._paths.chapter_prompt_path
 
-        # Load video prompt
         self._video_prompt = Prompt.load_from_json(self._chapter_prompt_path)
 
-        # Load separate narrator and image assets
         self._narrator_assets = NarratorAssets(video_creator_paths)
         self._image_recipe = ImageRecipe(video_creator_paths)
         self._image_assets = ImageAssets(video_creator_paths)
+
+        if not self._image_assets.is_complete() or len(self._image_assets.image_assets) > len(
+            self._image_recipe.recipes_data
+        ):
+            raise ValueError(
+                f"Image assets exceed image recipes. Assets: {len(self._image_assets.image_assets)}, "
+                f"Recipes: {len(self._image_recipe.recipes_data)}"
+            )
+
+        if not self._image_recipe.is_complete() or len(self._image_assets.image_assets) > len(self._video_prompt):
+            raise ValueError(
+                f"Image assets exceed video prompts. Assets: {len(self._image_assets.image_assets)}, "
+                f"Prompts: {len(self._video_prompt)}"
+            )
+
         self._recipe = None
 
         self._min_sub_videos = 3
@@ -127,10 +142,9 @@ class SubVideoRecipeBuilder:
         scene_scripts_results = self._run_script_generator_parallel()
 
         for i, prompt in enumerate(self._video_prompt):
-            # Get corresponding image asset if available, otherwise None
             sub_video_count = self._calculate_sub_videos_count(i)
-            image_asset = self._image_assets.image_assets[i] if i < len(self._image_assets.image_assets) else None
-            image_recipe = self._image_recipe.image_data[i] if i < len(self._image_recipe.image_data) else None
+            image_asset = self._image_assets.image_assets[i]
+            image_recipe = self._image_recipe.recipes_data[i]
 
             width = image_recipe.width
             height = image_recipe.height
@@ -188,7 +202,7 @@ class SubVideoRecipeBuilder:
             seed=seed,
         )
 
-    def create_video_recipe(self) -> None:
+    def create_sub_video_recipe(self) -> None:
         """Create video recipe from story folder and chapter prompt index."""
 
         logger.info("Starting video recipe creation process")

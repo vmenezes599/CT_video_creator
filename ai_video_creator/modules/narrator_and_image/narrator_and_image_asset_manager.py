@@ -33,7 +33,7 @@ class NarratorAndImageAssetManager:
 
         logger.debug(
             f"VideoAssetManager initialized with narrator scenes: {len(self.narrator_builder.recipe.narrator_data)}, "
-            f"image scenes: {len(self.image_builder.recipe.image_data)}"
+            f"image scenes: {len(self.image_builder.recipe.recipes_data)}"
         )
 
     def _generate_scene_assets(self, scene_index: int):

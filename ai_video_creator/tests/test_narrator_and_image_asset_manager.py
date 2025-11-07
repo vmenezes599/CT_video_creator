@@ -74,11 +74,15 @@ class TestNarratorAndImageAssetManager:
             "image_data": [
                 {
                     "prompt": "Test prompt 1",
+                    "width": 848,
+                    "height": 480,
                     "seed": 12345,
                     "recipe_type": "FluxImageRecipeType",
                 },
                 {
                     "prompt": "Test prompt 2",
+                    "width": 848,
+                    "height": 480,
                     "seed": 67890,
                     "recipe_type": "FluxImageRecipeType",
                 },
@@ -103,7 +107,7 @@ class TestNarratorAndImageAssetManager:
         manager = NarratorAndImageAssetManager(video_creator_paths)
 
         assert len(manager.narrator_builder.recipe.narrator_data) == 2
-        assert len(manager.image_builder.recipe.image_data) == 2
+        assert len(manager.image_builder.recipe.recipes_data) == 2
 
         assert len(manager.narrator_builder.narrator_assets.narrator_assets) == 2
         assert len(manager.image_builder.image_assets.image_assets) == 2
@@ -282,7 +286,7 @@ class TestNarratorAndImageAssetManager:
         for recipe in video_asset_manager.narrator_builder.recipe.narrator_data:
             recipe.GENERATOR_TYPE = lambda: FakeAudioGenerator()
 
-        for recipe in video_asset_manager.image_builder.recipe.image_data:
+        for recipe in video_asset_manager.image_builder.recipe.recipes_data:
             recipe.GENERATOR_TYPE = lambda: FakeImageGenerator()
 
         # Test the actual generation logic without mocking core methods
@@ -395,7 +399,7 @@ class TestNarratorAndImageAssetManager:
         # Replace generators with tracking versions
         for recipe in video_asset_manager.narrator_builder.recipe.narrator_data:
             recipe.GENERATOR_TYPE = lambda: TrackingFakeGenerator()
-        for recipe in video_asset_manager.image_builder.recipe.image_data:
+        for recipe in video_asset_manager.image_builder.recipe.recipes_data:
             recipe.GENERATOR_TYPE = lambda: TrackingFakeGenerator()
 
         # Run the actual generation logic
@@ -457,11 +461,11 @@ class TestNarratorAndImageAssetManager:
             "GENERATOR_TYPE",
             return_value=mock_audio_gen,
         ), patch.object(
-            video_asset_manager.image_builder.recipe.image_data[0],
+            video_asset_manager.image_builder.recipe.recipes_data[0],
             "GENERATOR_TYPE",
             return_value=mock_image_gen,
         ), patch.object(
-            video_asset_manager.image_builder.recipe.image_data[1],
+            video_asset_manager.image_builder.recipe.recipes_data[1],
             "GENERATOR_TYPE",
             return_value=mock_image_gen,
         ):
@@ -539,11 +543,11 @@ class TestNarratorAndImageAssetManager:
             "GENERATOR_TYPE",
             return_value=failing_audio_gen,
         ), patch.object(
-            video_asset_manager.image_builder.recipe.image_data[0],
+            video_asset_manager.image_builder.recipe.recipes_data[0],
             "GENERATOR_TYPE",
             return_value=failing_image_gen,
         ), patch.object(
-            video_asset_manager.image_builder.recipe.image_data[1],
+            video_asset_manager.image_builder.recipe.recipes_data[1],
             "GENERATOR_TYPE",
             return_value=failing_image_gen,
         ):
@@ -694,7 +698,7 @@ class TestNarratorAndImageAssetManager:
         mock_image_gen.text_to_image.side_effect = IOError("Generator failed")
 
         with patch.object(
-            video_asset_manager.image_builder.recipe.image_data[0],
+            video_asset_manager.image_builder.recipe.recipes_data[0],
             "GENERATOR_TYPE",
             return_value=mock_image_gen,
         ):

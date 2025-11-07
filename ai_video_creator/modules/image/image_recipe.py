@@ -18,13 +18,13 @@ class ImageRecipe:
         """Initialize ImageRecipe with default settings."""
         self.recipe_path = video_creator_paths.image_recipe_file
 
-        self.image_data: list[FluxImageRecipe] = []
+        self.recipes_data: list[FluxImageRecipe] = []
         self.extra_image_data: list[dict] = []
         self.__load_from_file(self.recipe_path)
 
     def add_image_data(self, image_data: FluxImageRecipe, extra_image_data: dict = None) -> None:
         """Add image data to the recipe."""
-        self.image_data.append(image_data)
+        self.recipes_data.append(image_data)
         # Always append extra_image_data to maintain alignment with image_data
         self.extra_image_data.append(extra_image_data or {})
         self.save_current_state()
@@ -34,13 +34,13 @@ class ImageRecipe:
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 data = json.load(file)
-                self.image_data = [self._create_recipe_from_dict(item) for item in data["image_data"]]
+                self.recipes_data = [self._create_recipe_from_dict(item) for item in data["image_data"]]
 
                 for image_data in data["image_data"]:
                     extra_data = image_data.get("extra_data", {})
                     self.extra_image_data.append(extra_data)
 
-                logger.info(f"Successfully loaded {len(self.image_data)} image recipes")
+                logger.info(f"Successfully loaded {len(self.recipes_data)} image recipes")
                 self.save_current_state()
 
         except FileNotFoundError:
@@ -71,7 +71,7 @@ class ImageRecipe:
 
     def clean(self) -> None:
         """Clean the current recipe data."""
-        self.image_data = []
+        self.recipes_data = []
         self.extra_image_data = []
 
     def to_dict(self) -> dict:
@@ -82,7 +82,7 @@ class ImageRecipe:
         """
         image_data = [
             {"index": i, "extra_data": extra, **item.to_dict()}
-            for i, (item, extra) in enumerate(zip(self.image_data, self.extra_image_data), 1)
+            for i, (item, extra) in enumerate(zip(self.recipes_data, self.extra_image_data), 1)
         ]
 
         return {"image_data": image_data}
@@ -95,10 +95,14 @@ class ImageRecipe:
         except IOError as e:
             logger.error(f"Error saving image recipe to {self.recipe_path.name}: {e}")
 
+    def is_complete(self) -> bool:
+        """Check if the image recipe is complete."""
+        return len(self.recipes_data) > 0
+
     def __len__(self) -> int:
         """Return the number of image recipes."""
-        return len(self.image_data)
+        return len(self.recipes_data)
 
     def __getitem__(self, index: int) -> FluxImageRecipe:
         """Get image recipe by index."""
-        return self.image_data[index]
+        return self.recipes_data[index]

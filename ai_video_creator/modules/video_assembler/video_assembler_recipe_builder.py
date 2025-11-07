@@ -90,7 +90,7 @@ class VideoAssemblerRecipeBuilder:
 
         intro = VideoIntroRecipe(self._paths)
 
-        image_data = self.image_recipe.image_data
+        image_data = self.image_recipe.recipes_data
         intro.skip = image_data[0].width < image_data[0].height if len(image_data) > 0 else False
 
         intro.intro_asset = VideoIntroRecipe.DEFAULT_INTRO_ASSET

@@ -44,7 +44,7 @@ class ImageRecipeBuilder:
         """Verify the recipe against the prompt to ensure all required data is present."""
         logger.debug("Verifying image recipe against prompt data")
 
-        if not self._recipe.image_data or len(self._recipe.image_data) != len(self.__video_prompt):
+        if not self._recipe.recipes_data or len(self._recipe.recipes_data) != len(self.__video_prompt):
             return False
 
         return True

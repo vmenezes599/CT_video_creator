@@ -109,16 +109,22 @@ class TestVideoCreationWorkflow:
             "image_data": [
                 {
                     "prompt": "space galaxy stars nebulae cosmic explorer",
+                    "width": 848,
+                    "height": 480,
                     "seed": 12345,
                     "recipe_type": "FluxImageRecipeType",
                 },
                 {
                     "prompt": "alien planet strange creatures exotic plants",
+                    "width": 848,
+                    "height": 480,
                     "seed": 67890,
                     "recipe_type": "FluxImageRecipeType",
                 },
                 {
                     "prompt": "time portal energy swirling cosmic adventure",
+                    "width": 848,
+                    "height": 480,
                     "seed": 11111,
                     "recipe_type": "FluxImageRecipeType",
                 },
@@ -136,7 +142,7 @@ class TestVideoCreationWorkflow:
         # Replace generators with fake implementations
         for recipe in asset_manager.narrator_builder.recipe.narrator_data:
             recipe.GENERATOR_TYPE = tracking.get_audio_generator
-        for recipe in asset_manager.image_builder.recipe.image_data:
+        for recipe in asset_manager.image_builder.recipe.recipes_data:
             recipe.GENERATOR_TYPE = tracking.get_image_generator
 
         # Test the complete workflow
@@ -222,6 +228,23 @@ class TestVideoCreationWorkflow:
         with open(image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_data, f)
 
+        # Create image recipe file that SubVideoRecipeBuilder needs
+        image_recipe_file = chapter_folder / "image_recipe.json"
+        image_recipe = {
+            "image_data": [
+                {
+                    "prompt": f"Test image prompt {i+1}",
+                    "width": 848,
+                    "height": 480,
+                    "seed": 12345 + i,
+                    "recipe_type": "FluxImageRecipeType",
+                }
+                for i in range(3)
+            ]
+        }
+        with open(image_recipe_file, "w", encoding="utf-8") as f:
+            json.dump(image_recipe, f)
+
         # Test recipe builder
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
@@ -241,7 +264,7 @@ class TestVideoCreationWorkflow:
             ]
 
             recipe_builder = SubVideoRecipeBuilder(video_creator_paths)
-            recipe_builder.create_video_recipe()
+            recipe_builder.create_sub_video_recipe()
 
         # Verify recipe was created
         recipe_file = chapter_folder / "sub_video_recipe.json"
@@ -344,11 +367,15 @@ class TestVideoCreationWorkflow:
             "image_data": [
                 {
                     "prompt": "Test image 1",
+                    "width": 848,
+                    "height": 480,
                     "seed": 12345,
                     "recipe_type": "FluxImageRecipeType",
                 },
                 {
                     "prompt": "Test image 2",
+                    "width": 848,
+                    "height": 480,
                     "seed": 67890,
                     "recipe_type": "FluxImageRecipeType",
                 },
@@ -375,7 +402,7 @@ class TestVideoCreationWorkflow:
         # Replace generators with failing ones
         for recipe in asset_manager.narrator_builder.recipe.narrator_data:
             recipe.GENERATOR_TYPE = FailingAudioGenerator
-        for recipe in asset_manager.image_builder.recipe.image_data:
+        for recipe in asset_manager.image_builder.recipe.recipes_data:
             recipe.GENERATOR_TYPE = FailingImageGenerator
 
         # Test that errors are handled gracefully
@@ -423,16 +450,22 @@ class TestVideoCreationWorkflow:
             "image_data": [
                 {
                     "prompt": "Test image 1",
+                    "width": 848,
+                    "height": 480,
                     "seed": 12345,
                     "recipe_type": "FluxImageRecipeType",
                 },
                 {
                     "prompt": "Test image 2",
+                    "width": 848,
+                    "height": 480,
                     "seed": 67890,
                     "recipe_type": "FluxImageRecipeType",
                 },
                 {
                     "prompt": "Test image 3",
+                    "width": 848,
+                    "height": 480,
                     "seed": 11111,
                     "recipe_type": "FluxImageRecipeType",
                 },
@@ -469,7 +502,7 @@ class TestVideoCreationWorkflow:
         # Replace generators for remaining assets
         for i, recipe in enumerate(asset_manager.narrator_builder.recipe.narrator_data):
             recipe.GENERATOR_TYPE = tracking.get_audio_generator
-        for i, recipe in enumerate(asset_manager.image_builder.recipe.image_data):
+        for i, recipe in enumerate(asset_manager.image_builder.recipe.recipes_data):
             recipe.GENERATOR_TYPE = tracking.get_image_generator
 
         # Run generation

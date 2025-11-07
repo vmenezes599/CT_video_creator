@@ -84,6 +84,27 @@ class TestVideoRecipeBuilder:
         with open(paths.image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_assets, f)
 
+        image_recipe = {
+            "image_data": [
+                {
+                    "recipe_type": "FluxImageRecipeType",
+                    "prompt": "First visual prompt",
+                    "seed": 42,
+                    "width": 848,
+                    "height": 480,
+                },
+                {
+                    "recipe_type": "FluxImageRecipeType",
+                    "prompt": "Second visual prompt",
+                    "seed": 43,
+                    "width": 848,
+                    "height": 480,
+                },
+            ]
+        }
+        with open(paths.image_recipe_file, "w", encoding="utf-8") as f:
+            json.dump(image_recipe, f)
+
         return paths
 
     def test_recipe_builder_creates_correct_file(self, video_creator_paths):
@@ -107,7 +128,7 @@ class TestVideoRecipeBuilder:
             ]
 
             builder = SubVideoRecipeBuilder(video_creator_paths)
-            builder.create_video_recipe()
+            builder.create_sub_video_recipe()
 
             # Verify recipe file was created
             recipe_file = builder._paths.sub_video_recipe_file
@@ -154,7 +175,7 @@ class TestVideoRecipeBuilder:
 
             # Create first recipe
             builder1 = SubVideoRecipeBuilder(video_creator_paths)
-            builder1.create_video_recipe()
+            builder1.create_sub_video_recipe()
 
             recipe_file = builder1._paths.sub_video_recipe_file
 
@@ -164,7 +185,7 @@ class TestVideoRecipeBuilder:
 
             # Create second builder - should use existing recipe
             builder2 = SubVideoRecipeBuilder(video_creator_paths)
-            builder2.create_video_recipe()
+            builder2.create_sub_video_recipe()
 
             # Content should be the same (recipes should not be recreated)
             with open(recipe_file, "r", encoding="utf-8") as f:
@@ -255,6 +276,34 @@ class TestVideoRecipeBuilder:
         with open(video_creator_paths.image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_assets, f)
 
+        image_recipe = {
+            "image_data": [
+                {
+                    "recipe_type": "FluxImageRecipeType",
+                    "prompt": "Prompt 1",
+                    "seed": 42,
+                    "width": 848,
+                    "height": 480,
+                },
+                {
+                    "recipe_type": "FluxImageRecipeType",
+                    "prompt": "Prompt 2",
+                    "seed": 43,
+                    "width": 848,
+                    "height": 480,
+                },
+                {
+                    "recipe_type": "FluxImageRecipeType",
+                    "prompt": "Prompt 3",
+                    "seed": 44,
+                    "width": 848,
+                    "height": 480,
+                },
+            ]
+        }
+        with open(video_creator_paths.image_recipe_file, "w", encoding="utf-8") as f:
+            json.dump(image_recipe, f)
+
         # Mock SceneScriptGenerator to avoid AI/LLM calls
         mock_scene_generator = patch(
             "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
@@ -273,7 +322,7 @@ class TestVideoRecipeBuilder:
             ]
 
             builder = SubVideoRecipeBuilder(video_creator_paths)
-            builder.create_video_recipe()
+            builder.create_sub_video_recipe()
 
             recipe_file = builder._paths.sub_video_recipe_file
             with open(recipe_file, "r", encoding="utf-8") as f:
@@ -290,14 +339,14 @@ class TestVideoRecipeBuilder:
                 )  # 3 because we have 3 narrator assets, limited by first 3 assets
 
     def test_recipe_builder_handles_missing_assets(self, tmp_path):
-        """Test recipe builder handles missing narrator and image assets gracefully."""
+        """Test recipe builder raises error when assets are incomplete."""
         user_folder = tmp_path / "user"
         story_name = "no_assets_story"
         chapter_index = 0
 
         story_folder = (
             user_folder / "stories" / story_name
-        )  # Fix: Add stories subfolder
+        )
         prompts_folder = story_folder / "prompts"
         prompts_folder.mkdir(parents=True)
 
@@ -315,39 +364,10 @@ class TestVideoRecipeBuilder:
         with open(prompt_file, "w", encoding="utf-8") as f:
             json.dump(chapter_prompt, f)
 
-        # Create VideoCreatorPaths but don't create narrator and image assets files
         video_creator_paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
 
-        # Mock SceneScriptGenerator to avoid AI/LLM calls
-        mock_scene_generator = patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
-        )
-
-        with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
-            return_value=10.0,
-        ), mock_scene_generator as MockSceneScriptGenerator:
-            # Mock the generate_scenes_script method to return test data
-            mock_instance = MockSceneScriptGenerator.return_value
-            mock_instance.generate_scenes_script.return_value = [
-                "Scene script 1",
-                "Scene script 2",
-                "Scene script 3",
-            ]
-
-            builder = SubVideoRecipeBuilder(video_creator_paths)
-            # Should not crash, should handle missing assets gracefully
-            builder.create_video_recipe()
-
-            recipe_file = builder._paths.sub_video_recipe_file
-            assert recipe_file.exists()
-
-            with open(recipe_file, "r", encoding="utf-8") as f:
-                saved_recipe = json.load(f)
-
-            # Should still create video data
-            assert len(saved_recipe["video_data"]) == 1
-            assert len(saved_recipe["video_data"][0]["recipe_list"]) == 3
+        with pytest.raises(ValueError):
+            SubVideoRecipeBuilder(video_creator_paths)
 
     def test_recipe_builder_handles_audio_duration_errors(self, video_creator_paths):
         """Test recipe builder handles audio duration errors gracefully."""
@@ -373,7 +393,7 @@ class TestVideoRecipeBuilder:
             # Currently, the builder does not handle audio duration errors gracefully
             # So we expect an exception to be raised
             with pytest.raises(Exception, match="Audio file not found"):
-                builder.create_video_recipe()
+                builder.create_sub_video_recipe()
 
     def test_recipe_builder_with_corrupted_prompts(self, tmp_path):
         """Test recipe builder handles corrupted prompt files gracefully."""
@@ -398,17 +418,5 @@ class TestVideoRecipeBuilder:
             "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             return_value=10.0,
         ):
-            builder = SubVideoRecipeBuilder(video_creator_paths)
-            # Should handle corrupted prompts gracefully
-            try:
-                builder.create_video_recipe()
-                # If it doesn't crash, the recipe file might not be created or might be empty
-                recipe_file = builder._paths.sub_video_recipe_file
-                if recipe_file.exists():
-                    with open(recipe_file, "r", encoding="utf-8") as f:
-                        saved_recipe = json.load(f)
-                        # Might have empty or default data
-                        assert "video_data" in saved_recipe
-            except Exception:
-                # It's acceptable to fail with corrupted input, but should be handled gracefully
-                pass
+            with pytest.raises(ValueError, match="Image assets exceed video prompts"):
+                SubVideoRecipeBuilder(video_creator_paths)

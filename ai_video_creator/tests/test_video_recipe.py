@@ -31,12 +31,13 @@ class TestVideoRecipeFile:
         test_image.touch()
         test_color_match.touch()
 
-        # Add real video recipe data
         video_recipe = WanI2VRecipe(
             prompt="Test video prompt",
+            width=848,
+            height=480,
             color_match_media_path=str(test_color_match),
             media_path=str(test_image),
-            high_lora=[],  # Required parameter
+            high_lora=[],
             seed=12345,
         )
 
@@ -83,7 +84,6 @@ class TestVideoRecipeFile:
         test_image.touch()
         test_color_match.touch()
 
-        # Create a test file with relative paths
         test_data = {
             "video_data": [
                 {
@@ -91,9 +91,11 @@ class TestVideoRecipeFile:
                     "recipe_list": [
                         {
                             "prompt": "Loaded video prompt",
+                            "width": 848,
+                            "height": 480,
                             "media_path": "assets/sub_videos/image.jpg",
                             "color_match_media_path": "assets/sub_videos/color_match.jpg",
-                            "high_lora": [],  # Required field
+                            "high_lora": [],
                             "seed": 99999,
                             "recipe_type": "WanI2VRecipeType",
                         }
@@ -170,20 +172,22 @@ class TestVideoRecipeFile:
             image_file, color_match_file = scene_files[scene]
             for sub_video in range(2):
                 if sub_video == 0:
-                    # First sub-video has media_path, use WanI2VRecipe
                     video_recipe = WanI2VRecipe(
                         prompt=f"Scene {scene} sub-video {sub_video}",
+                        width=848,
+                        height=480,
                         color_match_media_path=str(color_match_file),
                         media_path=str(image_file),
-                        high_lora=[],  # Required parameter
+                        high_lora=[],
                         seed=scene * 100 + sub_video,
                     )
                 else:
-                    # No media_path, use WanT2VRecipe
                     video_recipe = WanT2VRecipe(
                         prompt=f"Scene {scene} sub-video {sub_video}",
+                        width=848,
+                        height=480,
                         color_match_media_path=str(color_match_file),
-                        high_lora=[],  # Required parameter
+                        high_lora=[],
                         seed=scene * 100 + sub_video,
                     )
                 video_recipes.append(video_recipe)

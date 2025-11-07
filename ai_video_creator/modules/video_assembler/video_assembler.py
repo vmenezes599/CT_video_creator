@@ -342,10 +342,12 @@ class VideoAssembler:
         ending_sub_video = self._combine_sub_video_with_audio(ending_video_path, concatenated_narrator_path)
         self._temp_files.append(ending_sub_video)
 
-        start_time_seconds = (
-            get_media_duration(ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index])
-            + ending_recipe.ending_start_delay_seconds
-        )
+        previous_media_length = 0.0
+        if ending_recipe.ending_overlay_start_narrator_index > 0:
+            previous_narrator = ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index - 1]
+            previous_media_length = get_media_duration(previous_narrator)
+
+        start_time_seconds = previous_media_length + ending_recipe.ending_start_delay_seconds
 
         output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
 
@@ -408,9 +410,9 @@ class VideoAssembler:
         if video_segments[-1] == self.video_assembler_assets.video_ending:
             background_music_assets = [*background_music_assets, background_music_assets[-1]]
 
-        assert len(background_music_assets) == len(
+        assert len(background_music_assets) <= len(
             video_segments
-        ), "Background music and video_segments length mismatch."
+        ), "Background music must be bigger or equal length than video_segments."
 
         duration_dict: list[tuple[BackgroundMusicAsset, float]] = []
         previous_bgm_asset = None
