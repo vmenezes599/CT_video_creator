@@ -32,14 +32,11 @@ class BackgroundMusicAsset:
     def from_dict(cls, data: dict) -> "BackgroundMusicAsset":
         """Create a BackgroundMusicAsset from a dictionary."""
 
-        required_fields = {"asset", "volume", "skip"}
-        missing_fields = required_fields - set(data.keys())
-        if missing_fields:
-            raise ValueError(f"Missing fields in BackgroundMusicAsset data: {missing_fields}")
+        asset_path_str = data.get("asset")
+        asset_path = Path(asset_path_str) if asset_path_str else None
 
-        asset_path = Path(data["asset"]) if data["asset"] else None
-        volume = data["volume"]
-        skip = data["skip"]
+        volume = data.get("volume", 0.3)
+        skip = data.get("skip", False)
 
         return cls(asset=asset_path, volume=volume, skip=skip)
 
@@ -146,7 +143,7 @@ class BackgroundMusicAssets:
             return False
 
         music_asset_path = self.background_music_assets[scene_index]
-        if music_asset_path is None:
+        if music_asset_path.asset is None:
             return False
 
         if music_asset_path.skip:

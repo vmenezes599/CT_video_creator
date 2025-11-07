@@ -342,15 +342,13 @@ class VideoAssembler:
         ending_sub_video = self._combine_sub_video_with_audio(ending_video_path, concatenated_narrator_path)
         self._temp_files.append(ending_sub_video)
 
-        previous_media_length = 0.0
-        if (
-            ending_recipe.ending_overlay_start_narrator_index > 0
-            and ending_recipe.ending_overlay_start_narrator_index < len(ending_narrator_paths)
-        ):
-            previous_narrator = ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index - 1]
-            previous_media_length = get_media_duration(previous_narrator)
+        previous_medias_length = 0.0
+        target_index = ending_recipe.ending_overlay_start_narrator_index - 1
+        for index in range(target_index):
+            previous_narrator = ending_narrator_paths[index]
+            previous_medias_length += get_media_duration(previous_narrator)
 
-        start_time_seconds = previous_media_length + ending_recipe.ending_start_delay_seconds
+        start_time_seconds = previous_medias_length + ending_recipe.ending_start_delay_seconds
 
         output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
 
