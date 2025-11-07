@@ -1,7 +1,7 @@
 """This module manages the creation of video assets for a given story chapter."""
 
 from logging_utils import logger
-from ai_video_creator.utils import VideoCreatorPaths
+from ai_video_creator.utils import VideoCreatorPaths, AspectRatios
 
 from ai_video_creator.modules.image import ImageAssetManager, ImageRecipeBuilder
 from ai_video_creator.modules.narrator import (
@@ -29,14 +29,11 @@ class NarratorAndImageAssetManager:
 
         # Initialize separate builders for narrator and image assets
         self.narrator_builder = NarratorAssetManager(video_creator_paths)
-        self.narrator_recipe_builder = NarratorRecipeBuilder(video_creator_paths)
-
         self.image_builder = ImageAssetManager(video_creator_paths)
-        self.image_recipe_builder = ImageRecipeBuilder(video_creator_paths)
 
         logger.debug(
             f"VideoAssetManager initialized with narrator scenes: {len(self.narrator_builder.recipe.narrator_data)}, "
-            f"image scenes: {len(self.image_builder.recipe.image_data)}"
+            f"image scenes: {len(self.image_builder.recipe.recipes_data)}"
         )
 
     def _generate_scene_assets(self, scene_index: int):
@@ -62,14 +59,10 @@ class NarratorAndImageAssetManager:
     def generate_narrator_and_image_assets(self):
         """Generate all missing assets from the recipes in interleaved manner: image, then narrator for each scene."""
 
-        logger.info(
-            "Starting video asset generation process (interleaved: image -> narrator per scene)"
-        )
+        logger.info("Starting video asset generation process (interleaved: image -> narrator per scene)")
 
         # Get missing assets from both builders
-        missing_narrator = (
-            self.narrator_builder.narrator_assets.get_missing_narrator_assets()
-        )
+        missing_narrator = self.narrator_builder.narrator_assets.get_missing_narrator_assets()
         missing_image = self.image_builder.image_assets.get_missing_image_assets()
         all_missing_scenes = set(missing_narrator + missing_image)
 
@@ -84,13 +77,15 @@ class NarratorAndImageAssetManager:
 
         logger.info("Video asset generation process completed successfully")
 
-    def create_narrator_and_image_recipes(self):
+    def create_narrator_and_image_recipes(self, aspect_ratio: AspectRatios):
         """Create both narrator and image recipes from prompts."""
         logger.info("Creating narrator and image recipes from prompts")
 
-        self.narrator_recipe_builder.create_narrator_recipes()
+        narrator_recipe_builder = NarratorRecipeBuilder(self._paths)
+        narrator_recipe_builder.create_narrator_recipes()
 
         # Create image recipes using image recipe builder
-        self.image_recipe_builder.create_image_recipes()
+        image_recipe_builder = ImageRecipeBuilder(self._paths, aspect_ratio)
+        image_recipe_builder.create_image_recipes()
 
         logger.info("Recipe creation completed successfully")

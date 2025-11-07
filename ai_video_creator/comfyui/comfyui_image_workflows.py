@@ -384,21 +384,21 @@ class UnetWorkflowBase(ComfyUIWorkflowBase):
         }
         super()._set_fields(parameters)
 
-    def _set_image_resolution(self, node_index: tuple[int, int], resolution: tuple[int, int]) -> None:
+    def _set_image_resolution(self, width_node_index: int, height_node_index: int, width: int, height: int) -> None:
         """
         Set the image resolution.
         """
         parameters = {
-            node_index[0]: {
-                "int": resolution[0],
+            width_node_index: {
+                "int": width,
             },
-            node_index[1]: {
-                "int": resolution[1],
+            height_node_index: {
+                "int": height,
             },
         }
         super()._set_fields(parameters)
 
-        workflow_summary = f"Resolution({resolution[0]},{resolution[1]})/{self.get_workflow_summary()}"
+        workflow_summary = f"Resolution({width},{height})/{self.get_workflow_summary()}"
         self._set_workflow_summary(workflow_summary)
 
     def _set_random_noise(self, node_index: int, random_noise: int) -> None:
@@ -524,12 +524,13 @@ class FluxWorkflow(UnetWorkflowBase):
 
     def set_image_resolution(
         self,
-        resolution: tuple[int, int],
+        width: int,
+        height: int,
     ) -> None:
         """
         Set the image resolution.
         """
-        super()._set_image_resolution((self.WIDTH_NODE_INDEX, self.HEIGHT_NODE_INDEX), resolution=resolution)
+        super()._set_image_resolution(self.WIDTH_NODE_INDEX, self.HEIGHT_NODE_INDEX, width=width, height=height)
 
     def set_seed(
         self,

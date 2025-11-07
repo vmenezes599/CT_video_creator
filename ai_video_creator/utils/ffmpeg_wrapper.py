@@ -10,6 +10,54 @@ import ffmpeg
 from logging_utils import logger
 
 
+class SubtitlePosition(str, Enum):
+    """Subtitle vertical position options."""
+
+    TOP = "top"
+    CENTER = "center"
+    BOTTOM = "bottom"
+
+
+class SubtitleAlignment(str, Enum):
+    """Subtitle horizontal alignment options."""
+
+    LEFT = "left"
+    CENTER = "center"
+    RIGHT = "right"
+
+
+def _check_gpu_memory():
+    """Check GPU memory usage to diagnose NVENC issues."""
+    try:
+        result = subprocess.run(
+            [
+                "nvidia-smi",
+                "--query-gpu=memory.used,memory.total",
+                "--format=csv,noheader,nounits",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        if result.returncode == 0:
+            lines = result.stdout.strip().split("\n")
+            gpu_info = []
+            for i, line in enumerate(lines):
+                if line.strip():
+                    used, total = map(int, line.split(", "))
+                    usage_percent = (used / total) * 100
+                    gpu_info.append(f"GPU {i}: {used}MB/{total}MB ({usage_percent:.1f}%)")
+                    logger.debug(f"GPU {i} memory: {used}MB/{total}MB ({usage_percent:.1f}%)")
+            return gpu_info
+        else:
+            logger.debug("nvidia-smi not available or failed")
+            return None
+    except (FileNotFoundError, OSError):
+        logger.debug("Could not check GPU memory")
+        return None
+
+
 def _run_ffmpeg_trace(ffmpeg_compiled: str | list[str]):
     """Run FFmpeg command with comprehensive logging."""
     try:
@@ -73,6 +121,20 @@ def get_media_duration(path: str) -> float:
         return duration
     except Exception as e:
         raise RuntimeError(f"Failed to get audio duration for {path}: {e}") from e
+
+
+def get_media_resolution(path: Path | str) -> tuple[int, int]:
+    """Get media file resolution (width, height) using ffmpeg.probe."""
+    try:
+        probe = ffmpeg.probe(str(path))
+        video_streams = [stream for stream in probe["streams"] if stream["codec_type"] == "video"]
+        if not video_streams:
+            raise RuntimeError(f"No video stream found in {path}")
+        width = int(video_streams[0]["width"])
+        height = int(video_streams[0]["height"])
+        return width, height
+    except Exception as e:
+        raise RuntimeError(f"Failed to get media resolution for {path}: {e}") from e
 
 
 def extend_audio_to_duration(
@@ -402,25 +464,60 @@ def create_video_segment_from_sub_video_and_audio_freeze_last_frame(
     return output_path
 
 
-def burn_subtitles_to_video(video_path: str | Path, srt_path: str | Path, output_path: str | Path) -> Path:
-    """Add subtitles to a video file."""
+def burn_subtitles_to_video(
+    video_path: str | Path,
+    subtitle_path: str | Path,
+    output_path: str | Path,
+) -> Path:
+    """
+    Burn subtitle file into a video file.
+
+    Args:
+        video_path: Path to the input video
+        subtitle_path: Path to the subtitle file (ASS or SRT format)
+        output_path: Path for the output video
+
+    Returns:
+        Path to the output video file
+
+    Note:
+        For ASS files, all styling (position, margin, font size, alignment) should be
+        pre-configured in the ASS file itself. Use SubtitleGenerator to create properly
+        styled ASS files.
+    """
     video_path = Path(video_path)
-    srt_path = Path(srt_path)
+    subtitle_path = Path(subtitle_path)
     output_path = Path(output_path)
 
     logger.info(f"Burning subtitles to video: {video_path.name} -> {output_path.name}")
-    logger.debug(f"Using SRT file: {srt_path.name}")
+    logger.debug(f"Using subtitle file: {subtitle_path.name}")
+
+    # For ASS files, use the ass filter (styling is baked into the file)
+    # For SRT files, use the subtitles filter
+    if subtitle_path.suffix.lower() == ".ass":
+        subtitle_filter = f"ass={str(subtitle_path)}"
+    else:
+        # For SRT files, we need to specify the video resolution
+        probe = _probe(video_path)
+        video_stream = next((s for s in probe["streams"] if s["codec_type"] == "video"), None)
+        if not video_stream:
+            raise RuntimeError(f"No video stream found in {video_path}")
+
+        width = int(video_stream["width"])
+        height = int(video_stream["height"])
+
+        subtitle_filter = f"subtitles={str(subtitle_path)}:original_size={width}x{height}"
 
     cmd = (
         ffmpeg.input(str(video_path))
         .output(
             str(output_path),
-            vf=f"subtitles={str(srt_path)}",
+            vf=subtitle_filter,
             **{
                 "c:v": "h264_nvenc",
                 "preset": "p5",
                 "crf": "23",
-                "c:a": "aac",
+                "c:a": "copy",
                 "movflags": "+faststart",
                 "pix_fmt": "yuv420p",
             },
@@ -877,7 +974,7 @@ def blit_overlay_video_onto_main_video(
     allow_extend_duration: bool = False,
 ) -> Path:
     """
-    Overlay an outro video with green screen or alpha transparency onto a main video.
+    Overlay a video with green screen or alpha transparency onto a main video.
 
     Production-grade hardened version with:
     - Alpha compositing preferred over chromakey when available
@@ -889,19 +986,19 @@ def blit_overlay_video_onto_main_video(
     - Robust repeat logic without stream_loop
 
     Args:
-        intro_video: Path to the intro video with green/transparent background
+        overlay_video: Path to the overlay video with green/transparent background
         main_video: Path to the main video
         output_path: Path for the output video
-        start_time_seconds: Time in seconds when the intro should first appear
+        start_time_seconds: Time in seconds when the overlay should first appear
         repeat_every_seconds: Repeat interval in seconds (< 0 = never repeat)
-        position: Where to place the intro (center, top-left, top-right, bottom-left, bottom-right)
+        position: Where to place the overlay (center, top-left, top-right, bottom-left, bottom-right)
         chroma_color: Hex color to key out (default: green 0x00FF00)
         similarity: Chroma key similarity threshold (0.0-1.0, default: 0.25)
         blend: Chroma key blend amount (0.0-1.0, default: 0.05)
-        corner_scale_percent: Scale factor for corner placement (default: 0.30 = 30%)
+        scale_percent: Scale factor for corner placement (default: 0.30 = 30% of main video width)
         max_repeats: Maximum number of repeats (None = unlimited within duration)
-        match_fps: Match intro FPS to main FPS to avoid stutter (default: True)
-        intro_gain: Audio gain for intro (0.0-2.0, default: 1.0)
+        match_fps: Match overlay FPS to main FPS to avoid stutter (default: True)
+        outro_gain: Audio gain for overlay (0.0-2.0, default: 1.0)
         main_gain: Audio gain for main (0.0-2.0, default: 1.0)
         allow_extend_duration: Allow overlay to extend beyond main video duration (default: False)
 
@@ -922,12 +1019,12 @@ def blit_overlay_video_onto_main_video(
 
     # Validate inputs exist
     if not overlay_video.exists():
-        raise FileNotFoundError(f"Intro video not found: {overlay_video}")
+        raise FileNotFoundError(f"Overlay video not found: {overlay_video}")
     if not main_video.exists():
         raise FileNotFoundError(f"Main video not found: {main_video}")
 
-    logger.info(f"Blitting intro video onto main video at position: {position}")
-    logger.debug(f"Intro: {overlay_video.name}, Main: {main_video.name}")
+    logger.info(f"Blitting overlay video onto main video at position: {position}")
+    logger.debug(f"Overlay: {overlay_video.name}, Main: {main_video.name}")
 
     # Probe main video
     try:
@@ -966,111 +1063,85 @@ def blit_overlay_video_onto_main_video(
         f"duration={main_duration:.2f}s, has_audio={main_has_audio}"
     )
 
-    # Probe intro video
+    # Probe overlay video
     try:
-        intro_probe = _probe(overlay_video)
+        overlay_probe = _probe(overlay_video)
     except Exception as e:
-        logger.error(f"Failed to probe intro video: {e}")
-        raise RuntimeError(f"Cannot probe intro video: {overlay_video}") from e
+        logger.error(f"Failed to probe overlay video: {e}")
+        raise RuntimeError(f"Cannot probe overlay video: {overlay_video}") from e
 
-    intro_fps, intro_duration = _fps_and_duration(intro_probe)
+    overlay_fps, overlay_duration = _fps_and_duration(overlay_probe)
 
-    intro_video_stream = next((s for s in intro_probe["streams"] if s["codec_type"] == "video"), None)
-    if not intro_video_stream:
-        raise RuntimeError(f"No video stream found in intro video: {overlay_video}")
+    overlay_video_stream = next((s for s in overlay_probe["streams"] if s["codec_type"] == "video"), None)
+    if not overlay_video_stream:
+        raise RuntimeError(f"No video stream found in overlay video: {overlay_video}")
 
-    intro_width = int(intro_video_stream["width"])
-    intro_height = int(intro_video_stream["height"])
-    intro_pix_fmt = intro_video_stream.get("pix_fmt", "")
+    overlay_width = int(overlay_video_stream["width"])
+    overlay_height = int(overlay_video_stream["height"])
+    overlay_pix_fmt = overlay_video_stream.get("pix_fmt", "")
+    overlay_sar = overlay_video_stream.get("sample_aspect_ratio", "1:1")
 
-    # Check if intro has alpha channel
-    has_alpha = "yuva" in intro_pix_fmt or "rgba" in intro_pix_fmt or "gbra" in intro_pix_fmt
+    # Check if overlay has alpha channel
+    has_alpha = "yuva" in overlay_pix_fmt or "rgba" in overlay_pix_fmt or "gbra" in overlay_pix_fmt
 
-    # Check if intro has audio
-    intro_has_audio = any(s["codec_type"] == "audio" for s in intro_probe["streams"])
+    # Check if overlay has audio
+    overlay_has_audio = any(s["codec_type"] == "audio" for s in overlay_probe["streams"])
 
     logger.debug(
-        f"Intro video: {intro_width}x{intro_height} @ {intro_fps:.2f}fps, "
-        f"duration={intro_duration:.2f}s, pix_fmt={intro_pix_fmt}, "
-        f"has_alpha={has_alpha}, has_audio={intro_has_audio}"
+        f"Overlay video: {overlay_width}x{overlay_height} @ {overlay_fps:.2f}fps, "
+        f"SAR={overlay_sar}, duration={overlay_duration:.2f}s, has_alpha={has_alpha}, has_audio={overlay_has_audio}"
     )
 
-    # Determine scaling and positioning with aspect ratio preservation
+    # Step 1: Calculate overlay size - simple scale by percentage of its own size
+    target_width = int(overlay_width * scale_percent)
+    target_height = int(overlay_height * scale_percent)
+
+    logger.debug(
+        f"Target overlay size: {target_width}x{target_height} "
+        f"({scale_percent*100:.0f}% of storage {overlay_width}x{overlay_height})"
+    )
+
+    # Step 2: Calculate position with margins
     if position == VideoBlitPosition.CENTER:
-        # Center: use native resolution but clamp to main dimensions
-        target_width = min(intro_width, main_width)
-        target_height = min(intro_height, main_height)
-
-        # Preserve aspect ratio when clamping
-        intro_aspect = intro_width / intro_height
-        target_aspect = target_width / target_height
-
-        if intro_aspect > target_aspect:
-            # Intro is wider: constrain by width
-            target_height = int(target_width / intro_aspect)
-        else:
-            # Intro is taller: constrain by height
-            target_width = int(target_height * intro_aspect)
-
         x_pos = "(W-w)/2"
         y_pos = "(H-h)/2"
-        logger.debug(f"CENTER: scaled to {target_width}x{target_height} (clamped & AR preserved)")
-    else:
-        # Corner: scale to corner_scale_percent of smallest main dimension
-        # This preserves aspect ratio and ensures intro fits
-        min_main_dim = min(main_display_width, main_height)
-        target_size = int(min_main_dim * scale_percent)
+    elif position == VideoBlitPosition.TOP_LEFT:
+        x_pos = str(CORNER_MARGIN_X)
+        y_pos = str(CORNER_MARGIN_Y)
+    elif position == VideoBlitPosition.TOP_RIGHT:
+        x_pos = f"W-w-{CORNER_MARGIN_X}"
+        y_pos = str(CORNER_MARGIN_Y)
+    elif position == VideoBlitPosition.BOTTOM_LEFT:
+        x_pos = str(CORNER_MARGIN_X)
+        y_pos = f"H-h-{CORNER_MARGIN_Y}"
+    else:  # BOTTOM_RIGHT
+        x_pos = f"W-w-{CORNER_MARGIN_X}"
+        y_pos = f"H-h-{CORNER_MARGIN_Y}"
 
-        intro_aspect = intro_width / intro_height
-        if intro_aspect > 1.0:
-            # Landscape: constrain width
-            target_width = target_size
-            target_height = int(target_size / intro_aspect)
-        else:
-            # Portrait or square: constrain height
-            target_height = target_size
-            target_width = int(target_size * intro_aspect)
-
-        if position == VideoBlitPosition.TOP_LEFT:
-            x_pos = str(CORNER_MARGIN_X)
-            y_pos = str(CORNER_MARGIN_Y)
-        elif position == VideoBlitPosition.TOP_RIGHT:
-            x_pos = f"W-w-{CORNER_MARGIN_X}"
-            y_pos = str(CORNER_MARGIN_Y)
-        elif position == VideoBlitPosition.BOTTOM_LEFT:
-            x_pos = str(CORNER_MARGIN_X)
-            y_pos = f"H-h-{CORNER_MARGIN_Y}"
-        else:
-            x_pos = f"W-w-{CORNER_MARGIN_X}"
-            y_pos = f"H-h-{CORNER_MARGIN_Y}"
-
-        logger.debug(
-            f"Corner {position}: scaled to {target_width}x{target_height} "
-            f"({scale_percent*100:.0f}% of min dimension, AR preserved)"
-        )
+    logger.debug(f"Position: {position.value} at ({x_pos}, {y_pos})")
 
     starts = []
     if repeat_every_seconds < 0:
         # Single overlay placement
         if start_time_seconds >= main_duration:
             logger.warning(
-                f"Start time {start_time_seconds}s >= main duration {main_duration:.2f}s, intro won't appear"
+                f"Start time {start_time_seconds}s >= main duration {main_duration:.2f}s, overlay won't appear"
             )
-        elif not allow_extend_duration and (start_time_seconds + intro_duration) > main_duration:
+        elif not allow_extend_duration and (start_time_seconds + overlay_duration) > main_duration:
             logger.warning(
                 f"Start time {start_time_seconds}s would extend overlay beyond main video "
-                f"({start_time_seconds + intro_duration:.2f}s > {main_duration:.2f}s), skipping overlay. "
+                f"({start_time_seconds + overlay_duration:.2f}s > {main_duration:.2f}s), skipping overlay. "
                 f"Use allow_extend_duration=True to allow extending video duration."
             )
         else:
             starts = [start_time_seconds]
-            if (start_time_seconds + intro_duration) > main_duration:
+            if (start_time_seconds + overlay_duration) > main_duration:
                 logger.debug(
-                    f"Single overlay at t={start_time_seconds}s (duration: {intro_duration:.2f}s) "
-                    f"will extend video to {start_time_seconds + intro_duration:.2f}s"
+                    f"Single overlay at t={start_time_seconds}s (duration: {overlay_duration:.2f}s) "
+                    f"will extend video to {start_time_seconds + overlay_duration:.2f}s"
                 )
             else:
-                logger.debug(f"Single overlay at t={start_time_seconds}s (duration: {intro_duration:.2f}s)")
+                logger.debug(f"Single overlay at t={start_time_seconds}s (duration: {overlay_duration:.2f}s)")
     else:
         # Repeated overlay placement
         repeat_count = 0
@@ -1094,15 +1165,15 @@ def blit_overlay_video_onto_main_video(
                 break
 
             # Check if overlay would extend beyond main video
-            if not allow_extend_duration and (t_start + intro_duration) > main_duration:
+            if not allow_extend_duration and (t_start + overlay_duration) > main_duration:
                 logger.debug(
-                    f"Skipping overlay at t={t_start:.2f}s (would extend to {t_start + intro_duration:.2f}s, "
+                    f"Skipping overlay at t={t_start:.2f}s (would extend to {t_start + overlay_duration:.2f}s, "
                     f"beyond main duration {main_duration:.2f}s)"
                 )
             else:
                 starts.append(t_start)
-                if (t_start + intro_duration) > main_duration:
-                    logger.debug(f"Overlay at t={t_start:.2f}s will extend video to {t_start + intro_duration:.2f}s")
+                if (t_start + overlay_duration) > main_duration:
+                    logger.debug(f"Overlay at t={t_start:.2f}s will extend video to {t_start + overlay_duration:.2f}s")
             repeat_count += 1
 
         logger.debug(f"Repeated overlay: {len(starts)} appearances at times: {starts}")
@@ -1123,35 +1194,47 @@ def blit_overlay_video_onto_main_video(
         logger.info(f"Successfully copied main video: {output_path.name}")
         return output_path
 
-    intro_base_chain = []
+    overlay_base_chain = []
 
-    if match_fps and abs(intro_fps - main_fps) > 0.01:
-        intro_base_chain.append(f"fps={main_fps}")
-        logger.debug(f"Matching FPS: intro {intro_fps:.2f} → main {main_fps:.2f}")
+    # Match FPS if needed to avoid stutter
+    if match_fps and abs(overlay_fps - main_fps) > 0.01:
+        overlay_base_chain.append(f"fps={main_fps}")
+        logger.debug(f"Matching FPS: overlay {overlay_fps:.2f} → main {main_fps:.2f}")
 
+    # Normalize SAR BEFORE scaling to ensure correct proportions
+    # If SAR != 1:1, the video has non-square pixels which will cause stretching
+    if overlay_sar != "1:1" and overlay_sar != "0:1":
+        overlay_base_chain.append("setsar=1")
+        logger.debug(f"Normalizing overlay SAR from {overlay_sar} to 1:1 before scaling")
+
+    # Handle transparency (alpha channel or chromakey)
     if has_alpha:
-        intro_base_chain.append("format=yuva420p")
-        logger.debug("Using alpha compositing (intro has alpha channel)")
+        overlay_base_chain.append("format=yuva420p")
+        logger.debug("Using alpha compositing (overlay has alpha channel)")
     else:
-        intro_base_chain.append(f"chromakey={chroma_color}:{similarity}:{blend},format=yuva420p")
+        overlay_base_chain.append(f"chromakey={chroma_color}:{similarity}:{blend},format=yuva420p")
         logger.debug(f"Using chromakey: color={chroma_color}, similarity={similarity}, blend={blend}")
 
-    intro_base_chain.append(f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease")
+    # Step 3: Scale to target dimensions
+    # Use flags=bicubic for quality and eval=frame to force exact dimensions without auto-adjustment
+    overlay_base_chain.append(f"scale={target_width}:{target_height}:flags=bicubic:eval=frame")
+    logger.debug(f"Scaling overlay to exact {target_width}x{target_height}")
 
-    intro_base_chain.append(f"trim=0:{intro_duration},setpts=PTS-STARTPTS")
-    logger.debug(f"Trimming intro to {intro_duration:.2f}s and resetting PTS")
+    # Trim and reset timestamps for proper overlay timing
+    overlay_base_chain.append(f"trim=0:{overlay_duration},setpts=PTS-STARTPTS")
+    logger.debug(f"Trimming overlay to {overlay_duration:.2f}s")
 
-    intro_base_str = ",".join(intro_base_chain)
+    overlay_base_str = ",".join(overlay_base_chain)
 
     filter_parts = []
 
-    filter_parts.append(f"[1:v]{intro_base_str}[intro_base]")
+    filter_parts.append(f"[1:v]{overlay_base_str}[overlay_base]")
 
     if len(starts) > 1:
         split_outputs = "".join([f"[ib{i}]" for i in range(len(starts))])
-        filter_parts.append(f"[intro_base]split={len(starts)}{split_outputs}")
+        filter_parts.append(f"[overlay_base]split={len(starts)}{split_outputs}")
     else:
-        filter_parts.append("[intro_base]null[ib0]")
+        filter_parts.append("[overlay_base]null[ib0]")
 
     for i, start_time in enumerate(starts):
         filter_parts.append(f"[ib{i}]setpts=PTS+{start_time}/TB[iv{i}]")
@@ -1159,7 +1242,7 @@ def blit_overlay_video_onto_main_video(
 
     # Calculate required output duration if extending
     if allow_extend_duration and starts:
-        max_end_time = max(start + intro_duration for start in starts)
+        max_end_time = max(start + overlay_duration for start in starts)
         if max_end_time > main_duration:
             extend_duration = max_end_time - main_duration
             filter_parts.append(f"[0:v]format=yuv420p,tpad=stop_mode=clone:stop_duration={extend_duration}[base]")
@@ -1207,10 +1290,10 @@ def blit_overlay_video_onto_main_video(
     cmd.extend(["-i", str(main_video)])
     cmd.extend(["-i", str(overlay_video)])
 
-    if intro_has_audio and main_has_audio:
+    if overlay_has_audio and main_has_audio:
         audio_parts = []
 
-        audio_parts.append(f"[1:a]atrim=0:{intro_duration},asetpts=PTS-STARTPTS,volume={outro_gain}[ia_base]")
+        audio_parts.append(f"[1:a]atrim=0:{overlay_duration},asetpts=PTS-STARTPTS,volume={outro_gain}[ia_base]")
 
         if len(starts) > 1:
             split_outputs = "".join([f"[iab{i}]" for i in range(len(starts))])
@@ -1248,12 +1331,12 @@ def blit_overlay_video_onto_main_video(
                 "ar": "48000",
             }
         )
-        logger.debug(f"Audio mixing: {len(starts)} intro copies, intro_gain={outro_gain}, main_gain={main_gain}")
+        logger.debug(f"Audio mixing: {len(starts)} overlay copies, overlay_gain={outro_gain}, main_gain={main_gain}")
 
-    elif main_has_audio and not intro_has_audio:
+    elif main_has_audio and not overlay_has_audio:
         # Only main has audio: map it with optional gain and extension
         if allow_extend_duration and starts:
-            max_end_time = max(start + intro_duration for start in starts)
+            max_end_time = max(start + overlay_duration for start in starts)
             if max_end_time > main_duration:
                 extend_duration = max_end_time - main_duration
                 if main_gain != 1.0:
@@ -1312,8 +1395,8 @@ def blit_overlay_video_onto_main_video(
 
         logger.debug("Using main audio only")
 
-    elif intro_has_audio and not main_has_audio:
-        logger.warning("Intro has audio but main doesn't - intro audio will be ignored")
+    elif overlay_has_audio and not main_has_audio:
+        logger.warning("Overlay has audio but main doesn't - overlay audio will be ignored")
         cmd.extend(["-filter_complex", video_filter])
         cmd.extend(["-map", "[outv]"])
     else:

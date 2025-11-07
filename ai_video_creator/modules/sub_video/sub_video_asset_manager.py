@@ -42,25 +42,17 @@ class SubVideoAssetManager:
         # Ensure video_assets lists have the same size as recipe
         self._synchronize_assets_with_image_assets()
 
-        logger.debug(
-            f"VideoAssetManager initialized with {len(self.recipe.video_data)} scenes"
-        )
+        logger.debug(f"VideoAssetManager initialized with {len(self.recipe.video_data)} scenes")
 
     def _synchronize_assets_with_image_assets(self):
         """Ensure video_assets lists have the same size as recipe."""
         recipe_size = len(self.recipe.video_data)
         logger.debug(f"Synchronizing assets with recipe - target size: {recipe_size}")
 
-        ensure_collection_index_exists(
-            self.video_assets.assembled_sub_videos, recipe_size - 1
-        )
-        ensure_collection_index_exists(
-            self.video_assets.sub_video_assets, recipe_size - 1, []
-        )
+        ensure_collection_index_exists(self.video_assets.assembled_sub_videos, recipe_size - 1)
+        ensure_collection_index_exists(self.video_assets.sub_video_assets, recipe_size - 1, [])
 
-        logger.debug(
-            f"Asset synchronization completed - video assets: {len(self.video_assets.assembled_sub_videos)}"
-        )
+        logger.debug(f"Asset synchronization completed - video assets: {len(self.video_assets.assembled_sub_videos)}")
 
     def _set_next_recipe_media_path_and_color_match(
         self, scene_index: int, recipe_index: int, media_path: Path
@@ -87,18 +79,14 @@ class SubVideoAssetManager:
             next_recipe = video_recipe_list[next_recipe_index]
             if next_recipe.prompt:
                 return
-            next_recipe.prompt = FlorenceGenerator().generate_description(
-                sub_video_path
-            )
+            next_recipe.prompt = FlorenceGenerator().generate_description(sub_video_path)
             logger.debug(
                 f"Set prompt for next recipe at scene {scene_index + 1},"
                 f" current recipe {recipe_index + 1}, next recipe {next_recipe_index + 1}: {next_recipe.prompt}"
             )
             self.recipe.save_current_state()
 
-    def _generate_sub_video_file_path(
-        self, scene_index: int, recipe_index: int
-    ) -> Path:
+    def _generate_sub_video_file_path(self, scene_index: int, recipe_index: int) -> Path:
         """Generate a unique sub-video file path for a specific scene and recipe index."""
         return (
             self._paths.sub_videos_asset_folder
@@ -112,9 +100,7 @@ class SubVideoAssetManager:
 
             for recipe_index, recipe in enumerate(video_recipe_list):
                 if self.video_assets.has_sub_videos(scene_index, recipe_index):
-                    logger.debug(
-                        f"Sub-video {recipe_index + 1} already exists, skipping generation."
-                    )
+                    logger.debug(f"Sub-video {recipe_index + 1} already exists, skipping generation.")
                     continue
 
                 logger.info(
@@ -122,33 +108,21 @@ class SubVideoAssetManager:
                 )
 
                 video_generator: IVideoGenerator = recipe.GENERATOR_TYPE()
-                sub_video_file_path = self._generate_sub_video_file_path(
-                    scene_index, recipe_index
-                )
+                sub_video_file_path = self._generate_sub_video_file_path(scene_index, recipe_index)
 
                 logger.debug(
                     f"Using video generator: {type(video_generator).__name__} for file: {sub_video_file_path.name}"
                 )
 
-                output_sub_video = video_generator.generate_video(
-                    recipe, sub_video_file_path
-                )
+                output_sub_video = video_generator.generate_video(recipe, sub_video_file_path)
 
-                video_last_frame = extract_video_last_frame(
-                    output_sub_video, self._paths.image_asset_folder
-                )
+                video_last_frame = extract_video_last_frame(output_sub_video, self._paths.image_asset_folder)
 
-                self._set_next_recipe_media_path_and_color_match(
-                    scene_index, recipe_index, video_last_frame
-                )
+                self._set_next_recipe_media_path_and_color_match(scene_index, recipe_index, video_last_frame)
 
-                self._generate_and_set_next_recipe_prompt_if_empty(
-                    scene_index, recipe_index, video_last_frame
-                )
+                self._generate_and_set_next_recipe_prompt_if_empty(scene_index, recipe_index, video_last_frame)
 
-                self.video_assets.set_scene_sub_video(
-                    scene_index, recipe_index, output_sub_video
-                )
+                self.video_assets.set_scene_sub_video(scene_index, recipe_index, output_sub_video)
 
                 logger.info(
                     f"Successfully generated sub video for scene {scene_index + 1}({recipe_index+1}/{len(video_recipe_list)}): {output_sub_video.name}"
@@ -161,10 +135,7 @@ class SubVideoAssetManager:
 
     def _generate_video_file_path(self, scene_index: int) -> Path:
         """Generate a unique video file path for a specific scene."""
-        return (
-            self._paths.sub_videos_asset_folder
-            / f"{self.output_file_prefix}_video_{scene_index+1:03}.mp4"
-        )
+        return self._paths.sub_videos_asset_folder / f"{self.output_file_prefix}_video_{scene_index+1:03}.mp4"
 
     def _generate_video_asset(self, scene_index: int):
         """Generate assets for a specific scene."""
@@ -179,9 +150,7 @@ class SubVideoAssetManager:
             )
 
             self.video_assets.set_scene_video(scene_index, output_video)
-            logger.info(
-                f"Successfully generated video for scene {scene_index + 1}: {output_video.name}"
-            )
+            logger.info(f"Successfully generated video for scene {scene_index + 1}: {output_video.name}")
 
         except (IOError, OSError, RuntimeError) as e:
             logger.error(f"Failed to generate video for scene {scene_index + 1}: {e}")
@@ -191,13 +160,8 @@ class SubVideoAssetManager:
 
         logger.info("Starting video asset generation process")
 
-        if (
-            not self.__narrator_assets.is_complete()
-            or not self.__image_assets.is_complete()
-        ):
-            logger.error(
-                "Cannot generate videos - Some scenes are missing narrator or image assets"
-            )
+        if not self.__narrator_assets.is_complete() or not self.__image_assets.is_complete():
+            logger.error("Cannot generate videos - Some scenes are missing narrator or image assets")
             return
 
         missing_videos = self.video_assets.get_missing_videos()

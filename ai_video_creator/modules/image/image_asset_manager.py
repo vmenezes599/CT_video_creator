@@ -30,17 +30,17 @@ class ImageAssetManager:
         self.image_recipe_file = self._paths.image_recipe_file
         self.image_asset_file = self._paths.image_asset_file
 
-        self.recipe = ImageRecipe(self.image_recipe_file)
+        self.recipe = ImageRecipe(video_creator_paths)
         self.image_assets = ImageAssets(video_creator_paths)
 
         # Ensure image_assets list has the same size as recipe
         self._synchronize_assets_with_recipe()
 
-        logger.debug(f"ImageAssetBuilder initialized with {len(self.recipe.image_data)} scenes")
+        logger.debug(f"ImageAssetBuilder initialized with {len(self.recipe.recipes_data)} scenes")
 
     def _synchronize_assets_with_recipe(self):
         """Ensure image_assets list has the same size as recipe."""
-        recipe_size = len(self.recipe.image_data)
+        recipe_size = len(self.recipe.recipes_data)
         logger.debug(f"Synchronizing image assets with recipe - target size: {recipe_size}")
 
         # Extend or truncate image_list to match recipe size
@@ -54,7 +54,7 @@ class ImageAssetManager:
         """Generate image asset for a scene."""
         try:
             logger.info(f"Generating image asset for scene {scene_index + 1}")
-            image = self.recipe.image_data[scene_index]
+            image = self.recipe.recipes_data[scene_index]
             image_generator: IImageGenerator = image.GENERATOR_TYPE()
             output_image_file_path = (
                 self._paths.image_asset_folder / f"{self.output_file_prefix}_image_{scene_index+1:03}.png"

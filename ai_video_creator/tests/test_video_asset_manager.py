@@ -60,6 +60,8 @@ class TestVideoAssetManager:
                     "recipe_list": [
                         {
                             "prompt": "Test prompt 1",
+                            "width": 848,
+                            "height": 480,
                             "generator_id": "florence_model",
                             "recipe_type": "WanI2VRecipeType",
                             "media_path": "assets/images/image1.jpg",
@@ -71,6 +73,8 @@ class TestVideoAssetManager:
                     "recipe_list": [
                         {
                             "prompt": "Test prompt 2",
+                            "width": 848,
+                            "height": 480,
                             "generator_id": "florence_model",
                             "recipe_type": "WanI2VRecipeType",
                             "media_path": "assets/images/image2.jpg",

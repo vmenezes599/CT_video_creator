@@ -5,6 +5,7 @@ Subtitle Generation Module
 from pathlib import Path
 import stable_whisper
 from logging_utils import logger
+from ai_video_creator.utils import SubtitleAlignment, SubtitlePosition
 
 
 class SubtitleGenerator:
@@ -75,25 +76,76 @@ class SubtitleGenerator:
 
         logger.info(f"SRT file written successfully: {output_path.name}")
 
-    def generate_subtitles_from_audio(self, video_path: Path, word_level: bool = False) -> Path:
+    def generate_subtitles_from_audio(
+        self,
+        video_path: Path,
+        word_level: bool = False,
+        segment_level: bool = True,
+        font_size: int = 24,
+        margin: int = 50,
+        karaoke: bool = True,
+        position: SubtitlePosition = SubtitlePosition.BOTTOM,
+        alignment: SubtitleAlignment = SubtitleAlignment.CENTER,
+    ) -> Path:
         """
-        Generate an SRT file from the audio track of a video.
+        Generate an ASS subtitle file from the audio track of a video.
 
         :param video_path: Path to the input video file
-        :param output_srt_path: Path for the output SRT file (optional)
-        :return: Path to the generated SRT file
+        :param word_level: Whether to use word-level timestamps
+        :param segment_level: Whether to use segment-level timestamps
+        :param font_size: Font size for subtitles
+        :param position: Vertical position (TOP, CENTER, BOTTOM)
+        :param margin: Vertical margin in pixels
+        :param alignment: Horizontal alignment (LEFT, CENTER, RIGHT, JUSTIFIED)
+        :return: Path to the generated ASS file
         """
-        logger.info(f"Generating SRT file for video: {video_path.name}")
-        output_srt_path = video_path.with_suffix(".srt")
-        logger.info(f"SRT file doesn't exist, transcribing audio from: {video_path.name}")
+        # Calculate ASS alignment value based on vertical position and horizontal alignment
+        # ASS Alignment values (numpad layout):
+        # 1=bottom-left, 2=bottom-center, 3=bottom-right
+        # 4=middle-left, 5=middle-center, 6=middle-right
+        # 7=top-left,    8=top-center,    9=top-right
+
+        # Map position to row (1=bottom, 2=middle, 3=top)
+        position_row = {
+            SubtitlePosition.BOTTOM: 0,
+            SubtitlePosition.CENTER: 3,
+            SubtitlePosition.TOP: 6,
+        }
+
+        # Map alignment to column (0=left, 1=center, 2=right)
+        alignment_col = {
+            SubtitleAlignment.LEFT: 0,
+            SubtitleAlignment.CENTER: 1,
+            SubtitleAlignment.RIGHT: 2,
+        }
+
+        # Calculate final ASS alignment (1-9)
+        ass_alignment = position_row[position] + alignment_col[alignment] + 1
+
+        logger.info(f"Generating ASS subtitle file for video: {video_path.name}")
+        logger.debug(
+            f"Subtitle settings: position={position.value}, margin={margin}, "
+            f"font_size={font_size}, alignment={alignment.value}, ass_alignment={ass_alignment}"
+        )
+        output_ass_path = video_path.with_suffix(".ass")
+        logger.info(f"Transcribing audio from: {video_path.name}")
         model = self._load_model()
 
         logger.info("Starting audio transcription with Whisper")
         result = model.transcribe(str(video_path), vad=True)
         logger.info("Transcription completed.")
 
-        result.to_srt_vtt(str(output_srt_path), word_level=word_level)
+        # Generate ASS with custom styling parameters
+        result.to_ass(
+            str(output_ass_path),
+            word_level=word_level,
+            segment_level=segment_level,
+            font_size=font_size,
+            Alignment=ass_alignment,
+            MarginV=margin,
+            karaoke=karaoke,
+        )
 
         self._unload_model()
 
-        return output_srt_path
+        return output_ass_path

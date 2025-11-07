@@ -29,6 +29,7 @@ from ai_video_creator.utils import (  # pylint: disable=unused-import
     concatenate_videos_no_reencoding,
     add_background_music_to_video,
     reencode_to_reference_basic,
+    get_media_resolution,
     get_media_duration,
     safe_move,
     VideoCreatorPaths,
@@ -44,6 +45,9 @@ class VideoAssembler:
     A class that orchestrates the video creation process by coordinating
     image generation, audio generation, and video composition.
     """
+
+    DEFAULT_WIDTH = 1920
+    DEFAULT_HEIGHT = 1080
 
     def __init__(self, video_creator_paths: VideoCreatorPaths):
         """
@@ -67,6 +71,7 @@ class VideoAssembler:
         self.video_assembler_recipe = VideoAssemblerRecipe(self._paths)
 
         self.output_path = self._paths.video_output_file
+        self.subtitle_file: Path | None = None
         self._temp_files = []
 
     def _cleanup(self):
@@ -95,20 +100,34 @@ class VideoAssembler:
         self._temp_files.append(output_path)
         return output_path
 
-    def _combine_sub_video_with_audio(self, video_path: str, audio_path: str) -> str:
+    def _get_desired_video_resolution(self, video_path: Path) -> tuple[int, int]:
+        """
+        Get the desired video resolution from the recipe.
+        """
+        width = self.DEFAULT_WIDTH
+        height = self.DEFAULT_HEIGHT
+
+        video_width, video_height = get_media_resolution(video_path)
+        if video_height > video_width:
+            width = self.DEFAULT_HEIGHT
+            height = self.DEFAULT_WIDTH
+        return width, height
+
+    def _combine_sub_video_with_audio(self, video_path: Path, audio_path: Path) -> str:
         """
         Generate a video segment from a video and audio file.
         """
-        video_path_obj = Path(video_path)
-        temp_file_base = f"temp_{video_path_obj.stem}"
+        temp_file_base = f"temp_{video_path.stem}"
         temp_file = self._paths.video_assembler_asset_folder / f"{temp_file_base}.mp4"
         index = 1
         while temp_file.exists():
             temp_file = temp_file.with_stem(f"{temp_file_base}_{index}")
             index += 1
 
+        width, height = self._get_desired_video_resolution(video_path)
+
         output_path = create_video_segment_from_sub_video_and_audio_freeze_last_frame(
-            sub_video_path=video_path, audio_path=audio_path, output_path=temp_file
+            sub_video_path=video_path, audio_path=audio_path, output_path=temp_file, width=width, height=height
         )
 
         return output_path
@@ -121,10 +140,12 @@ class VideoAssembler:
 
         logger.info(f"Composing final video from {len(video_segments)} segments")
 
+        width, height = self._get_desired_video_resolution(video_segments[0])
+
         # Step 2: Create concat list
         output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_raw")
         raw_video_path = concatenate_videos_with_fade_in_out(
-            video_segments=video_segments, output_path=output_video_path
+            video_segments=video_segments, output_path=output_video_path, width=width, height=height
         )
         # self._temp_files.append(raw_video_path)
 
@@ -321,10 +342,15 @@ class VideoAssembler:
         ending_sub_video = self._combine_sub_video_with_audio(ending_video_path, concatenated_narrator_path)
         self._temp_files.append(ending_sub_video)
 
-        start_time_seconds = (
-            get_media_duration(ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index])
-            + ending_recipe.ending_start_delay_seconds
-        )
+        previous_media_length = 0.0
+        if (
+            ending_recipe.ending_overlay_start_narrator_index > 0
+            and ending_recipe.ending_overlay_start_narrator_index < len(ending_narrator_paths)
+        ):
+            previous_narrator = ending_narrator_paths[ending_recipe.ending_overlay_start_narrator_index - 1]
+            previous_media_length = get_media_duration(previous_narrator)
+
+        start_time_seconds = previous_media_length + ending_recipe.ending_start_delay_seconds
 
         output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
 
@@ -387,9 +413,9 @@ class VideoAssembler:
         if video_segments[-1] == self.video_assembler_assets.video_ending:
             background_music_assets = [*background_music_assets, background_music_assets[-1]]
 
-        assert len(background_music_assets) == len(
+        assert len(background_music_assets) <= len(
             video_segments
-        ), "Background music and video_segments length mismatch."
+        ), "Background music must be bigger or equal length than video_segments."
 
         duration_dict: list[tuple[BackgroundMusicAsset, float]] = []
         previous_bgm_asset = None
@@ -507,8 +533,14 @@ class VideoAssembler:
             logger.info("Subtitle generation is skipped as per the recipe.")
             return video_path
 
-        subtitle_file = self._subtitle_generator.generate_subtitles_from_audio(
-            video_path, subtitle_recipe.word_level_timestamps
+        self.subtitle_file = self._subtitle_generator.generate_subtitles_from_audio(
+            video_path=video_path,
+            word_level=subtitle_recipe.word_level_timestamps,
+            segment_level=subtitle_recipe.segment_level_timestamps,
+            font_size=subtitle_recipe.font_size,
+            position=subtitle_recipe.position,
+            margin=subtitle_recipe.subtitle_margin,
+            alignment=subtitle_recipe.alignment,
         )
 
         output_file = video_path
@@ -518,9 +550,21 @@ class VideoAssembler:
             output_file = self.output_path.with_stem(f"{self.output_path.stem}_subtitled")
             output_file = burn_subtitles_to_video(
                 video_path=video_path,
-                srt_path=subtitle_file,
+                subtitle_path=self.subtitle_file,
                 output_path=output_file,
             )
+
+        return output_file
+
+    def _rename_outputs(self, video_path: Path) -> Path:
+        """
+        Rename the final output video and subtitle files to match the desired output path.
+        """
+        output_file = video_path.rename(self.output_path)
+
+        if self.subtitle_file:
+            subtitle_target = self.subtitle_file.with_stem(self.output_path.stem)
+            self.subtitle_file = self.subtitle_file.rename(subtitle_target)
 
         return output_file
 
@@ -543,7 +587,7 @@ class VideoAssembler:
 
         output_file = self._subtitle_process(output_file)
 
-        output_file = output_file.rename(self.output_path)
+        output_file = self._rename_outputs(output_file)
 
         self._cleanup()
 
