@@ -352,22 +352,11 @@ class VideoAssemblerRecipe:
             with open(self.effects_file_path, "r", encoding="utf-8") as file_handler:
                 data: dict = json.load(file_handler)
 
-            required_fields = [
-                "narrator_asset_effects",
-                "video_ending_recipe",
-                "video_overlay_recipe",
-                "video_intro_recipe",
-                "subtitle_recipe",
-            ]
-            missing_fields = set(data.keys()) - set(required_fields)
-            if missing_fields:
-                raise KeyError(f"Missing required fields: {missing_fields}")
-
-            self._narrator_asset_effects.from_dict(data["narrator_asset_effects"])
-            self._video_ending_recipe.from_dict(data["video_ending_recipe"])
-            self._video_intro_recipe.from_dict(data["video_intro_recipe"])
-            self._video_overlay_recipe.from_dict(data["video_overlay_recipe"])
-            self._subtitle_recipe.from_dict(data["subtitle_recipe"])
+            self._narrator_asset_effects.from_dict(data.get("narrator_asset_effects", {}))
+            self._video_ending_recipe.from_dict(data.get("video_ending_recipe", {}))
+            self._video_intro_recipe.from_dict(data.get("video_intro_recipe", {}))
+            self._video_overlay_recipe.from_dict(data.get("video_overlay_recipe", {}))
+            self._subtitle_recipe.from_dict(data.get("subtitle_recipe", {}))
 
             logger.info("Successfully loaded video assembler recipe.")
         except FileNotFoundError:

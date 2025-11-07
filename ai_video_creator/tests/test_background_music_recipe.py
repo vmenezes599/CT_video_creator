@@ -163,9 +163,7 @@ class TestBackgroundMusicRecipe:
         assert recipe.is_empty()
 
         # Verify backup was created
-        backup_file = paths.background_music_recipe_file.parent / (
-            paths.background_music_recipe_file.name + ".old"
-        )
+        backup_file = paths.background_music_recipe_file.parent / (paths.background_music_recipe_file.name + ".old")
         assert backup_file.exists()
 
     def test_background_music_recipe_invalid_data_structure(self, tmp_path):

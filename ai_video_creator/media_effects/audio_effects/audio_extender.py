@@ -16,11 +16,7 @@ class AudioExtender(EffectBase):
 
     effect_type: str = "AudioExtenderType"
 
-    def __init__(
-        self,
-        seconds_to_extend_front: float = 0.0,
-        seconds_to_extend_back: float = 0.0,
-    ):
+    def __init__(self, seconds_to_extend_front: float, seconds_to_extend_back: float):
         """
         Initialize the audio extender effect.
 
@@ -66,10 +62,5 @@ class AudioExtender(EffectBase):
         Initialize the effect from a JSON-serialized format.
         """
 
-        required_fields = ["seconds_to_extend_front", "seconds_to_extend_back"]
-        missing_fields = set(required_fields) - json_data.keys()
-        for field in missing_fields:
-            raise KeyError(f"Missing required key: {field}")
-
-        self.__seconds_to_extend_front = json_data["seconds_to_extend_front"]
-        self.__seconds_to_extend_back = json_data["seconds_to_extend_back"]
+        self.__seconds_to_extend_front = json_data.get("seconds_to_extend_front", 0.0)
+        self.__seconds_to_extend_back = json_data.get("seconds_to_extend_back", 0.0)
