@@ -143,7 +143,7 @@ class BackgroundMusicAssets:
             return False
 
         music_asset_path = self.background_music_assets[scene_index]
-        if music_asset_path.asset is None:
+        if music_asset_path is None or music_asset_path.asset is None:
             return False
 
         if music_asset_path.skip:
