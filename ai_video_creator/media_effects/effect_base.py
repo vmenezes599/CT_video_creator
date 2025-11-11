@@ -23,12 +23,13 @@ class EffectBase(ABC):
         self.effect_type = effect_type
 
     @abstractmethod
-    def apply(self, media_file_path: Path, **kwargs) -> Path:
+    def apply(self, media_file_path: Path, output_folder: Path, **kwargs) -> Path:
         """
         Apply the effect to the media data.
 
         Args:
             media_file_path: The path to the input media file
+            output_folder: The folder to save the processed media file
             **kwargs: Additional parameters specific to the effect
 
         Returns:

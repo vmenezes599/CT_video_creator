@@ -72,6 +72,9 @@ class VideoAssembler:
 
         self.output_path = self._paths.video_output_file
         self.subtitle_file: Path | None = None
+
+        self._temp_folder = self._paths.video_assembler_asset_folder / "temp_files"
+        self._temp_folder.mkdir(parents=True, exist_ok=True)
         self._temp_files = []
 
     def _cleanup(self):
@@ -84,6 +87,12 @@ class VideoAssembler:
             if file_path.exists():
                 logger.debug(f"Removing temporary file: {file_path.name}")
                 file_path.unlink()
+
+        for f in self._temp_folder.iterdir():
+            f.unlink()
+            logger.debug(f"Removing temporary file: {f.name}")
+
+        self._temp_folder.rmdir()
         logger.info("Cleanup completed")
 
     def _combine_image_with_audio(self, image_path: str, audio_path: str) -> str:
@@ -91,7 +100,7 @@ class VideoAssembler:
         Generate a video segment from a image and audio file.
         """
         image_path_obj = Path(image_path)
-        temp_file = self._paths.video_assembler_asset_folder / f"temp_{image_path_obj.stem}.mp4"
+        temp_file = self._temp_folder / f"{image_path_obj.stem}_with_audio.mp4"
 
         output_path = create_video_segment_from_image_and_audio(
             image_path=image_path, audio_path=audio_path, output_path=temp_file
@@ -113,12 +122,12 @@ class VideoAssembler:
             height = self.DEFAULT_WIDTH
         return width, height
 
-    def _combine_sub_video_with_audio(self, video_path: Path, audio_path: Path) -> str:
+    def _combine_sub_video_with_audio(self, video_path: Path, audio_path: Path) -> Path:
         """
         Generate a video segment from a video and audio file.
         """
-        temp_file_base = f"temp_{video_path.stem}"
-        temp_file = self._paths.video_assembler_asset_folder / f"{temp_file_base}.mp4"
+        temp_file_base = f"{video_path.stem}_with_audio"
+        temp_file = self._temp_folder / f"{temp_file_base}.mp4"
         index = 1
         while temp_file.exists():
             temp_file = temp_file.with_stem(f"{temp_file_base}_{index}")
@@ -138,27 +147,15 @@ class VideoAssembler:
         """
         assert len(video_segments) > 0, "No clips to compose."
 
+        output_video_path = self._temp_folder / f"{self.output_path.stem}_composed{self.output_path.suffix}"
+
         logger.info(f"Composing final video from {len(video_segments)} segments")
 
         width, height = self._get_desired_video_resolution(video_segments[0])
 
-        # Step 2: Create concat list
-        output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_raw")
-        raw_video_path = concatenate_videos_with_fade_in_out(
+        return concatenate_videos_with_fade_in_out(
             video_segments=video_segments, output_path=output_video_path, width=width, height=height
         )
-        # self._temp_files.append(raw_video_path)
-
-        # Generate subtitles using SubtitleGenerator
-
-        # self._temp_files.append(str_file)
-
-        # Add subtitles to the final video
-        # burn_subtitles_to_video(
-        #    video_path=video_path, srt_path=srt_path, output_path=self.output_path
-        # )
-
-        return raw_video_path
 
     def _apply_narrator_effects(self, narrator_file_paths: list[Path]) -> list[Path]:
         """
@@ -170,7 +167,7 @@ class VideoAssembler:
             processed_narrator_path = audio_path
             for effect in audio_effects:
                 if effect:
-                    processed_narrator_path = effect.apply(processed_narrator_path)
+                    processed_narrator_path = effect.apply(processed_narrator_path, self._temp_folder)
                     self._temp_files.append(processed_narrator_path)
             processed_narrators.append(processed_narrator_path)
 
@@ -254,13 +251,6 @@ class VideoAssembler:
             return video_segments
 
         reencoded_intro = intro_video_path
-        # reencoded_intro = reencode_to_reference_basic(
-        #     intro_video_path,
-        #     video_segments[0],
-        #     intro_video_path.with_stem(f"{intro_video_path.stem}_reencoded"),
-        # )
-
-        # self._temp_files.append(reencoded_intro)
 
         logger.info(f"Adding intro video segment: {intro_video_path.name}")
 
@@ -277,7 +267,7 @@ class VideoAssembler:
         seed = ending_recipe.seed
 
         base_name = "video_assembler_ending_narrator"
-        output_path_base = self._paths.narrator_asset_folder / f"{base_name}.mp3"
+        output_path_base = self._temp_folder / f"{base_name}.mp3"
 
         generated_audio_paths = []
         for index, narrator_text in enumerate(narrator_text_list):
@@ -299,7 +289,7 @@ class VideoAssembler:
         """
         logger.info("Concatenating ending narrators")
 
-        concatenated_narrator_path = self._paths.narrator_asset_folder / "ending_narrator_concatenated.mp3"
+        concatenated_narrator_path = self._temp_folder / "ending_narrator_concatenated.mp3"
 
         concatenated_narrator_path = concatenate_audio_with_silence_inbetween(
             narrator_path_list, concatenated_narrator_path
@@ -340,7 +330,6 @@ class VideoAssembler:
         concatenated_narrator_path = self._concatenate_ending_narrators(ending_narrator_paths)
 
         ending_sub_video = self._combine_sub_video_with_audio(ending_video_path, concatenated_narrator_path)
-        self._temp_files.append(ending_sub_video)
 
         previous_medias_length = 0.0
         target_index = ending_recipe.ending_overlay_start_narrator_index - 1
@@ -350,8 +339,12 @@ class VideoAssembler:
 
         start_time_seconds = previous_medias_length + ending_recipe.ending_start_delay_seconds
 
+        output_path = (
+            self._paths.video_assembler_asset_folder / f"{self.output_path.stem}_ending{self.output_path.suffix}"
+        )
         if ending_recipe.ending_overlay_asset:
-            output_path = ending_sub_video.with_stem(f"{self.output_path.stem}_ending")
+
+            self._temp_files.append(ending_sub_video)
 
             ending_sub_video = blit_overlay_video_onto_main_video(
                 overlay_video=ending_recipe.ending_overlay_asset,
@@ -362,6 +355,8 @@ class VideoAssembler:
                 start_time_seconds=start_time_seconds,
                 allow_extend_duration=True,
             )
+        else:
+            ending_sub_video = ending_sub_video.rename(output_path)
 
         self.video_assembler_assets.set_video_ending(ending_sub_video)
 
@@ -385,8 +380,8 @@ class VideoAssembler:
             return video_path
 
         logger.info(f"Adding outro video segment: {overlay_asset_path.name}")
-        output_video_path = self.output_path.with_stem(f"{self.output_path.stem}_final")
 
+        output_video_path = self._temp_folder / f"{self.output_path.stem}_with_overlay{self.output_path.suffix}"
         self._temp_files.append(video_path)
 
         output_path = blit_overlay_video_onto_main_video(
@@ -412,7 +407,7 @@ class VideoAssembler:
         if video_segments[-1] == self.video_assembler_assets.video_ending:
             background_music_assets = [*background_music_assets, background_music_assets[-1]]
 
-        assert len(background_music_assets) <= len(
+        assert len(background_music_assets) >= len(
             video_segments
         ), "Background music must be bigger or equal length than video_segments."
 
@@ -462,7 +457,7 @@ class VideoAssembler:
 
         music_duration_dict = self._generate_background_music_duration_dict(video_segments)
 
-        output_path = self.output_path.with_stem(f"{self.output_path.stem}_bgm")
+        output_path = self._temp_folder / f"{self.output_path.stem}_bgm{self.output_path.suffix}"
 
         music_assets = [segment["asset"] for segment in music_duration_dict]
         start_times = [segment["start_time"] for segment in music_duration_dict]
@@ -547,7 +542,7 @@ class VideoAssembler:
         if subtitle_recipe.burn_subtitles_into_video:
             self._temp_files.append(video_path)
 
-            output_file = self.output_path.with_stem(f"{self.output_path.stem}_subtitled")
+            output_file = self._temp_folder / f"{self.output_path.stem}_subtitled{self.output_path.suffix}"
             output_file = burn_subtitles_to_video(
                 video_path=video_path,
                 subtitle_path=ass_subtitle,
@@ -563,7 +558,7 @@ class VideoAssembler:
         output_file = video_path.rename(self.output_path)
 
         if self.subtitle_file:
-            subtitle_target = self.subtitle_file.with_stem(self.output_path.stem)
+            subtitle_target = output_file.with_suffix(self.subtitle_file.suffix)
             self.subtitle_file = self.subtitle_file.rename(subtitle_target)
 
         return output_file
