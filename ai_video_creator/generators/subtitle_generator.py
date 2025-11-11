@@ -86,7 +86,7 @@ class SubtitleGenerator:
         karaoke: bool = True,
         position: SubtitlePosition = SubtitlePosition.BOTTOM,
         alignment: SubtitleAlignment = SubtitleAlignment.CENTER,
-    ) -> Path:
+    ) -> tuple[Path, Path]:
         """
         Generate an ASS subtitle file from the audio track of a video.
 
@@ -97,7 +97,7 @@ class SubtitleGenerator:
         :param position: Vertical position (TOP, CENTER, BOTTOM)
         :param margin: Vertical margin in pixels
         :param alignment: Horizontal alignment (LEFT, CENTER, RIGHT, JUSTIFIED)
-        :return: Path to the generated ASS file
+        :return: tuple[Path, Path] Paths to the generated ASS and SRT files
         """
         # Calculate ASS alignment value based on vertical position and horizontal alignment
         # ASS Alignment values (numpad layout):
@@ -127,7 +127,6 @@ class SubtitleGenerator:
             f"Subtitle settings: position={position.value}, margin={margin}, "
             f"font_size={font_size}, alignment={alignment.value}, ass_alignment={ass_alignment}"
         )
-        output_ass_path = video_path.with_suffix(".ass")
         logger.info(f"Transcribing audio from: {video_path.name}")
         model = self._load_model()
 
@@ -136,6 +135,7 @@ class SubtitleGenerator:
         logger.info("Transcription completed.")
 
         # Generate ASS with custom styling parameters
+        output_ass_path = video_path.with_suffix(".ass")
         result.to_ass(
             str(output_ass_path),
             word_level=word_level,
@@ -146,6 +146,10 @@ class SubtitleGenerator:
             karaoke=karaoke,
         )
 
+        # Generate SRT file
+        output_srt_path = video_path.with_suffix(".srt")
+        result.to_srt_vtt(str(output_srt_path), word_level=word_level, segment_level=segment_level)
+
         self._unload_model()
 
-        return output_ass_path
+        return output_ass_path, output_srt_path

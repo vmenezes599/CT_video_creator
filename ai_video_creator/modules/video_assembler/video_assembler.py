@@ -532,7 +532,7 @@ class VideoAssembler:
             logger.info("Subtitle generation is skipped as per the recipe.")
             return video_path
 
-        self.subtitle_file = self._subtitle_generator.generate_subtitles_from_audio(
+        ass_subtitle, self.subtitle_file = self._subtitle_generator.generate_subtitles_from_audio(
             video_path=video_path,
             word_level=subtitle_recipe.word_level_timestamps,
             segment_level=subtitle_recipe.segment_level_timestamps,
@@ -541,6 +541,7 @@ class VideoAssembler:
             margin=subtitle_recipe.subtitle_margin,
             alignment=subtitle_recipe.alignment,
         )
+        self._temp_files.append(ass_subtitle)
 
         output_file = video_path
         if subtitle_recipe.burn_subtitles_into_video:
@@ -549,7 +550,7 @@ class VideoAssembler:
             output_file = self.output_path.with_stem(f"{self.output_path.stem}_subtitled")
             output_file = burn_subtitles_to_video(
                 video_path=video_path,
-                subtitle_path=self.subtitle_file,
+                subtitle_path=ass_subtitle,
                 output_path=output_file,
             )
 
