@@ -5,6 +5,7 @@ Audio Generation Module
 import random
 import tempfile
 import requests
+import time
 
 from zipfile import ZipFile
 from pathlib import Path
@@ -59,7 +60,27 @@ class MusicGenGenerator(IBackgroundMusicGenerator):
         """
         Initialize the MusicGenGenerator class.
         """
-        self.ttm_endpoint = f"{TTM_SERVER_URL}/ttm"
+        self.endpoint = f"{TTM_SERVER_URL}"
+        self.ttm_endpoint = f"{self.endpoint}/ttm"
+
+        self._wait_for_service_ready()
+
+    def _wait_for_service_ready(self, check_interval: int = 5):
+        """
+        Wait until the Text-to-Music service is ready to accept requests.
+        """
+        max_tries = (5 * 60) / check_interval  # Wait up to 5 minutes
+        tries = 0
+        while tries < max_tries:
+            try:
+                response = requests.get(f"{self.endpoint}/health", timeout=10)
+                if response.ok:
+                    return
+            except requests.RequestException:
+                print("Waiting for Text-to-Music service to be ready...")
+                time.sleep(check_interval)
+            finally:
+                tries += 1
 
     @override
     def text_to_music(self, recipe: "MusicGenRecipe", output_folder: Path) -> Path:

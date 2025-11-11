@@ -5,6 +5,7 @@ Audio Generation Module
 import random
 from abc import ABC, abstractmethod
 from pathlib import Path
+import time
 import requests
 
 from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER, TTS_SERVER_URL
@@ -79,7 +80,27 @@ class ZonosTTSAudioGenerator(IAudioGenerator):
         """
         Initialize the ZonosTTSAudioGenerator class.
         """
-        self.tts_endpoint = f"{TTS_SERVER_URL}/tts"
+        self.endpoint = f"{TTS_SERVER_URL}"
+        self.tts_endpoint = f"{self.endpoint}/tts"
+
+        self._wait_for_service_ready()
+
+    def _wait_for_service_ready(self, check_interval: int = 5):
+        """
+        Wait until the Text-to-Music service is ready to accept requests.
+        """
+        max_tries = (5 * 60) / check_interval  # Wait up to 5 minutes
+        tries = 0
+        while tries < max_tries:
+            try:
+                response = requests.get(f"{self.endpoint}/health", timeout=10)
+                if response.ok:
+                    return
+            except requests.RequestException:
+                print("Waiting for Text-to-Music service to be ready...")
+                time.sleep(check_interval)
+            finally:
+                tries += 1
 
     @override
     def text_to_speech(self, text_list: list[str], output_file_path: Path) -> Path:
