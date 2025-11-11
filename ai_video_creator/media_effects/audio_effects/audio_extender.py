@@ -29,13 +29,13 @@ class AudioExtender(EffectBase):
         self.__seconds_to_extend_back = seconds_to_extend_back
 
     @override
-    def apply(self, media_file_path: Path, **kwargs) -> Path:
+    def apply(self, media_file_path: Path, output_folder: Path, **kwargs) -> Path:
         """Apply the audio extender effect."""
         logger.info(
             f"Applying AudioExtender to {media_file_path.name} - "
             f"front: {self.__seconds_to_extend_front}s, back: {self.__seconds_to_extend_back}s"
         )
-        output_path = media_file_path.with_stem(f"{media_file_path.stem}_extended")
+        output_path = output_folder / f"{media_file_path.stem}_extended{media_file_path.suffix}"
 
         result = extend_audio_to_duration(
             input_path=media_file_path,
