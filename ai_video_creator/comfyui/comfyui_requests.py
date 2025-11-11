@@ -20,18 +20,33 @@ class ComfyUIRequests:
     ComfyuiRequest is a class that handles HTTP requests to the ComfyUI API.
     """
 
-    def __init__(
-        self, max_retries_per_request: int = 5, delay_seconds: int = 1
-    ) -> None:
+    def __init__(self, max_retries_per_request: int = 5, delay_seconds: int = 1) -> None:
         """
         Initializes the ComfyuiRequest with a configurable retry mechanism.
         """
         self.max_retries_per_request = max_retries_per_request
         self.delay_seconds = delay_seconds
 
-    def _send_get_request(
-        self, url: str, params: dict = None, stream: bool = False, timeout: int = 10
-    ):
+        self._wait_for_service_ready()
+
+    def _wait_for_service_ready(self, check_interval: int = 5):
+        """
+        Wait until ComfyUI is ready to accept requests.
+        """
+        max_tries = (5 * 60) / check_interval  # Wait up to 5 minutes
+        tries = 0
+        while tries < max_tries:
+            try:
+                response = self._send_get_request(f"{COMFYUI_URL}/prompt", timeout=10)
+                if response.ok:
+                    return
+            except RequestException:
+                logger.info("Waiting for ComfyUI to be ready...")
+                time.sleep(check_interval)
+            finally:
+                tries += 1
+
+    def _send_get_request(self, url: str, params: dict = None, stream: bool = False, timeout: int = 10):
         """
         Sends a GET request using the configured session.
         """
@@ -49,9 +64,7 @@ class ComfyUIRequests:
         """
         Sends a POST request using the configured session.
         """
-        response = requests.post(
-            url=url, data=data, json=json, files=files, params=params, timeout=timeout
-        )
+        response = requests.post(url=url, data=data, json=json, files=files, params=params, timeout=timeout)
         response.raise_for_status()
         return response
 
@@ -78,9 +91,7 @@ class ComfyUIRequests:
 
         return self._send_post_request(url=url, json=prompt, timeout=timeout)
 
-    def _create_workflow_summary(
-        self, workflow: IComfyUIWorkflow, max_length: int = 100
-    ) -> tuple[str, str]:
+    def _create_workflow_summary(self, workflow: IComfyUIWorkflow, max_length: int = 100) -> tuple[str, str]:
         """
         Create a progress summary for displaying workflow information.
 
@@ -131,9 +142,7 @@ class ComfyUIRequests:
         """
         try:
             payload = {"unload_models": True, "free_memory": True}
-            response = self._send_post_request(
-                f"{COMFYUI_URL}/free", json=payload, timeout=10
-            )
+            response = self._send_post_request(f"{COMFYUI_URL}/free", json=payload, timeout=10)
             if not response.ok:
                 logger.error("Failed to clean memory in ComfyUI: {}", response.text)
             time.sleep(5)  # Give ComfyUI time to process the request
@@ -176,14 +185,10 @@ class ComfyUIRequests:
         """
         if response["status"]["status_str"] != "success":
             logger.error("ComfyUI request failed: {}", response["status"]["status_str"])
-            raise RuntimeError(
-                f"ComfyUI request failed: {response['status']['status_str']}"
-            )
+            raise RuntimeError(f"ComfyUI request failed: {response['status']['status_str']}")
         if response["status"]["completed"] is False:
             logger.error("ComfyUI request not completed successfully.")
-            raise RuntimeError(
-                f"ComfyUI request failed: {response['status']['status_str']}"
-            )
+            raise RuntimeError(f"ComfyUI request failed: {response['status']['status_str']}")
 
     def _process_single_workflow(self, workflow: IComfyUIWorkflow) -> list[str]:
         """
@@ -272,9 +277,7 @@ class ComfyUIRequests:
 
         return Path(file_path.name)
 
-    def download_all_files(
-        self, files_to_download: list[Path], output_folder: Path
-    ) -> list[Path]:
+    def download_all_files(self, files_to_download: list[Path], output_folder: Path) -> list[Path]:
         """
         Download all specified files from ComfyUI.
 
@@ -290,9 +293,7 @@ class ComfyUIRequests:
                 "type": "output",
             }
             try:
-                response = self._send_get_request(
-                    f"{COMFYUI_URL}/view", params=params, stream=True, timeout=120
-                )
+                response = self._send_get_request(f"{COMFYUI_URL}/view", params=params, stream=True, timeout=120)
                 response.raise_for_status()
                 output_folder.mkdir(parents=True, exist_ok=True)
                 out_path = output_folder / file_handler.name
@@ -306,9 +307,7 @@ class ComfyUIRequests:
 
         return output_paths
 
-    def ensure_send_all_prompts(
-        self, req_list: list[IComfyUIWorkflow], output_dir: Path
-    ) -> list[str]:
+    def ensure_send_all_prompts(self, req_list: list[IComfyUIWorkflow], output_dir: Path) -> list[str]:
         """
         Send all prompts in the list to ComfyUI and wait for them to finish.
 
@@ -329,9 +328,7 @@ class ComfyUIRequests:
 
         logger.info("Finished processing all ComfyUI requests.")
 
-        downloaded_files = self.download_all_files(
-            [Path(p) for p in output_image_paths], output_folder=output_dir
-        )
+        downloaded_files = self.download_all_files([Path(p) for p in output_image_paths], output_folder=output_dir)
 
         if len(downloaded_files) < len(req_list):
             logger.error("No files were downloaded from ComfyUI.")
