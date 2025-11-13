@@ -20,7 +20,8 @@ class ImageRecipe:
 
         self.recipes_data: list[FluxImageRecipe] = []
         self.extra_image_data: list[dict] = []
-        self.__load_from_file(self.recipe_path)
+        
+        self._load_from_file(self.recipe_path)
 
     def add_image_data(self, image_data: FluxImageRecipe, extra_image_data: dict = None) -> None:
         """Add image data to the recipe."""
@@ -29,7 +30,7 @@ class ImageRecipe:
         self.extra_image_data.append(extra_image_data or {})
         self.save_current_state()
 
-    def __load_from_file(self, file_path: Path) -> None:
+    def _load_from_file(self, file_path: Path) -> None:
         """Load image recipe from a JSON file."""
         try:
             with open(file_path, "r", encoding="utf-8") as file:

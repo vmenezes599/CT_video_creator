@@ -6,7 +6,8 @@ from pathlib import Path
 
 from logging_utils import setup_console_logging, setup_file_logging, cleanup_logging
 
-from .modules.narrator_and_image import NarratorAndImageAssetManager
+from .modules.narrator import NarratorRecipeBuilder, NarratorAssetManager
+from .modules.image import ImageRecipeBuilder, ImageAssetManager
 from .modules.background_music import BackgroundMusicRecipeBuilder, BackgroundMusicAssetManager
 from .modules.sub_video import SubVideoRecipeBuilder, SubVideoAssetManager
 from .modules.video_assembler import VideoAssemblerRecipeBuilder, VideoAssembler
@@ -15,9 +16,7 @@ from .utils import VideoCreatorPaths, AspectRatios
 from .utils.garbage_collector import internal_clean_unused_assets
 
 
-def create_narrator_and_image_recipe(
-    user_folder: Path, story_name: str, chapter_index: int, aspect_ratio: AspectRatios
-) -> None:
+def create_narrator_recipe(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create a video from a video prompt file.
 
@@ -28,7 +27,7 @@ def create_narrator_and_image_recipe(
         None
     """
 
-    log_id = setup_console_logging("create_narrator_and_image_recipes_from_prompt", log_level="TRACE")
+    log_id = setup_console_logging("create_narrator_recipes_from_prompt", log_level="TRACE")
 
     paths = VideoCreatorPaths(
         user_folder=user_folder,
@@ -36,24 +35,23 @@ def create_narrator_and_image_recipe(
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_narrator_and_image_recipes_from_prompt",
+        "create_narrator_recipes_from_prompt",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
 
-    asset_manager = NarratorAndImageAssetManager(paths)
-    asset_manager.create_narrator_and_image_recipes(aspect_ratio=aspect_ratio)
+    narrator_recipe_builder = NarratorRecipeBuilder(paths)
+    narrator_recipe_builder.create_narrator_recipes()
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)
 
 
-def create_narrator_and_image_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
+def create_narrator_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
     """
     Create video assets from the recipe.
     """
-    log_id = setup_console_logging("create_narrator_and_images_from_recipe", log_level="TRACE")
-
+    log_id = setup_console_logging("create_narrator_from_recipe", log_level="TRACE")
     paths = VideoCreatorPaths(
         user_folder=user_folder,
         story_name=story_name,
@@ -65,8 +63,57 @@ def create_narrator_and_image_assets(user_folder: Path, story_name: str, chapter
         base_folder=paths.video_chapter_folder,
     )
 
-    narrator_img_asset_manager = NarratorAndImageAssetManager(paths)
-    narrator_img_asset_manager.generate_narrator_and_image_assets()
+    narrator_asset_manager = NarratorAssetManager(paths)
+    narrator_asset_manager.generate_narrator_assets()
+
+    cleanup_logging(log_id)
+    cleanup_logging(file_log_id)
+
+
+def create_image_recipe(user_folder: Path, story_name: str, chapter_index: int, aspect_ratio: AspectRatios) -> None:
+    """
+    Create images from the recipe.
+    """
+
+    log_id = setup_console_logging("create_image_recipes_from_prompt", log_level="TRACE")
+
+    paths = VideoCreatorPaths(
+        user_folder=user_folder,
+        story_name=story_name,
+        chapter_index=chapter_index,
+    )
+    file_log_id = setup_file_logging(
+        "create_image_recipes_from_prompt",
+        log_level="TRACE",
+        base_folder=paths.video_chapter_folder,
+    )
+
+    image_recipe_builder = ImageRecipeBuilder(paths, aspect_ratio)
+    image_recipe_builder.create_image_recipes()
+
+    cleanup_logging(log_id)
+    cleanup_logging(file_log_id)
+
+
+def create_images_assets(user_folder: Path, story_name: str, chapter_index: int) -> None:
+    """
+    Create images from the recipe.
+    """
+    log_id = setup_console_logging("create_images_from_recipe", log_level="TRACE")
+
+    paths = VideoCreatorPaths(
+        user_folder=user_folder,
+        story_name=story_name,
+        chapter_index=chapter_index,
+    )
+    file_log_id = setup_file_logging(
+        "create_images_from_recipe",
+        log_level="TRACE",
+        base_folder=paths.video_chapter_folder,
+    )
+
+    image_asset_manager = ImageAssetManager(paths)
+    image_asset_manager.generate_image_assets()
 
     cleanup_logging(log_id)
     cleanup_logging(file_log_id)
