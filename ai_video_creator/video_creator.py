@@ -9,7 +9,7 @@ from logging_utils import setup_console_logging, setup_file_logging, cleanup_log
 from .modules.narrator import NarratorRecipeBuilder, NarratorAssetManager
 from .modules.image import ImageRecipeBuilder, ImageAssetManager
 from .modules.background_music import BackgroundMusicRecipeBuilder, BackgroundMusicAssetManager
-from .modules.sub_video import SubVideoRecipeBuilder, SubVideoAssetManager
+from .modules.sub_video import SubVideoI2VRecipeBuilder, SubVideoT2VRecipeBuilder, SubVideoAssetManager
 from .modules.video_assembler import VideoAssemblerRecipeBuilder, VideoAssembler
 
 from .utils import VideoCreatorPaths, AspectRatios
@@ -27,7 +27,7 @@ def create_narrator_recipe(user_folder: Path, story_name: str, chapter_index: in
         None
     """
 
-    log_id = setup_console_logging("create_narrator_recipes_from_prompt", log_level="TRACE")
+    log_id = setup_console_logging("create_narrator_recipe", log_level="TRACE")
 
     paths = VideoCreatorPaths(
         user_folder=user_folder,
@@ -35,7 +35,7 @@ def create_narrator_recipe(user_folder: Path, story_name: str, chapter_index: in
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_narrator_recipes_from_prompt",
+        "create_narrator_recipe",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
@@ -51,14 +51,14 @@ def create_narrator_assets(user_folder: Path, story_name: str, chapter_index: in
     """
     Create video assets from the recipe.
     """
-    log_id = setup_console_logging("create_narrator_from_recipe", log_level="TRACE")
+    log_id = setup_console_logging("create_narrator_assets", log_level="TRACE")
     paths = VideoCreatorPaths(
         user_folder=user_folder,
         story_name=story_name,
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_narrator_and_images_from_recipe",
+        "create_narrator_assets",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
@@ -75,7 +75,7 @@ def create_image_recipe(user_folder: Path, story_name: str, chapter_index: int, 
     Create images from the recipe.
     """
 
-    log_id = setup_console_logging("create_image_recipes_from_prompt", log_level="TRACE")
+    log_id = setup_console_logging("create_image_recipe", log_level="TRACE")
 
     paths = VideoCreatorPaths(
         user_folder=user_folder,
@@ -83,7 +83,7 @@ def create_image_recipe(user_folder: Path, story_name: str, chapter_index: int, 
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_image_recipes_from_prompt",
+        "create_image_recipe",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
@@ -99,7 +99,7 @@ def create_images_assets(user_folder: Path, story_name: str, chapter_index: int)
     """
     Create images from the recipe.
     """
-    log_id = setup_console_logging("create_images_from_recipe", log_level="TRACE")
+    log_id = setup_console_logging("create_images_assets", log_level="TRACE")
 
     paths = VideoCreatorPaths(
         user_folder=user_folder,
@@ -107,7 +107,7 @@ def create_images_assets(user_folder: Path, story_name: str, chapter_index: int)
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_images_from_recipe",
+        "create_images_assets",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
@@ -124,7 +124,7 @@ def create_background_music_recipe(user_folder: Path, story_name: str, chapter_i
     Create background music from the recipe.
     """
 
-    log_id = setup_console_logging("create_background_music_recipe_from_prompt", log_level="TRACE")
+    log_id = setup_console_logging("create_background_music_recipe", log_level="TRACE")
 
     paths = VideoCreatorPaths(
         user_folder=user_folder,
@@ -132,7 +132,7 @@ def create_background_music_recipe(user_folder: Path, story_name: str, chapter_i
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_background_music_recipe_from_prompt",
+        "create_background_music_recipe",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
@@ -148,7 +148,7 @@ def create_background_music_assets(user_folder: Path, story_name: str, chapter_i
     """
     Create background music from the recipe.
     """
-    log_id = setup_console_logging("create_background_music_from_recipe", log_level="TRACE")
+    log_id = setup_console_logging("create_background_music_assets", log_level="TRACE")
 
     paths = VideoCreatorPaths(
         user_folder=user_folder,
@@ -156,7 +156,7 @@ def create_background_music_assets(user_folder: Path, story_name: str, chapter_i
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_background_music_from_recipe",
+        "create_background_music_assets",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
@@ -172,19 +172,24 @@ def create_sub_video_recipes(user_folder: Path, story_name: str, chapter_index: 
     """
     Create a video recipe from existing images and narrator audio files.
     """
-    log_id = setup_console_logging("create_sub_video_recipes_from_images", log_level="TRACE")
+    log_id = setup_console_logging("create_sub_video_recipes", log_level="TRACE")
     paths = VideoCreatorPaths(
         user_folder=user_folder,
         story_name=story_name,
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_sub_video_recipes_from_images",
+        "create_sub_video_recipes",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
 
-    video_recipe_builder = SubVideoRecipeBuilder(paths)
+    i2v_available = paths.image_asset_file.exists() and paths.image_recipe_file.exists()
+
+    if i2v_available:
+        video_recipe_builder = SubVideoI2VRecipeBuilder(paths)
+    else:
+        video_recipe_builder = SubVideoT2VRecipeBuilder(paths)
     video_recipe_builder.create_sub_video_recipe()
 
     cleanup_logging(log_id)
@@ -195,7 +200,7 @@ def create_sub_videos_assets(user_folder: Path, story_name: str, chapter_index: 
     """
     Create videos from the images in the recipe.
     """
-    log_id = setup_console_logging("create_sub_videos_from_sub_video_recipes", log_level="TRACE")
+    log_id = setup_console_logging("create_sub_videos_assets", log_level="TRACE")
 
     paths = VideoCreatorPaths(
         user_folder=user_folder,
@@ -203,7 +208,7 @@ def create_sub_videos_assets(user_folder: Path, story_name: str, chapter_index: 
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "create_sub_videos_from_sub_video_recipes",
+        "create_sub_videos_assets",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )
@@ -249,7 +254,7 @@ def assemble_video(user_folder: Path, story_name: str, chapter_index: int) -> No
     Returns:
         None
     """
-    log_id = setup_console_logging("assemble_final_video", log_level="TRACE")
+    log_id = setup_console_logging("assemble_video", log_level="TRACE")
 
     paths = VideoCreatorPaths(
         user_folder=user_folder,
@@ -257,7 +262,7 @@ def assemble_video(user_folder: Path, story_name: str, chapter_index: int) -> No
         chapter_index=chapter_index,
     )
     file_log_id = setup_file_logging(
-        "assemble_final_video",
+        "assemble_video",
         log_level="TRACE",
         base_folder=paths.video_chapter_folder,
     )

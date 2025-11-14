@@ -75,14 +75,15 @@ class SceneScriptGenerator:
 
     def __init__(
         self,
-        scene_initial_image: Path,
+        scene_initial_image: Path | None,
         number_of_subdivisions: int,
         sub_video_prompt: Prompt,
-        previous_sub_video_prompt: Prompt = None,
+        previous_sub_video_prompt: Prompt | None = None,
     ):
         """
         Initialize the SceneScriptGenerator class.
         """
+        self.florence2_description = None
         self._number_of_subdivisions = number_of_subdivisions
         self._sub_video_prompt = sub_video_prompt
         self._previous_sub_video_prompt = previous_sub_video_prompt
@@ -91,9 +92,82 @@ class SceneScriptGenerator:
 
         self._scene_subdivisions: list[str] = []
 
-        self.florence2_description = FlorenceGenerator().generate_description(scene_initial_image)
+        if scene_initial_image:
+            self.florence2_description = FlorenceGenerator().generate_description(scene_initial_image)
 
     def _generate_scene_script_prompt(self, index: int) -> LLMPromptBuilder:
+        """
+        Generate a default prompt to enrich a single visual segment (from subdivision) into a full scene script description.
+        This is the second phase after subdivision.
+        """
+        system = (
+            "You are a helpful assistant that turns short, literal visual descriptions "
+            "into rich scene scripts. Your job is to expand each one into a detailed, vivid "
+            "scene description suitable for visual rendering."
+        )
+
+        prompt_builder = LLMPromptBuilder(system=system)
+
+        # --- FORMAT RULES ---
+        format_rules = [
+            "Output exactly one paragraph.",
+            "Do not number or bullet the output.",
+            "Write in present tense, third person.",
+            "Do not include camera terms unless explicitly mentioned.",
+            "Avoid dialogue and internal thoughts.",
+            "Keep it between 1 and 3 sentences, 50–80 words in total.",
+        ]
+        prompt_builder.add_format_rules_front(format_rules)
+
+        # --- CONTENT RULES ---
+        content_rules = [
+            "Enrich the current visual segment into a vivid, cinematic scene.",
+            "Do not introduce characters, actions, or objects not supported by the original visual prompt.",
+            f"Adhere strictly to the resolved time period for this scene ({self._sub_video_prompt.scene_time_period}): align "
+            "clothing, props, architecture, and technology to it; forbid anachronisms; if timing is ambiguous, use era-neutral descriptions.",
+            "You may add environmental details, lighting, motion, or atmosphere for richness.",
+            "Do not contradict or reinterpret the original visual intent.",
+            "Write as if describing a cinematic shot ready for generation.",
+            "If a previous visual segment is provided, you may use it to preserve flow or avoid repeating visual setup.",
+        ]
+        prompt_builder.add_content_rules_front(content_rules)
+
+        # --- USER PROMPT ---
+        scene_description = self._scene_subdivisions[index]
+        previous_description = self._scene_subdivisions[index - 1] if index > 0 else None
+        original_visual_prompt = self._sub_video_prompt.visual_description
+
+        user_prompt = (
+            "You are given a plain visual description of a scene segment. "
+            "Your task is to enrich the current visual description into a vivid, cinematic scene. "
+            "Use the original visual prompt as context for intent or tone.\n\n"
+            f"Original visual prompt (intent/tone):\n{original_visual_prompt.strip()}\n\n"
+        )
+
+        if previous_description:
+            user_prompt += f"Previous visual segment (for continuity):\n{previous_description.strip()}\n\n"
+
+        user_prompt += f"Current visual description:\n{scene_description.strip()}"
+        prompt_builder.set_user_prompt(user_prompt)
+
+        # --- EXAMPLE ---
+        example = (
+            "Original visual prompt (intent/tone):\n"
+            "The boy stands alone beneath the towering canopy as the sunlight breaks through the mist.\n\n"
+            "Previous visual segment (for continuity):\n"
+            "The boy slows down, breathing heavily as the forest path narrows.\n\n"
+            "Current visual description:\n"
+            "The boy runs through a dense forest path, sunlight flashing between the leaves.\n\n"
+            "Enriched scene:\n"
+            "Sunlight pulses through the trees as the boy sprints along the narrow forest trail. "
+            "Leaves scatter under his feet while the distant wind whistles through the dense canopy. "
+            "The light dances across his face, emphasizing the urgency in his stride."
+        )
+        prompt_builder.set_example(example)
+
+        return prompt_builder
+
+    def _generate_scene_script_florence_prompt(self, index: int) -> LLMPromptBuilder:
         """
         Generate a prompt to enrich a single visual segment (from subdivision) into a full scene script description.
         This is the second phase after subdivision.
@@ -131,6 +205,7 @@ class SceneScriptGenerator:
             "Write as if describing a cinematic shot ready for generation.",
             "If a previous visual segment is provided, you may use it to preserve flow or avoid repeating visual setup.",
         ]
+
         prompt_builder.add_content_rules_front(content_rules)
 
         # --- USER PROMPT ---
@@ -191,7 +266,13 @@ class SceneScriptGenerator:
         """
         Generate a scene script based on the input image and scene text.
         """
-        prompt_builder = self._generate_scene_script_prompt(index)
+        florence_available = self.florence2_description is not None and self.florence2_description.strip() != ""
+
+        if florence_available:
+            prompt_builder = self._generate_scene_script_florence_prompt(index)
+        else:
+            prompt_builder = self._generate_scene_script_prompt(index)
+
         response = self._llm_manager.send_prompt_advanced(
             self.DEFAULT_LLM_MODEL,
             prompt_builder,
