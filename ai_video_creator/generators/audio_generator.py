@@ -117,6 +117,16 @@ class ZonosTTSAudioGenerator(IAudioGenerator):
         data = {
             "text": recipe.prompt,
             "seed": recipe.seed,
+            "happiness": recipe.happiness,
+            "sadness": recipe.sadness,
+            "disgust": recipe.disgust,
+            "fear": recipe.fear,
+            "surprise": recipe.surprise,
+            "anger": recipe.anger,
+            "other": recipe.other,
+            "neutral": recipe.neutral,
+            "expressiveness": recipe.expressiveness,
+            "speaking_rate": recipe.speaking_rate,
         }
 
         with open(recipe.clone_voice_path, "rb") as audio_file:
@@ -157,9 +167,34 @@ class ZonosTTSRecipe(AudioRecipeBase):
 
     recipe_type = "ZonosTTSRecipeType"
     clone_voice_path = ""
-    seed = 0
+    seed = None
+    happiness = None
+    sadness = None
+    disgust = None
+    fear = None
+    surprise = None
+    anger = None
+    other = None
+    neutral = None
+    expressiveness = None
+    speaking_rate = None
 
-    def __init__(self, prompt: str, clone_voice_path: str, seed: int | None = None):
+    def __init__(
+        self,
+        prompt: str,
+        clone_voice_path: str,
+        seed: int | None = None,
+        happiness: float | None = None,
+        sadness: float | None = None,
+        disgust: float | None = None,
+        fear: float | None = None,
+        surprise: float | None = None,
+        anger: float | None = None,
+        other: float | None = None,
+        neutral: float | None = None,
+        expressiveness: float | None = None,
+        speaking_rate: float | None = None,
+    ):
         """
         Initialize AudioRecipe with audio data.
 
@@ -169,6 +204,16 @@ class ZonosTTSRecipe(AudioRecipeBase):
         super().__init__(prompt, recipe_type=self.recipe_type)
         self.clone_voice_path = clone_voice_path
         self.seed = random.randint(0, 2**31 - 1) if seed is None else seed
+        self.happiness = 0.3077 if happiness is None else happiness
+        self.sadness = 0.0256 if sadness is None else sadness
+        self.disgust = 0.0256 if disgust is None else disgust
+        self.fear = 0.0256 if fear is None else fear
+        self.surprise = 0.0256 if surprise is None else surprise
+        self.anger = 0.0256 if anger is None else anger
+        self.other = 0.2564 if other is None else other
+        self.neutral = 0.3077 if neutral is None else neutral
+        self.expressiveness = 0.1 if expressiveness is None else expressiveness
+        self.speaking_rate = 0.375 if speaking_rate is None else speaking_rate
 
     def to_dict(self) -> dict:
         """
@@ -182,6 +227,16 @@ class ZonosTTSRecipe(AudioRecipeBase):
             "clone_voice_path": self.clone_voice_path,
             "recipe_type": self.recipe_type,
             "seed": self.seed,
+            "happiness": self.happiness,
+            "sadness": self.sadness,
+            "disgust": self.disgust,
+            "fear": self.fear,
+            "surprise": self.surprise,
+            "anger": self.anger,
+            "other": self.other,
+            "neutral": self.neutral,
+            "expressiveness": self.expressiveness,
+            "speaking_rate": self.speaking_rate,
         }
 
     @classmethod
@@ -219,4 +274,14 @@ class ZonosTTSRecipe(AudioRecipeBase):
             prompt=data["prompt"],
             clone_voice_path=data["clone_voice_path"],
             seed=data.get("seed", None),
+            happiness=data.get("happiness", None),
+            sadness=data.get("sadness", None),
+            disgust=data.get("disgust", None),
+            fear=data.get("fear", None),
+            surprise=data.get("surprise", None),
+            anger=data.get("anger", None),
+            other=data.get("other", None),
+            neutral=data.get("neutral", None),
+            expressiveness=data.get("expressiveness", None),
+            speaking_rate=data.get("speaking_rate", None),
         )
