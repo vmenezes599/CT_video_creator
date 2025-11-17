@@ -37,7 +37,7 @@ def create_narrator_recipe(user_folder: Path, story_name: str, chapter_index: in
     file_log_id = setup_file_logging(
         "create_narrator_recipe",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     narrator_recipe_builder = NarratorRecipeBuilder(paths)
@@ -60,7 +60,7 @@ def create_narrator_assets(user_folder: Path, story_name: str, chapter_index: in
     file_log_id = setup_file_logging(
         "create_narrator_assets",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     narrator_asset_manager = NarratorAssetManager(paths)
@@ -85,7 +85,7 @@ def create_image_recipe(user_folder: Path, story_name: str, chapter_index: int, 
     file_log_id = setup_file_logging(
         "create_image_recipe",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     image_recipe_builder = ImageRecipeBuilder(paths, aspect_ratio)
@@ -109,7 +109,7 @@ def create_images_assets(user_folder: Path, story_name: str, chapter_index: int)
     file_log_id = setup_file_logging(
         "create_images_assets",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     image_asset_manager = ImageAssetManager(paths)
@@ -134,7 +134,7 @@ def create_background_music_recipe(user_folder: Path, story_name: str, chapter_i
     file_log_id = setup_file_logging(
         "create_background_music_recipe",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     recipe_builder = BackgroundMusicRecipeBuilder(paths)
@@ -158,7 +158,7 @@ def create_background_music_assets(user_folder: Path, story_name: str, chapter_i
     file_log_id = setup_file_logging(
         "create_background_music_assets",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     asset_manager = BackgroundMusicAssetManager(paths)
@@ -181,15 +181,10 @@ def create_sub_video_recipes(user_folder: Path, story_name: str, chapter_index: 
     file_log_id = setup_file_logging(
         "create_sub_video_recipes",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
-    i2v_available = paths.image_asset_file.exists() and paths.image_recipe_file.exists()
-
-    if i2v_available:
-        video_recipe_builder = SubVideoI2VRecipeBuilder(paths)
-    else:
-        video_recipe_builder = SubVideoT2VRecipeBuilder(paths)
+    video_recipe_builder = SubVideoI2VRecipeBuilder(paths)
     video_recipe_builder.create_sub_video_recipe()
 
     cleanup_logging(log_id)
@@ -210,7 +205,7 @@ def create_sub_videos_assets(user_folder: Path, story_name: str, chapter_index: 
     file_log_id = setup_file_logging(
         "create_sub_videos_assets",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     video_asset_manager = SubVideoAssetManager(paths)
@@ -234,7 +229,7 @@ def create_assemble_video_recipe(user_folder: Path, story_name: str, chapter_ind
     file_log_id = setup_file_logging(
         "create_assemble_video_recipe",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     _ = VideoAssemblerRecipeBuilder(paths)
@@ -264,7 +259,7 @@ def assemble_video(user_folder: Path, story_name: str, chapter_index: int) -> No
     file_log_id = setup_file_logging(
         "assemble_video",
         log_level="TRACE",
-        base_folder=paths.video_chapter_folder,
+        base_folder=str(paths.video_chapter_folder),
     )
 
     video_assembler = VideoAssembler(paths)
