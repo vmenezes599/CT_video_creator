@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from logging_utils import logger, begin_file_logging
 
-from ai_video_creator.generators import WanRecipeBase, WanT2VRecipe, WanI2VRecipe, SceneScriptGenerator
+from ai_video_creator.generators import WanT2VRecipe, WanI2VRecipe, SceneScriptGenerator
 from ai_video_creator.modules.narrator import NarratorAssets
 from ai_video_creator.utils import VideoCreatorPaths
 from ai_video_creator.prompt import Prompt
@@ -39,7 +39,7 @@ class SubVideoT2VRecipeBuilder:
 
         self._chapter_prompt_path = self._paths.chapter_prompt_path
 
-        self._video_prompt = Prompt.load_from_json(self._chapter_prompt_path)
+        self._video_prompt = Prompt.load_from_json(str(self._chapter_prompt_path))
 
         self._narrator_assets = NarratorAssets(video_creator_paths)
 
@@ -55,11 +55,11 @@ class SubVideoT2VRecipeBuilder:
         self._max_sub_videos = 8
         self._default_sub_video_duration_seconds = 5
 
-    def _is_recipe_complete(self) -> None:
+    def _is_recipe_complete(self) -> bool:
         """Verify the recipe against the prompt to ensure all required data is present."""
         logger.debug("Verifying recipe against narrator assets.")
 
-        if not self._recipe.video_data or len(self._recipe.video_data) < len(self._narrator_assets.narrator_assets):
+        if not self._recipe or not self._recipe.video_data or len(self._recipe.video_data) < len(self._narrator_assets.narrator_assets):
             return False
 
         return True
@@ -102,7 +102,7 @@ class SubVideoT2VRecipeBuilder:
         results_dict = {}
         with begin_file_logging(
             "run_script_generator_parallel",
-            self._paths.video_chapter_folder,
+            str(self._paths.video_chapter_folder),
             log_level="TRACE",
         ):
 
@@ -137,7 +137,7 @@ class SubVideoT2VRecipeBuilder:
 
             scene_scripts = scene_scripts_results[i]
 
-            recipe_list: list[WanRecipeBase] = []
+            recipe_list: list[WanI2VRecipe | WanT2VRecipe] = []
             recipe = self._create_wan_t2v_recipe(
                 prompt=scene_scripts[0],
                 seed=seed,
@@ -156,15 +156,16 @@ class SubVideoT2VRecipeBuilder:
                 )
                 recipe_list.append(recipe)
 
-            self._recipe.add_video_data(recipe_list, {"helper_story_text": prompt.narrator})
+            if self._recipe is not None:
+                self._recipe.add_video_data(recipe_list, {"helper_story_text": prompt.narrator})
 
         logger.info(f"Successfully created {len(self._video_prompt)} Wan video recipes")
 
     def _create_wan_i2v_recipe(
         self,
         prompt: str,
-        seed: int,
-        color_match_image_asset: Path,
+        seed: int | None,
+        color_match_image_asset: Path | None,
         width: int,
         height: int,
         image_asset: Path | None = None,
@@ -172,7 +173,7 @@ class SubVideoT2VRecipeBuilder:
         high_lora_strength: list[float] | None = None,
         low_lora: list[str] | None = None,
         low_lora_strength: list[float] | None = None,
-    ) -> None:
+    ) -> WanI2VRecipe:
         """Create video recipe from story folder and chapter prompt index."""
         return WanI2VRecipe(
             prompt=prompt,
@@ -190,15 +191,15 @@ class SubVideoT2VRecipeBuilder:
     def _create_wan_t2v_recipe(
         self,
         prompt: str,
-        seed: int,
-        color_match_image_asset: Path,
+        seed: int | None,
+        color_match_image_asset: Path | None,
         width: int,
         height: int,
         high_lora: list[str] | None = None,
         high_lora_strength: list[float] | None = None,
         low_lora: list[str] | None = None,
         low_lora_strength: list[float] | None = None,
-    ) -> None:
+    ) -> WanT2VRecipe:
         """Create video recipe from story folder and chapter prompt index."""
         return WanT2VRecipe(
             prompt=prompt,

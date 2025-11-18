@@ -40,7 +40,7 @@ class SubVideoI2VRecipeBuilder:
 
         self._chapter_prompt_path = self._paths.chapter_prompt_path
 
-        self._video_prompt = Prompt.load_from_json(self._chapter_prompt_path)
+        self._video_prompt = Prompt.load_from_json(str(self._chapter_prompt_path))
 
         self._narrator_assets = NarratorAssets(video_creator_paths)
         self._image_recipe = ImageRecipe(video_creator_paths)
@@ -66,11 +66,15 @@ class SubVideoI2VRecipeBuilder:
         self._max_sub_videos = 8
         self._default_sub_video_duration_seconds = 5
 
-    def _is_recipe_complete(self) -> None:
+    def _is_recipe_complete(self) -> bool:
         """Verify the recipe against the prompt to ensure all required data is present."""
         logger.debug("Verifying recipe against image assets.")
 
-        if not self._recipe.video_data or len(self._recipe.video_data) < len(self._image_assets.image_assets):
+        if (
+            not self._recipe
+            or not self._recipe.video_data
+            or len(self._recipe.video_data) < len(self._image_assets.image_assets)
+        ):
             return False
 
         return True
@@ -114,7 +118,7 @@ class SubVideoI2VRecipeBuilder:
         results_dict = {}
         with begin_file_logging(
             "run_script_generator_parallel",
-            self._paths.video_chapter_folder,
+            str(self._paths.video_chapter_folder),
             log_level="TRACE",
         ):
 
@@ -171,23 +175,24 @@ class SubVideoI2VRecipeBuilder:
                 )
                 recipe_list.append(recipe)
 
-            self._recipe.add_video_data(recipe_list, {"helper_story_text": prompt.narrator})
+            if self._recipe is not None:
+                self._recipe.add_video_data(recipe_list, {"helper_story_text": prompt.narrator})
 
         logger.info(f"Successfully created {len(self._video_prompt)} Wan video recipes")
 
     def _create_wan_i2v_recipe(
         self,
         prompt: str,
-        seed: int,
         color_match_image_asset: Path,
         width: int,
         height: int,
+        seed: int | None,
         image_asset: Path | None = None,
         high_lora: list[str] | None = None,
         high_lora_strength: list[float] | None = None,
         low_lora: list[str] | None = None,
         low_lora_strength: list[float] | None = None,
-    ) -> None:
+    ) -> WanI2VRecipe:
         """Create video recipe from story folder and chapter prompt index."""
         return WanI2VRecipe(
             prompt=prompt,

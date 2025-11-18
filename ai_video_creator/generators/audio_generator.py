@@ -110,10 +110,13 @@ class ZonosTTSAudioGenerator(IAudioGenerator):
         raise NotImplementedError("Zonos TTS only supports voice cloning.")
 
     @override
-    def clone_text_to_speech(self, recipe: "ZonosTTSRecipe", output_file_path: Path) -> Path:
+    def clone_text_to_speech(self, recipe: AudioRecipeBase, output_file_path: Path) -> Path:
         """
         Clone the voice from the given recipe and save it to the specified file.
         """
+        if not isinstance(recipe, ZonosTTSRecipe):
+            raise TypeError(f"Expected ZonosTTSRecipe, got {type(recipe).__name__}")
+        
         data = {
             "text": recipe.prompt,
             "seed": recipe.seed,

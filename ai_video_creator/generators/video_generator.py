@@ -155,13 +155,7 @@ class WanGenerator(IVideoGenerator):
         :return: A list of file paths to the generated images.
         """
 
-        color_match_media_path = Path(recipe.color_match_media_path)
-        new_color_match_media_path = (
-            self.requests.upload_file(recipe.color_match_media_path)
-            if color_match_media_path.exists() and color_match_media_path.is_file()
-            else None
-        )
-
+        # Note: T2V workflow does not support color matching, so we don't use color_match_media_path here
         workflow = WanT2VWorkflow()
 
         workflow.set_positive_prompt(recipe.prompt)

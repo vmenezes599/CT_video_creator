@@ -218,7 +218,7 @@ class SceneScriptGenerator:
             "Your task is to enrich the current visual description into a vivid, cinematic scene. "
             "Use the Florence2 description as the main perceptual base, "
             "and the original visual prompt only as optional context for intent or tone.\n\n"
-            f"Scene context (Florence2 – visual base):\n{self.florence2_description.strip()}\n\n"
+            f"Scene context (Florence2 – visual base):\n{(self.florence2_description or '').strip()}\n\n"
             f"Original visual prompt (intent/tone):\n{original_visual_prompt.strip()}\n\n"
         )
 
@@ -371,7 +371,7 @@ class SceneScriptGenerator:
         """
         return subdivisions
 
-    def _generate_scene_subdivisions(self) -> list[str]:
+    def _generate_scene_subdivisions(self):
         """
         Generate subdivisions for the scene.
         """
@@ -424,6 +424,7 @@ def main():
     gen = SceneScriptGenerator(image_path, 5, current_prompt, previous_prompt)
 
     result = gen.generate_scenes_script()
+    logger.info(f"Generated scripts: {result}")
 
 
 if __name__ == "__main__":

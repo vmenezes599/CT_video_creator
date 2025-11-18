@@ -62,7 +62,7 @@ class SubVideoAssetManager:
         next_recipe_index = recipe_index + 1
         if next_recipe_index < len(video_recipe_list):
             next_recipe = video_recipe_list[next_recipe_index]
-            next_recipe.media_path = media_path
+            next_recipe.media_path = str(media_path)
             logger.debug(
                 f"Set media path for next recipe at scene {scene_index + 1},"
                 f" current recipe {recipe_index + 1}, next recipe {next_recipe_index + 1}: {media_path.name}"
@@ -95,8 +95,9 @@ class SubVideoAssetManager:
 
     def _generate_sub_videos_assets(self, scene_index: int) -> None:
         """Generate sub-videos assets for a specific scene."""
+        video_recipe_list = self.recipe.video_data[scene_index]
+        recipe_index = 0
         try:
-            video_recipe_list = self.recipe.video_data[scene_index]
 
             for recipe_index, recipe in enumerate(video_recipe_list):
                 if self.video_assets.has_sub_videos(scene_index, recipe_index):
@@ -145,8 +146,9 @@ class SubVideoAssetManager:
             self._generate_sub_videos_assets(scene_index)
 
             video_file_path = self._generate_video_file_path(scene_index)
+            sub_videos_filtered: list[str | Path] = [v for v in self.video_assets.sub_video_assets[scene_index] if v is not None]
             output_video = concatenate_videos_remove_last_frame_except_last(
-                self.video_assets.sub_video_assets[scene_index], video_file_path
+                sub_videos_filtered, video_file_path
             )
 
             self.video_assets.set_scene_video(scene_index, output_video)

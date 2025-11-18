@@ -63,7 +63,7 @@ class VideoCreatorPaths:
         # Output video file path
         self.video_output_file = self.video_chapter_folder / f"video_chapter_{chapter_index+1:03}.mp4"
 
-    def mask_asset_path(self, asset_path: Path):
+    def mask_asset_path(self, asset_path: Path) -> Path:
         """Get the masked asset path for this instance."""
 
         if asset_path.is_dir():
@@ -93,7 +93,7 @@ class VideoCreatorPaths:
         else:
             raise ValueError(f"Asset path is not under known assets folders: {asset_path}")
 
-    def unmask_asset_path(self, asset_path: Path):
+    def unmask_asset_path(self, asset_path: Path) -> Path:
         """Get the unmasked asset path for this instance."""
 
         if asset_path.is_dir():
@@ -223,10 +223,10 @@ class VideoCreatorPaths:
         return result
 
     @classmethod
-    def get_default_assets_folder(cls):
+    def get_default_assets_folder(cls) -> Path:
         """Get the default assets folder path."""
         return Path(DEFAULT_ASSETS_FOLDER)
 
-    def get_user_assets_folder(self):
+    def get_user_assets_folder(self) -> Path:
         """Get the user assets folder path for this instance."""
         return Path(self.user_folder) / "user_assets"

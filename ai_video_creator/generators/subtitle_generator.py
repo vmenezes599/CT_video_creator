@@ -136,7 +136,7 @@ class SubtitleGenerator:
 
         # Generate ASS with custom styling parameters
         output_ass_path = video_path.with_suffix(".ass")
-        result.to_ass(
+        result.to_ass(  # type: ignore[attr-defined]
             str(output_ass_path),
             word_level=word_level,
             segment_level=segment_level,
@@ -148,7 +148,7 @@ class SubtitleGenerator:
 
         # Generate SRT file
         output_srt_path = video_path.with_suffix(".srt")
-        result.to_srt_vtt(str(output_srt_path), word_level=word_level, segment_level=segment_level)
+        result.to_srt_vtt(str(output_srt_path), word_level=word_level, segment_level=segment_level)  # type: ignore[attr-defined]
 
         self._unload_model()
 

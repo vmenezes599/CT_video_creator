@@ -17,8 +17,8 @@ class SubVideoAssets:
         self.asset_file_path = self._paths.sub_video_asset_file
         self.asset_file_parent = self.asset_file_path.parent.resolve()
 
-        self.assembled_sub_videos: list[Path] = []
-        self.sub_video_assets: list[list[Path]] = []
+        self.assembled_sub_videos: list[Path | None] = []
+        self.sub_video_assets: list[list[Path | None]] = []
 
         self._load_assets_from_file()
 
