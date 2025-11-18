@@ -38,7 +38,7 @@ class SubVideoRecipe:
 
         self._from_dict(recipe_path)
 
-    def add_video_data(self, video_data: list[WanI2VRecipe | WanT2VRecipe], extra_data: dict = None) -> None:
+    def add_video_data(self, video_data: list[WanI2VRecipe | WanT2VRecipe], extra_data: dict | None = None) -> None:
         """Add video data to the recipe."""
         self.video_data.append(video_data)
         # Always append extra_data to keep indices aligned, use empty dict if None
@@ -91,9 +91,9 @@ class SubVideoRecipe:
             raise ValueError(f"Unknown recipe_type: {recipe_type}")
 
         if recipe.media_path:
-            recipe.media_path = self._paths.unmask_asset_path(Path(recipe.media_path))
+            recipe.media_path = str(self._paths.unmask_asset_path(Path(recipe.media_path)))
         if recipe.color_match_media_path:
-            recipe.color_match_media_path = self._paths.unmask_asset_path(Path(recipe.color_match_media_path))
+            recipe.color_match_media_path = str(self._paths.unmask_asset_path(Path(recipe.color_match_media_path)))
         return recipe
 
     def clean(self) -> None:
@@ -142,6 +142,13 @@ class SubVideoRecipe:
                 "recipe_list": recipe_list,
             }
             result["video_data"].append(result_item)
+
+        return result
+
+    def _create_temp_copy_paste_helper_file(self) -> str:
+        """"""
+
+        result = ""
 
         return result
 

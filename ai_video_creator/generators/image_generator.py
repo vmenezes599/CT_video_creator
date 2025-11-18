@@ -63,13 +63,15 @@ class FluxAIImageGenerator(IImageGenerator):
         logger.trace(f"Asset moved successfully to: {complete_target_path}")
         return move_result
 
-    def text_to_image(self, recipe: "FluxImageRecipe", output_file_path: Path) -> Path:
+    def text_to_image(self, recipe: ImageRecipeBase, output_file_path: Path) -> Path:
         """
         Generate images for a list of prompts and return the paths to the generated images.
 
         :param prompts: A list of text prompts to generate images for.
         :return: A list of file paths to the generated images.
         """
+        if not isinstance(recipe, FluxImageRecipe):
+            raise TypeError(f"Expected FluxImageRecipe, got {type(recipe).__name__}")
 
         # Set the positive prompt in the workflow
         workflow = FluxWorkflow()
@@ -84,7 +86,10 @@ class FluxAIImageGenerator(IImageGenerator):
 
         result_files = self.requests.ensure_send_all_prompts([workflow], output_file_path.parent)
 
-        return Path(result_files[0]) if result_files else None
+        if not result_files:
+            raise RuntimeError("No image files were generated")
+        
+        return Path(result_files[0])
 
 
 class FluxImageRecipe(ImageRecipeBase):
