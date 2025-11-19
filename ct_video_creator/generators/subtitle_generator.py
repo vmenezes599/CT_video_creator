@@ -4,7 +4,7 @@ Subtitle Generation Module
 
 from pathlib import Path
 import stable_whisper
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.utils import SubtitleAlignment, SubtitlePosition
 
 

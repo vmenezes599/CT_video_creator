@@ -8,7 +8,7 @@ import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing_extensions import override
-from logging_utils import logger
+from ct_logging import logger
 from requests.exceptions import RequestException
 
 from ct_video_creator.comfyui import ComfyUIRequests, WanI2VWorkflow, WanT2VWorkflow

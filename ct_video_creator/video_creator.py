@@ -4,7 +4,7 @@ AI Video Generation Module
 
 from pathlib import Path
 
-from logging_utils import setup_console_logging, setup_file_logging, cleanup_logging
+from ct_logging import setup_console_logging, setup_file_logging, cleanup_logging
 
 from .modules.narrator import NarratorRecipeBuilder, NarratorAssetManager
 from .modules.image import ImageRecipeBuilder, ImageAssetManager

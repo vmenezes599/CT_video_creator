@@ -3,7 +3,7 @@ Environment variables for ComfyUI automation module.
 """
 
 import os
-from ai_llm import GPT_4oMini_LLM
+from ct_llm import GPT_4oMini_LLM
 from dotenv import load_dotenv
 
 load_dotenv()

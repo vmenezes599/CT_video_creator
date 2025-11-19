@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 from ct_video_creator.utils import VideoCreatorPaths, ensure_collection_index_exists, backup_file_to_old
-from logging_utils import logger
+from ct_logging import logger
 
 
 class NarratorAssets:

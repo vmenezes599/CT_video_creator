@@ -2,7 +2,7 @@
 Background music asset manager for creating background music assets from recipes.
 """
 
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.generators import IBackgroundMusicGenerator
 from ct_video_creator.utils import VideoCreatorPaths
 

@@ -329,11 +329,11 @@ class TestVideoAssetManager:
         # Also mock the concatenation function and FFmpeg operations since they require real video files
         # Mock FlorenceGenerator to avoid AI/LLM calls
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
+            "ct_video_creator.modules.sub_video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
         ) as mock_concat, patch(
-            "ai_video_creator.modules.sub_video.sub_video_asset_manager.extract_video_last_frame"
+            "ct_video_creator.modules.sub_video.sub_video_asset_manager.extract_video_last_frame"
         ) as mock_extract, patch(
-            "ai_video_creator.modules.sub_video.sub_video_asset_manager.FlorenceGenerator"
+            "ct_video_creator.modules.sub_video.sub_video_asset_manager.FlorenceGenerator"
         ) as MockFlorenceGenerator:
 
             def fake_concat(input_videos, output_path):

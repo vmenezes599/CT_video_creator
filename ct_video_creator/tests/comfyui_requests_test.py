@@ -157,7 +157,7 @@ class TestComfyUIRequests:
             # Assert
             assert last_entry == {}
 
-    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ct_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_comfyui_ensure_send_all_prompts_filters_none_results(self, mock_sleep, comfyui_requests, tmp_path):
         """Test that ensure_send_all_prompts raises exception when any workflow fails."""
         # Arrange
@@ -198,8 +198,8 @@ class TestComfyUIRequests:
             # Assert
             assert result == []
 
-    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
-    @patch("ai_video_creator.comfyui.comfyui_requests.datetime")
+    @patch("ct_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ct_video_creator.comfyui.comfyui_requests.datetime")
     def test_wait_for_completion_success(self, mock_datetime, mock_sleep, comfyui_requests):
         """Test successful completion waiting - tests polling logic and timing calculation."""
         # Arrange
@@ -231,8 +231,8 @@ class TestComfyUIRequests:
             assert mock_sleep.call_count == 1
             mock_sleep.assert_called_with(1)  # Default check_interval
 
-    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
-    @patch("ai_video_creator.comfyui.comfyui_requests.datetime")
+    @patch("ct_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ct_video_creator.comfyui.comfyui_requests.datetime")
     def test_wait_for_completion_custom_interval(self, mock_datetime, mock_sleep, comfyui_requests):
         """Test completion waiting with custom check interval."""
         # Arrange
@@ -300,7 +300,7 @@ class TestComfyUIRequests:
             comfyui_requests._check_for_output_success(failed_incomplete_response)
 
     @patch.object(ComfyUIRequests, "_comfyui_get_history_output_name")
-    @patch("ai_video_creator.comfyui.comfyui_requests.os.path.join")
+    @patch("ct_video_creator.comfyui.comfyui_requests.os.path.join")
     def test_get_output_path_success(self, mock_path_join, mock_get_output_name, comfyui_requests):
         """Test successful output path construction - tests file path building logic."""
         # Arrange
@@ -405,7 +405,7 @@ class TestComfyUIRequests:
         assert display_summary == "This is a ..."
         assert len(display_summary) == 13  # 10 + "..." = 13
 
-    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ct_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_success(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test successful single workflow processing - tests complete flow integration."""
         # Arrange
@@ -438,7 +438,7 @@ class TestComfyUIRequests:
             mock_check_success.assert_called_once()
             mock_get_paths.assert_called_once()
 
-    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ct_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_runtime_error_retry(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test workflow processing with RuntimeError and successful retry - tests retry mechanism."""
         # Arrange
@@ -473,7 +473,7 @@ class TestComfyUIRequests:
         assert mock_check_success.call_count == 2
         assert mock_sleep.call_count == mock_submit.call_count
 
-    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ct_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_request_exception_retry(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test workflow processing with RequestException and successful retry - tests different exception handling."""
         # Arrange
@@ -506,7 +506,7 @@ class TestComfyUIRequests:
         assert mock_submit.call_count == 2
         assert mock_sleep.call_count == mock_submit.call_count
 
-    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ct_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_max_retries_exceeded(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test workflow processing when max retries are exceeded - tests failure propagation."""
         # Arrange
@@ -525,7 +525,7 @@ class TestComfyUIRequests:
         assert mock_submit.call_count == comfyui_requests.retries
         assert mock_sleep.call_count == comfyui_requests.retries  # cleanup delay per attempt
 
-    @patch("ai_video_creator.comfyui.comfyui_requests.time.sleep")
+    @patch("ct_video_creator.comfyui.comfyui_requests.time.sleep")
     def test_process_single_workflow_no_history_entry(self, mock_sleep, comfyui_requests, mock_workflow):
         """Test workflow processing when no history entry is found - tests edge case handling and retry logic."""
         # Arrange

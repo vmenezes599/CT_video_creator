@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from ct_video_creator.utils import ensure_collection_index_exists, backup_file_to_old
 

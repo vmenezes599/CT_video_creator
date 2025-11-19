@@ -5,7 +5,7 @@ Image recipe for managing image-specific recipe data.
 import json
 from pathlib import Path
 
-from logging_utils import logger
+from ct_logging import logger
 
 from ct_video_creator.generators import FluxImageRecipe
 from ct_video_creator.utils import VideoCreatorPaths, backup_file_to_old

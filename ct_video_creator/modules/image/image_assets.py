@@ -7,7 +7,7 @@ from pathlib import Path
 
 from ct_video_creator.utils.video_creator_paths import VideoCreatorPaths
 from ct_video_creator.utils import backup_file_to_old
-from logging_utils import logger
+from ct_logging import logger
 
 
 class ImageAssets:

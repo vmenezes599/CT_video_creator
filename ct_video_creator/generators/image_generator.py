@@ -6,7 +6,7 @@ import random
 from abc import ABC, abstractmethod
 from pathlib import Path
 from requests.exceptions import RequestException
-from logging_utils import logger
+from ct_logging import logger
 
 from ct_video_creator.utils import safe_move
 from ct_video_creator.comfyui import ComfyUIRequests, FluxWorkflow

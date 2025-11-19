@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 
 import ffmpeg
-from logging_utils import logger
+from ct_logging import logger
 
 
 class SubtitlePosition(str, Enum):

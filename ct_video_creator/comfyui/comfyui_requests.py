@@ -10,7 +10,7 @@ from typing import Any
 
 import requests
 from ct_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER, COMFYUI_URL
-from logging_utils import logger
+from ct_logging import logger
 from requests import Response, Session
 from requests.exceptions import RequestException
 

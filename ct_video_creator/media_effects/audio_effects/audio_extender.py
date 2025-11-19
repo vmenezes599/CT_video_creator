@@ -5,7 +5,7 @@ A class that extends the duration of an audio clip by a specified number of seco
 from pathlib import Path
 from typing_extensions import override
 
-from logging_utils import logger
+from ct_logging import logger
 
 from ct_video_creator.utils import extend_audio_to_duration
 from ct_video_creator.media_effects.effect_base import EffectBase

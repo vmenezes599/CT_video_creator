@@ -5,13 +5,13 @@ import random
 import tempfile
 from pathlib import Path
 
-from ai_llm import LLMManager, LLMPromptBuilder
+from ct_llm import LLMManager, LLMPromptBuilder
 from ct_video_creator.comfyui import ComfyUIRequests
 from ct_video_creator.environment_variables import DESCRIPTION_GENERATION_LLM_MODEL
 from ct_video_creator.comfyui import FlorentI2TWorkflow, FlorentV2TWorkflow
 
 from ct_video_creator.prompt import Prompt
-from logging_utils import logger
+from ct_logging import logger
 
 
 class FlorenceGenerator:
@@ -418,7 +418,7 @@ def main():
         "",
     )
     image_path = Path(
-        "/home/vitor/projects/AI-Story-Video/AI-Video-Creator/stories/Bible/video/chapter_001/assets/images/chapter_001_image_003_00005_.png"
+        "/home/vitor/projects/AI-Story-Video/CT_video_creator/stories/Bible/video/chapter_001/assets/images/chapter_001_image_003_00005_.png"
     )
 
     gen = SceneScriptGenerator(image_path, 5, current_prompt, previous_prompt)
