@@ -6,7 +6,7 @@ from pathlib import Path
 from math import ceil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from logging_utils import logger, begin_file_logging
+from ct_logging import logger, begin_file_logging
 
 from ct_video_creator.generators import WanI2VRecipe, SceneScriptGenerator
 from ct_video_creator.modules.narrator import NarratorAssets

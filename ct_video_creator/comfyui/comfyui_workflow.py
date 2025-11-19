@@ -43,7 +43,7 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
     Base class for ComfyUI
     """
 
-    def __init__(self, base_workflow: dict):
+    def __init__(self, base_workflow: str):
         """
         Initialize the ComfyUIWorkflowBase class.
         """
@@ -55,7 +55,7 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
 
         self.workflow_summary = "output"
 
-    def _set_fields(self, field_parameters: dict[int, dict[str, str]]) -> None:
+    def _set_fields(self, field_parameters: dict) -> None:
         """
         Set the model sweeper to the JSON configuration.
 
@@ -66,22 +66,16 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
 
             # Check if the node exists in the workflow
             if index_str not in self.workflow:
-                raise ValueError(
-                    f"WRONG NODE INDEX: Node index {index_str} does not exist in the workflow."
-                )
+                raise ValueError(f"WRONG NODE INDEX: Node index {index_str} does not exist in the workflow.")
 
             # Check if the "inputs" field exists for the node
             if "inputs" not in self.workflow[index_str]:
-                raise ValueError(
-                    f"WRONG NODE INDEX: Node {index_str} is missing the 'inputs' field."
-                )
+                raise ValueError(f"WRONG NODE INDEX: Node {index_str} is missing the 'inputs' field.")
 
             # Validate that all keys in `parameters` exist in the workflow's inputs
             for key in parameters.keys():
                 if key not in self.workflow[index_str]["inputs"]:
-                    raise ValueError(
-                        f"WRONG NODE INDEX: Key '{key}' is missing in the 'inputs' of node {index_str}."
-                    )
+                    raise ValueError(f"WRONG NODE INDEX: Key '{key}' is missing in the 'inputs' of node {index_str}.")
 
             # Set the values in the workflow
             for key, value in parameters.items():
@@ -107,9 +101,7 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
 
                 for key, value in obj.items():
                     if key in reference_keys:
-                        new_values = [
-                            to_index_str if v == from_index_str else v for v in value
-                        ]
+                        new_values = [to_index_str if v == from_index_str else v for v in value]
                         result[key] = new_values
                     else:
                         result[key] = __replace_references(value)
@@ -120,28 +112,20 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
 
         self.workflow = __replace_references(self.workflow)
 
-    def _rewire_node(
-        self, node_index_to_rewire: int, from_index: int, to_index: int
-    ) -> None:
+    def _rewire_node(self, node_index_to_rewire: int, from_index: int, to_index: int) -> None:
         """Rewire the output of one node to the input of another node."""
         node_index_to_rewire_str = str(node_index_to_rewire)
         from_index_str = str(from_index)
         to_index_str = str(to_index)
 
         if node_index_to_rewire_str not in self.workflow:
-            raise ValueError(
-                f"Node '{node_index_to_rewire_str}' does not exist in the workflow."
-            )
+            raise ValueError(f"Node '{node_index_to_rewire_str}' does not exist in the workflow.")
 
         if "inputs" not in self.workflow[node_index_to_rewire_str]:
-            raise ValueError(
-                f"Node '{node_index_to_rewire_str}' has no inputs to rewire."
-            )
+            raise ValueError(f"Node '{node_index_to_rewire_str}' has no inputs to rewire.")
 
         if "model" not in self.workflow[node_index_to_rewire_str]["inputs"]:
-            raise ValueError(
-                f"Node '{node_index_to_rewire_str}' has no model to rewire."
-            )
+            raise ValueError(f"Node '{node_index_to_rewire_str}' has no model to rewire.")
 
         # Fix: Properly modify the model reference in the workflow
         model_input = self.workflow[node_index_to_rewire_str]["inputs"]["model"]
@@ -170,9 +154,7 @@ class ComfyUIWorkflowBase(IComfyUIWorkflow):
         """
         return self.workflow
 
-    def _set_output_filename(
-        self, output_filename_node_index: int, filename: str
-    ) -> None:
+    def _set_output_filename(self, output_filename_node_index: int, filename: str) -> None:
         """
         Set the output filename for the generated file.
         """

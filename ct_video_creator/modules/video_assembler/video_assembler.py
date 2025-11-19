@@ -7,7 +7,7 @@ by coordinating image generation, audio generation, and video composition.
 
 from pathlib import Path
 
-from logging_utils import logger
+from ct_logging import logger
 
 from ct_video_creator.comfyui import ComfyUIRequests
 from ct_video_creator.modules.background_music import BackgroundMusicAssets, BackgroundMusicAsset

@@ -4,7 +4,7 @@ import random
 import json
 from pathlib import Path
 
-from logging_utils import logger
+from ct_logging import logger
 
 from ct_video_creator.environment_variables import DEFAULT_ASSETS_FOLDER
 from ct_video_creator.utils import (

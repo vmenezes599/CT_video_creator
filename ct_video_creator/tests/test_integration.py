@@ -13,7 +13,7 @@ from unittest.mock import patch
 import pytest
 
 sub_video_i2v_module = importlib.import_module(
-    "ai_video_creator.modules.sub_video.sub_video_recipe_builder"
+    "ct_video_creator.modules.sub_video.sub_video_recipe_builder"
 )
 from ct_video_creator.modules.narrator_and_image import NarratorAndImageAssetManager
 from ct_video_creator.modules.sub_video import SubVideoAssetManager, SubVideoI2VRecipeBuilder
@@ -293,11 +293,11 @@ class TestVideoCreationWorkflow:
         # Mock the concatenation function and FFmpeg operations since they require real video files
         # Mock FlorenceGenerator to avoid AI/LLM calls
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
+            "ct_video_creator.modules.sub_video.sub_video_asset_manager.concatenate_videos_remove_last_frame_except_last"
         ) as mock_concat, patch(
-            "ai_video_creator.modules.sub_video.sub_video_asset_manager.extract_video_last_frame"
+            "ct_video_creator.modules.sub_video.sub_video_asset_manager.extract_video_last_frame"
         ) as mock_extract, patch(
-            "ai_video_creator.modules.sub_video.sub_video_asset_manager.FlorenceGenerator"
+            "ct_video_creator.modules.sub_video.sub_video_asset_manager.FlorenceGenerator"
         ) as MockFlorenceGenerator:
 
             def fake_concat(input_videos, output_path):

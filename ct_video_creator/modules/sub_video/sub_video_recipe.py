@@ -5,7 +5,7 @@ Video executor for create_video command.
 import json
 from pathlib import Path
 
-from logging_utils import logger
+from ct_logging import logger
 
 from ct_video_creator.generators import (
     WanI2VRecipe,

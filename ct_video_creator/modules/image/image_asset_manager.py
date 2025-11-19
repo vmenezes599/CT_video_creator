@@ -2,7 +2,7 @@
 Image asset builder for creating image assets from recipes.
 """
 
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.generators import IImageGenerator
 from ct_video_creator.utils import VideoCreatorPaths
 

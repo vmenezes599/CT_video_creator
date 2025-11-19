@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.generators import IVideoGenerator, FlorenceGenerator
 from ct_video_creator.utils import (
     VideoCreatorPaths,

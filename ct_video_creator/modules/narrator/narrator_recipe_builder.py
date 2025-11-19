@@ -2,7 +2,7 @@
 Narrator recipe builder for creating narrator recipes from prompts.
 """
 
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.prompt import Prompt
 
 from ct_video_creator.generators import ZonosTTSRecipe

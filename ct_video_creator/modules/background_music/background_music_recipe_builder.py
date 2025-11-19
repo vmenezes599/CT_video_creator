@@ -1,10 +1,10 @@
 """Module for building background music generation prompts."""
 
 import random
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.prompt import Prompt
 from ct_video_creator.environment_variables import BACKGROUND_MUSIC_PROMPT_LLM_MODEL
-from ai_llm import LLMManager, LLMPromptBuilder
+from ct_llm import LLMManager, LLMPromptBuilder
 
 from ct_video_creator.utils import VideoCreatorPaths
 from ct_video_creator.generators import MusicGenRecipe

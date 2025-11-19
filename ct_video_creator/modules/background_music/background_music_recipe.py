@@ -5,7 +5,7 @@ Background music recipe for managing background music data.
 import json
 from pathlib import Path
 
-from logging_utils import logger
+from ct_logging import logger
 
 from ct_video_creator.utils import VideoCreatorPaths, backup_file_to_old
 from ct_video_creator.generators import MusicGenRecipe

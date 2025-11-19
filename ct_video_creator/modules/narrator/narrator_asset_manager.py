@@ -2,7 +2,7 @@
 Narrator asset builder for creating narrator assets from recipes.
 """
 
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.generators import IAudioGenerator
 from ct_video_creator.utils import VideoCreatorPaths
 

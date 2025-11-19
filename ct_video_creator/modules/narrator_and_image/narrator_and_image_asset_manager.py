@@ -1,6 +1,6 @@
 """This module manages the creation of video assets for a given story chapter."""
 
-from logging_utils import logger
+from ct_logging import logger
 from ct_video_creator.utils import VideoCreatorPaths, AspectRatios
 
 from ct_video_creator.modules.image import ImageAssetManager, ImageRecipeBuilder

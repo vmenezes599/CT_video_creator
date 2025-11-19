@@ -7,7 +7,7 @@ import json
 from unittest.mock import patch
 
 sub_video_i2v_module = importlib.import_module(
-    "ai_video_creator.modules.sub_video.sub_video_recipe_builder"
+    "ct_video_creator.modules.sub_video.sub_video_recipe_builder"
 )
 
 import pytest
@@ -17,7 +17,7 @@ import importlib
 from ct_video_creator.modules.sub_video import SubVideoI2VRecipeBuilder
 from ct_video_creator.utils import VideoCreatorPaths
 
-importlib.import_module("ai_video_creator.modules.sub_video.sub_video_recipe_builder")
+importlib.import_module("ct_video_creator.modules.sub_video.sub_video_recipe_builder")
 
 class TestVideoRecipeBuilder:
     """Test VideoRecipeBuilder class - focus on actual recipe creation."""
@@ -431,7 +431,7 @@ class TestVideoRecipeBuilder:
         video_creator_paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
 
         with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
+            "ct_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
             return_value=10.0,
         ):
             with pytest.raises(ValueError, match="Image assets exceed video prompts"):
