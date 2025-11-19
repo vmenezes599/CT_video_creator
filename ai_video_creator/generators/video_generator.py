@@ -9,6 +9,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing_extensions import override
 from logging_utils import logger
+from requests.exceptions import RequestException
 
 from ai_video_creator.comfyui import ComfyUIRequests, WanI2VWorkflow, WanT2VWorkflow
 from ai_video_creator.utils import safe_move, extract_video_last_frame
@@ -55,7 +56,7 @@ class IVideoGenerator(ABC):
         return complete_target_path
 
     @abstractmethod
-    def generate_video(self, recipe: VideoRecipeBase, output_file_path: Path) -> Path:
+    def generate_video(self, recipe, output_file_path: Path) -> Path | None:
         """Generate a video based on the recipe."""
 
 
@@ -89,7 +90,7 @@ class WanGenerator(IVideoGenerator):
         return moved_files
 
     @override
-    def generate_video(self, recipe: "WanRecipeBase", output_file_path: Path) -> Path:
+    def generate_video(self, recipe, output_file_path: Path) -> Path | None:
         """
         Generate a video based on the recipe.
         """
@@ -116,7 +117,7 @@ class WanGenerator(IVideoGenerator):
             return self.requests.upload_file(media_path)
         return None
 
-    def image_to_video(self, recipe: "WanI2VRecipe", output_file_path: Path) -> Path:
+    def image_to_video(self, recipe: "WanI2VRecipe", output_file_path: Path) -> Path | None:
         """
         Generate images for a list of prompts and return the paths to the generated images.
 
@@ -134,7 +135,7 @@ class WanGenerator(IVideoGenerator):
         workflow.set_resolution(recipe.width, recipe.height)
         workflow.set_output_filename(output_file_path.stem)
         workflow.set_image_path(new_media_path.name)
-        workflow.set_color_match_filename(new_color_match_media_path.name if new_color_match_media_path else None)
+        workflow.set_color_match_filename(new_color_match_media_path.name if new_color_match_media_path else "")
 
         for lora, strength in zip(recipe.high_lora, recipe.high_lora_strength):
             workflow.add_high_lora(lora, strength)
@@ -147,7 +148,7 @@ class WanGenerator(IVideoGenerator):
 
         return result_files[0] if result_files else None
 
-    def text_to_video(self, recipe: "WanT2VRecipe", output_file_path: Path) -> Path:
+    def text_to_video(self, recipe: "WanT2VRecipe", output_file_path: Path) -> Path | None:
         """
         Generate images for a list of prompts and return the paths to the generated images.
 
@@ -180,6 +181,7 @@ class WanRecipeBase(VideoRecipeBase):
 
     GENERATOR_TYPE = WanGenerator
     LORA_SUBFOLDER = ["Wan2.2_General"]
+    _AVAILABLE_LORAS: list[str] | None = None
 
     color_media_path: str
     high_lora: list[str]
@@ -223,8 +225,7 @@ class WanRecipeBase(VideoRecipeBase):
             seed=random.randint(0, 2**31 - 1) if seed is None else seed,
             recipe_type=self.recipe_type,
         )
-        requests = ComfyUIRequests()
-        available_loras = requests.get_available_loras()
+        available_loras = self._get_available_loras()
 
         self.color_match_media_path = color_match_media_path if color_match_media_path else ""
         if high_lora is None or high_lora == self._DEFAULT:
@@ -269,9 +270,7 @@ class WanRecipeBase(VideoRecipeBase):
             Dictionary representation of the ImageRecipe
         """
         # TODO: Remove this when web UI is mature?
-        requests = ComfyUIRequests()
-        comfyui_available_loras = [Path(lora) for lora in requests.get_available_loras()]
-
+        comfyui_available_loras = [Path(lora) for lora in self._get_available_loras()]
         available_loras = []
         for lora in comfyui_available_loras:
             lora_folder = lora.parent.name
@@ -339,6 +338,17 @@ class WanRecipeBase(VideoRecipeBase):
             seed=data.get("seed", None),
         )
 
+    @classmethod
+    def _get_available_loras(cls) -> list[str]:
+        if cls._AVAILABLE_LORAS is None:
+            try:
+                requests = ComfyUIRequests()
+                cls._AVAILABLE_LORAS = requests.get_available_loras()
+            except RequestException as exc:
+                logger.warning("Unable to fetch available WAN LORAs: %s", exc)
+                cls._AVAILABLE_LORAS = []
+        return cls._AVAILABLE_LORAS
+
 
 class WanI2VRecipe(WanRecipeBase):
     """Video recipe for creating videos from stories."""
@@ -354,9 +364,9 @@ class WanI2VRecipe(WanRecipeBase):
         width: int,
         height: int,
         color_match_media_path: str | None,
-        high_lora: list[str] | None = WanRecipeBase._DEFAULT,
+        high_lora: list[str] | None | object = WanRecipeBase._DEFAULT,
         high_lora_strength: list[float] | None = None,
-        low_lora: list[str] | None = WanRecipeBase._DEFAULT,
+        low_lora: list[str] | None | object = WanRecipeBase._DEFAULT,
         low_lora_strength: list[float] | None = None,
         media_path: str | None = None,
         seed: int | None = None,
@@ -453,9 +463,9 @@ class WanT2VRecipe(WanI2VRecipe):
         width: int,
         height: int,
         color_match_media_path: str | None,
-        high_lora: list[str] | None = WanRecipeBase._DEFAULT,
+        high_lora: list[str] | None | object = WanRecipeBase._DEFAULT,
         high_lora_strength: list[float] | None = None,
-        low_lora: list[str] | None = WanRecipeBase._DEFAULT,
+        low_lora: list[str] | None | object = WanRecipeBase._DEFAULT,
         low_lora_strength: list[float] | None = None,
         # TODO: Remove media_path when changing subclass to WanRecipeBase
         media_path: str | None = None,
@@ -512,5 +522,17 @@ class WanT2VRecipe(WanI2VRecipe):
             KeyError: If required keys are missing from data
             ValueError: If data format is invalid
         """
-        # WanT2VRecipe has no extra fields beyond WanRecipeBase, so just delegate
-        return super().from_dict(data)
+        base_instance = super().from_dict(data)
+
+        return cls(
+            prompt=base_instance.prompt,
+            width=base_instance.width,
+            height=base_instance.height,
+            color_match_media_path=base_instance.color_match_media_path,
+            high_lora=base_instance.high_lora,
+            high_lora_strength=base_instance.high_lora_strength,
+            low_lora=base_instance.low_lora,
+            low_lora_strength=base_instance.low_lora_strength,
+            media_path=getattr(base_instance, "media_path", None),
+            seed=base_instance.seed,
+        )

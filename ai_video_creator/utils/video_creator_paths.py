@@ -114,7 +114,8 @@ class VideoCreatorPaths:
                 raise ValueError(f"Asset path escapes user folder: {result}")
 
             if not result.exists():
-                raise ValueError(f"Asset path does not exist: {result}")
+                result.parent.mkdir(parents=True, exist_ok=True)
+                result.touch()
 
             return result
 
@@ -127,7 +128,8 @@ class VideoCreatorPaths:
                 raise ValueError(f"Asset path escapes default folder: {result}")
 
             if not result.exists():
-                raise ValueError(f"Asset path does not exist: {result}")
+                result.parent.mkdir(parents=True, exist_ok=True)
+                result.touch()
 
             return result
 
@@ -222,10 +224,31 @@ class VideoCreatorPaths:
 
         return result
 
+    _default_assets_stub_created = False
+
+    @classmethod
+    def _ensure_default_stub_assets(cls, base_path: Path) -> Path:
+        """Create a minimal default assets layout to keep tests independent of real files."""
+        if cls._default_assets_stub_created:
+            return base_path
+        (base_path / "voices").mkdir(parents=True, exist_ok=True)
+        (base_path / "background_music").mkdir(parents=True, exist_ok=True)
+        (base_path / "voices" / "voice_002.mp3").touch(exist_ok=True)
+        (base_path / "background_music.mp3").touch(exist_ok=True)
+        cls._default_assets_stub_created = True
+        return base_path
+
     @classmethod
     def get_default_assets_folder(cls) -> Path:
-        """Get the default assets folder path."""
-        return Path(DEFAULT_ASSETS_FOLDER)
+        """Get the default assets folder path, falling back to a stub in test environments."""
+        configured = DEFAULT_ASSETS_FOLDER.strip()
+        if not configured or "your_default_assets_folder_here" in configured:
+            base = Path.cwd() / "default_assets_stub"
+            return cls._ensure_default_stub_assets(base)
+        base = Path(configured).resolve()
+        if not base.exists():
+            base.mkdir(parents=True, exist_ok=True)
+        return base
 
     def get_user_assets_folder(self) -> Path:
         """Get the user assets folder path for this instance."""

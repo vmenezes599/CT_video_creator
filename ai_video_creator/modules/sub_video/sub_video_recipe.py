@@ -145,10 +145,33 @@ class SubVideoRecipe:
 
         return result
 
-    def _create_temp_copy_paste_helper_file(self) -> str:
+    def _create_temp_copy_paste_helper_file(self) -> dict:
         """"""
 
-        result = ""
+        result: dict = {}
+
+        for i, recipe_list in enumerate(self.video_data, 1):
+
+            item: dict = {
+                "index": i,
+            }
+
+            prompts = {}
+
+            for j, recipe in enumerate(recipe_list, 1):
+
+                prompt = ""
+                if j == 1:
+                    item.update({"first_frame": Path(recipe.media_path).name})
+                    prompt += self.extra_data[i - 1].get("helper_story_text", "") + "\n"
+
+                prompt += recipe.prompt
+
+                prompts.update({"index": j, "prompt": prompt})
+
+            item.update({"prompts": prompts})
+
+            result.update(item)
 
         return result
 
@@ -160,6 +183,10 @@ class SubVideoRecipe:
 
             with open(self.recipe_path, "w", encoding="utf-8") as file:
                 json.dump(self.to_dict(), file, ensure_ascii=False, indent=4)
+
+            helper_file_path = self.recipe_path.with_name(self.recipe_path.stem + "_copy_paste_helper.json")
+            with open(helper_file_path, "w", encoding="utf-8") as helper_file:
+                json.dump(self._create_temp_copy_paste_helper_file(), helper_file, ensure_ascii=False, indent=4)
         except IOError as e:
             logger.error(f"Error saving video recipe to {self.recipe_path.name}: {e}")
 

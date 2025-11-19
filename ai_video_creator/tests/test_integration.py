@@ -5,14 +5,18 @@ These tests focus on testing complete workflows with minimal mocking,
 using fake implementations for external dependencies only.
 """
 
+import importlib
 import json
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
+sub_video_i2v_module = importlib.import_module(
+    "ai_video_creator.modules.sub_video.sub_video_recipe_builder"
+)
 from ai_video_creator.modules.narrator_and_image import NarratorAndImageAssetManager
-from ai_video_creator.modules.sub_video import SubVideoAssetManager, SubVideoRecipeBuilder
+from ai_video_creator.modules.sub_video import SubVideoAssetManager, SubVideoI2VRecipeBuilder
 from ai_video_creator.utils import VideoCreatorPaths
 from .test_fakes import TrackingFakeGenerators
 
@@ -228,7 +232,7 @@ class TestVideoCreationWorkflow:
         with open(image_asset_file, "w", encoding="utf-8") as f:
             json.dump(image_data, f)
 
-        # Create image recipe file that SubVideoRecipeBuilder needs
+        # Create image recipe file that SubVideoI2VRecipeBuilder needs
         image_recipe_file = chapter_folder / "image_recipe.json"
         image_recipe = {
             "image_data": [
@@ -247,12 +251,14 @@ class TestVideoCreationWorkflow:
 
         # Test recipe builder
         # Mock SceneScriptGenerator to avoid AI/LLM calls
-        mock_scene_generator = patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
+        mock_scene_generator = patch.object(
+            sub_video_i2v_module,
+            "SceneScriptGenerator",
         )
 
-        with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
+        with patch.object(
+            sub_video_i2v_module,
+            "get_media_duration",
             return_value=5.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -263,7 +269,7 @@ class TestVideoCreationWorkflow:
                 "Scene script 3",
             ]
 
-            recipe_builder = SubVideoRecipeBuilder(video_creator_paths)
+            recipe_builder = SubVideoI2VRecipeBuilder(video_creator_paths)
             recipe_builder.create_sub_video_recipe()
 
         # Verify recipe was created

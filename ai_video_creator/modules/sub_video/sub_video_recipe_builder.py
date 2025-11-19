@@ -65,7 +65,6 @@ class SubVideoI2VRecipeBuilder:
         self._min_sub_videos = 3
         self._max_sub_videos = 8
         self._default_sub_video_duration_seconds = 5
-
     def _is_recipe_complete(self) -> bool:
         """Verify the recipe against the prompt to ensure all required data is present."""
         logger.debug("Verifying recipe against image assets.")
