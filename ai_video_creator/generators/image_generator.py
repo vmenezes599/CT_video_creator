@@ -5,6 +5,7 @@ AI Video Generation Module
 import random
 from abc import ABC, abstractmethod
 from pathlib import Path
+from requests.exceptions import RequestException
 from logging_utils import logger
 
 from ai_video_creator.utils import safe_move
@@ -115,9 +116,7 @@ class FluxImageRecipe(ImageRecipeBase):
             image_path: Path to the image file
             seed: Seed used for image generation
         """
-        requests = ComfyUIRequests()
-        available_loras = requests.get_available_loras()
-        validated_lora = lora if lora in available_loras else ""
+        validated_lora = lora or ""
 
         batch_size = batch_size if batch_size is not None else 1
         seed = seed if seed is not None else random.randint(0, 2**31 - 1)
@@ -138,8 +137,12 @@ class FluxImageRecipe(ImageRecipeBase):
         Returns:
             Dictionary representation of the ImageRecipe
         """
-        requests = ComfyUIRequests()
-        comfyui_available_loras = [Path(lora) for lora in requests.get_available_loras()]
+        try:
+            requests = ComfyUIRequests()
+            comfyui_available_loras = [Path(lora) for lora in requests.get_available_loras()]
+        except RequestException:
+            logger.warning("Unable to fetch available LORAs for serialization; returning empty list.")
+            comfyui_available_loras = []
 
         available_loras = []
         for lora in comfyui_available_loras:

@@ -2,14 +2,22 @@
 Unit tests for video_recipe_builder module.
 """
 
+import importlib
 import json
 from unittest.mock import patch
 
+sub_video_i2v_module = importlib.import_module(
+    "ai_video_creator.modules.sub_video.sub_video_recipe_builder"
+)
+
 import pytest
 
-from ai_video_creator.modules.sub_video import SubVideoRecipeBuilder
+import importlib
+
+from ai_video_creator.modules.sub_video import SubVideoI2VRecipeBuilder
 from ai_video_creator.utils import VideoCreatorPaths
 
+importlib.import_module("ai_video_creator.modules.sub_video.sub_video_recipe_builder")
 
 class TestVideoRecipeBuilder:
     """Test VideoRecipeBuilder class - focus on actual recipe creation."""
@@ -53,7 +61,7 @@ class TestVideoRecipeBuilder:
         # Create VideoCreatorPaths instance
         paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
 
-        # Create the required asset files for SubVideoRecipeBuilder
+        # Create the required asset files for SubVideoI2VRecipeBuilder
         narrator_assets = {
             "assets": [
                 {"index": 1, "narrator": "assets/narrators/narrator_001.mp3"},
@@ -111,12 +119,14 @@ class TestVideoRecipeBuilder:
         """Test that VideoRecipeBuilder creates the correct JSON file structure."""
         # Mock only external dependencies - get_media_duration is external
         # Mock SceneScriptGenerator to avoid AI/LLM calls
-        mock_scene_generator = patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
+        mock_scene_generator = patch.object(
+            sub_video_i2v_module,
+            "SceneScriptGenerator",
         )
 
-        with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
+        with patch.object(
+            sub_video_i2v_module,
+            "get_media_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -127,7 +137,7 @@ class TestVideoRecipeBuilder:
                 "Scene script 3",
             ]
 
-            builder = SubVideoRecipeBuilder(video_creator_paths)
+            builder = SubVideoI2VRecipeBuilder(video_creator_paths)
             builder.create_sub_video_recipe()
 
             # Verify recipe file was created
@@ -157,12 +167,14 @@ class TestVideoRecipeBuilder:
     def test_recipe_builder_with_existing_valid_recipe(self, video_creator_paths):
         """Test that builder doesn't recreate valid existing recipes."""
         # Mock SceneScriptGenerator to avoid AI/LLM calls
-        mock_scene_generator = patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
+        mock_scene_generator = patch.object(
+            sub_video_i2v_module,
+            "SceneScriptGenerator",
         )
 
-        with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
+        with patch.object(
+            sub_video_i2v_module,
+            "get_media_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -174,7 +186,7 @@ class TestVideoRecipeBuilder:
             ]
 
             # Create first recipe
-            builder1 = SubVideoRecipeBuilder(video_creator_paths)
+            builder1 = SubVideoI2VRecipeBuilder(video_creator_paths)
             builder1.create_sub_video_recipe()
 
             recipe_file = builder1._paths.sub_video_recipe_file
@@ -184,7 +196,7 @@ class TestVideoRecipeBuilder:
                 original_content = json.load(f)
 
             # Create second builder - should use existing recipe
-            builder2 = SubVideoRecipeBuilder(video_creator_paths)
+            builder2 = SubVideoI2VRecipeBuilder(video_creator_paths)
             builder2.create_sub_video_recipe()
 
             # Content should be the same (recipes should not be recreated)
@@ -305,12 +317,14 @@ class TestVideoRecipeBuilder:
             json.dump(image_recipe, f)
 
         # Mock SceneScriptGenerator to avoid AI/LLM calls
-        mock_scene_generator = patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
+        mock_scene_generator = patch.object(
+            sub_video_i2v_module,
+            "SceneScriptGenerator",
         )
 
-        with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
+        with patch.object(
+            sub_video_i2v_module,
+            "get_media_duration",
             return_value=10.0,
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -321,7 +335,7 @@ class TestVideoRecipeBuilder:
                 "Scene script 3",
             ]
 
-            builder = SubVideoRecipeBuilder(video_creator_paths)
+            builder = SubVideoI2VRecipeBuilder(video_creator_paths)
             builder.create_sub_video_recipe()
 
             recipe_file = builder._paths.sub_video_recipe_file
@@ -367,18 +381,20 @@ class TestVideoRecipeBuilder:
         video_creator_paths = VideoCreatorPaths(user_folder, story_name, chapter_index)
 
         with pytest.raises(ValueError):
-            SubVideoRecipeBuilder(video_creator_paths)
+            SubVideoI2VRecipeBuilder(video_creator_paths)
 
     def test_recipe_builder_handles_audio_duration_errors(self, video_creator_paths):
         """Test recipe builder handles audio duration errors gracefully."""
         # Mock get_media_duration to raise an exception
         # Mock SceneScriptGenerator to avoid AI/LLM calls
-        mock_scene_generator = patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.SceneScriptGenerator"
+        mock_scene_generator = patch.object(
+            sub_video_i2v_module,
+            "SceneScriptGenerator",
         )
 
-        with patch(
-            "ai_video_creator.modules.sub_video.sub_video_recipe_builder.get_media_duration",
+        with patch.object(
+            sub_video_i2v_module,
+            "get_media_duration",
             side_effect=Exception("Audio file not found"),
         ), mock_scene_generator as MockSceneScriptGenerator:
             # Mock the generate_scenes_script method to return test data
@@ -389,7 +405,7 @@ class TestVideoRecipeBuilder:
                 "Scene script 3",
             ]
 
-            builder = SubVideoRecipeBuilder(video_creator_paths)
+            builder = SubVideoI2VRecipeBuilder(video_creator_paths)
             # Currently, the builder does not handle audio duration errors gracefully
             # So we expect an exception to be raised
             with pytest.raises(Exception, match="Audio file not found"):
@@ -419,4 +435,4 @@ class TestVideoRecipeBuilder:
             return_value=10.0,
         ):
             with pytest.raises(ValueError, match="Image assets exceed video prompts"):
-                SubVideoRecipeBuilder(video_creator_paths)
+                SubVideoI2VRecipeBuilder(video_creator_paths)

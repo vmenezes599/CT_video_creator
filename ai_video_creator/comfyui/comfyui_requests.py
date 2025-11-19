@@ -6,10 +6,12 @@ import os
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import requests
 from ai_video_creator.environment_variables import COMFYUI_OUTPUT_FOLDER, COMFYUI_URL
 from logging_utils import logger
+from requests import Response, Session
 from requests.exceptions import RequestException
 
 from .comfyui_workflow import IComfyUIWorkflow
@@ -20,60 +22,122 @@ class ComfyUIRequests:
     ComfyuiRequest is a class that handles HTTP requests to the ComfyUI API.
     """
 
-    def __init__(self, max_retries_per_request: int = 5, delay_seconds: int = 1) -> None:
+    DEFAULT_CLEANUP_DELAY_SECONDS = 5
+
+    def __init__(self, retries: int = 5, retry_delay: int = 1) -> None:
         """
         Initializes the ComfyuiRequest with a configurable retry mechanism.
         """
-        self.max_retries_per_request = max_retries_per_request
-        self.delay_seconds = delay_seconds
+        self.retries = max(1, retries)
+        self.retry_delay = max(0, retry_delay)
+        self._delay_between_requests = self.retry_delay
+        self._cleanup_delay_seconds = self.DEFAULT_CLEANUP_DELAY_SECONDS
+        self.session: Session = requests.Session()
 
-        self._wait_for_service_ready()
+    def _send_get_request(
+        self,
+        url: str,
+        params: dict[str, Any] | None = None,
+        stream: bool = False,
+        timeout: float | tuple[float, float] = 10.0,
+    ) -> Response:
+        """
+        Send a GET request using the configured session with simple retries.
+        """
+        last_exc: RequestException | None = None
 
-    def _wait_for_service_ready(self, check_interval: int = 5):
-        """
-        Wait until ComfyUI is ready to accept requests.
-        """
-        max_tries = (5 * 60) / check_interval  # Wait up to 5 minutes
-        tries = 0
-        while tries < max_tries:
+        for attempt in range(1, self.retries + 1):
             try:
-                response = self._send_get_request(f"{COMFYUI_URL}/prompt", timeout=10)
-                if response.ok:
-                    return
-            except RequestException:
-                logger.info("Waiting for ComfyUI to be ready...")
-                time.sleep(check_interval)
-            finally:
-                tries += 1
+                response = self.session.get(
+                    url=url,
+                    params=params,
+                    stream=stream,
+                    timeout=timeout,
+                )
+                response.raise_for_status()
+                return response
+            except RequestException as exc:
+                last_exc = exc
+                if attempt >= self.retries:
+                    logger.error(
+                        "GET %s failed after %s attempts. Last error: %s",
+                        url,
+                        self.retries,
+                        exc,
+                    )
+                    raise
 
-    def _send_get_request(self, url: str, params: dict | None = None, stream: bool = False, timeout: int = 10):
-        """
-        Sends a GET request using the configured session.
-        """
-        return requests.get(url=url, params=params, stream=stream, timeout=timeout)
+                logger.warning(
+                    "GET %s failed on attempt %s/%s. Retrying in %s seconds. Error: %s",
+                    url,
+                    attempt,
+                    self.retries,
+                    self.retry_delay,
+                    exc,
+                )
+                time.sleep(self.retry_delay)
+
+        raise last_exc or RequestException("Unknown error during GET request.")
 
     def _send_post_request(
         self,
         url: str,
-        data: dict | None = None,
-        json: dict | None = None,
-        files: dict | None = None,
-        params: dict | None = None,
-        timeout: int = 10,
-    ) -> requests.Response:
+        data: dict[str, Any] | None = None,
+        json: dict[str, Any] | None = None,
+        files: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        timeout: float | tuple[float, float] = 10.0,
+    ) -> Response:
         """
-        Sends a POST request using the configured session.
+        Send a POST request using the configured session with retries.
         """
-        response = requests.post(url=url, data=data, json=json, files=files, params=params, timeout=timeout)
-        response.raise_for_status()
-        return response
+        last_exc: RequestException | None = None
+
+        for attempt in range(1, self.retries + 1):
+            try:
+                response = self.session.post(
+                    url=url,
+                    data=data,
+                    json=json,
+                    files=files,
+                    params=params,
+                    timeout=timeout,
+                )
+                response.raise_for_status()
+                return response
+            except RequestException as exc:
+                last_exc = exc
+                if attempt >= self.retries:
+                    logger.error(
+                        "POST %s failed after %s attempts. Last error: %s",
+                        url,
+                        self.retries,
+                        exc,
+                    )
+                    raise
+
+                logger.warning(
+                    "POST %s failed on attempt %s/%s. Retrying in %s seconds. Error: %s",
+                    url,
+                    attempt,
+                    self.retries,
+                    self.retry_delay,
+                    exc,
+                )
+                time.sleep(self.retry_delay)
+
+        raise last_exc or RequestException("Unknown error during POST request.")
 
     def comfyui_get_heartbeat(self) -> bool:
         """
         Check if ComfyUI is running by sending a GET request to the heartbeat endpoint.
         """
-        response = self._send_get_request(f"{COMFYUI_URL}/prompt", timeout=10)
-        return response.ok
+        try:
+            self._send_get_request(f"{COMFYUI_URL}/prompt", timeout=10)
+            return True
+        except RequestException:
+            logger.error("Failed to fetch heartbeat from ComfyUI.")
+            return False
 
     def comfyui_send_prompt(self, json: dict, timeout: int = 10) -> requests.Response:
         """
@@ -140,12 +204,14 @@ class ComfyUIRequests:
         """
         Send a request to clean memory in ComfyUI.
         """
+        payload = {"unload_models": True, "free_memory": True}
         try:
             payload = {"unload_models": True, "free_memory": True}
             response = self._send_post_request(f"{COMFYUI_URL}/free", json=payload, timeout=10)
             if not response.ok:
                 logger.error("Failed to clean memory in ComfyUI: {}", response.text)
-            time.sleep(5)  # Give ComfyUI time to process the request
+            else:
+                time.sleep(self._cleanup_delay_seconds)  # Give ComfyUI time to process the request
         except RequestException as e:
             logger.error("Error occurred while cleaning memory in ComfyUI: {}", e)
 
@@ -199,16 +265,10 @@ class ComfyUIRequests:
         """
         _, display_summary = self._create_workflow_summary(workflow)
 
-        tries = 0
-        while tries < self.max_retries_per_request:
+        for attempt in range(1, self.retries + 1):
             try:
-                # Submit the prompt
                 response = self._submit_single_prompt(workflow)
-                response_data = response.json()
-
-                prompt_id = response_data["prompt_id"]
-
-                # Wait for completion and track timing
+                prompt_id = response.json()["prompt_id"]
                 processing_time = self._wait_for_completion(prompt_id)
 
                 logger.info(
@@ -217,44 +277,32 @@ class ComfyUIRequests:
                     display_summary,
                 )
 
-                # Get output path
                 history_entry = self.get_last_history_entry()
-
                 if history_entry:
                     self._check_for_output_success(history_entry)
-                    output_paths = self._get_output_paths(history_entry)
+                    return self._get_output_paths(history_entry)
 
-                    return output_paths
-                else:
-                    tries += 1
+                logger.error("No history entry found for request: {}", display_summary)
 
-            except RuntimeError:
-                tries += 1
+            except RuntimeError as err:
                 logger.error(
-                    "Failed to run workflow on attempt {}/{} for request: {}",
-                    tries,
-                    self.max_retries_per_request,
+                    "Failed to run workflow on attempt %s/%s for request %s: %s",
+                    attempt,
+                    self.retries,
                     display_summary,
+                    err,
                 )
-            except RequestException as e:
-                tries += 1
+            except RequestException as exc:
                 logger.error(
-                    "Connection error during request {} (attempt {}/{}): {}",
+                    "Connection error during request %s (attempt %s/%s): %s",
                     display_summary,
-                    tries,
-                    self.max_retries_per_request,
-                    e,
+                    attempt,
+                    self.retries,
+                    exc,
                 )
-
             finally:
                 self._send_clean_memory_request()
 
-        # If all retries exhausted
-        logger.error(
-            "Failed to process workflow after {} attempts: {}",
-            self.max_retries_per_request,
-            display_summary,
-        )
         return []
 
     def upload_file(self, file_path: Path) -> Path:
@@ -322,9 +370,8 @@ class ComfyUIRequests:
             logger.info(f"Processing request {index}/{len(req_list)}")
             output_paths = self._process_single_workflow(workflow)
             output_image_paths.extend(output_paths)
-
-            # Add delay between requests
-            time.sleep(self.delay_seconds)
+            if self._delay_between_requests > 0:
+                time.sleep(self._delay_between_requests)
 
         logger.info("Finished processing all ComfyUI requests.")
 
@@ -340,27 +387,24 @@ class ComfyUIRequests:
         """
         Get the queue information from ComfyUI.
         """
-        response = self._send_get_request(f"{COMFYUI_URL}/prompt", timeout=10)
-
-        if response.ok:
+        try:
+            response = self._send_get_request(f"{COMFYUI_URL}/prompt", timeout=10)
             queue_data = response.json()
             return queue_data["exec_info"]["queue_remaining"]
-
-        logger.error("Failed to fetch queue.")
-        return -1
+        except RequestException as exc:
+            logger.error(f"Failed to fetch queue: {exc}")
+            return -1
 
     def get_history(self) -> dict:
         """
         Get the history information from ComfyUI.
         """
-        response = self._send_get_request(f"{COMFYUI_URL}/history", timeout=10)
-
-        if response.ok:
-            history_data = response.json()
-            return history_data
-
-        logger.error("Failed to fetch history.")
-        return {}
+        try:
+            response = self._send_get_request(f"{COMFYUI_URL}/history", timeout=10)
+            return response.json()
+        except RequestException as exc:
+            logger.error(f"Failed to fetch history: {exc}")
+            return {}
 
     def get_last_history_entry(self) -> dict:
         """
@@ -380,11 +424,9 @@ class ComfyUIRequests:
         """
         Get the list of available LORA models from ComfyUI.
         """
-        response = self._send_get_request(f"{COMFYUI_URL}/models/loras", timeout=10)
-
-        if response.ok:
-            lora_data = response.json()
-            return lora_data
-
-        logger.error("Failed to fetch available LORA models.")
-        return []
+        try:
+            response = self._send_get_request(f"{COMFYUI_URL}/models/loras", timeout=10)
+            return response.json()
+        except RequestException as exc:
+            logger.error(f"Failed to fetch available LORA models: {exc}")
+            return []

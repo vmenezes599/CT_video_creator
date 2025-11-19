@@ -5,6 +5,7 @@ Creates synthetic test fixtures using FFmpeg filters (no large binaries required
 Tests cover alpha compositing, chromakey, FPS matching, audio mixing, scaling, and timing.
 """
 
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -17,6 +18,8 @@ from ai_video_creator.utils.ffmpeg_wrapper import (
     _probe,
     _fps_and_duration,
 )
+
+FFMPEG_AVAILABLE = shutil.which("ffmpeg") is not None
 
 
 class TestFixtureGenerator:
@@ -148,6 +151,8 @@ def temp_dir():
 @pytest.fixture
 def main_video(temp_dir):
     """Create a standard main video fixture."""
+    if not FFMPEG_AVAILABLE:
+        pytest.skip("ffmpeg is required for video fixture generation")
     path = temp_dir / "main.mp4"
     TestFixtureGenerator.create_main_video(path, duration=6.0, fps=30.0, with_audio=True)
     return path
@@ -156,6 +161,8 @@ def main_video(temp_dir):
 @pytest.fixture
 def intro_chromakey(temp_dir):
     """Create a chromakey intro fixture."""
+    if not FFMPEG_AVAILABLE:
+        pytest.skip("ffmpeg is required for video fixture generation")
     path = temp_dir / "intro_chroma.mp4"
     TestFixtureGenerator.create_intro_chromakey(path, duration=1.0, fps=30.0, with_audio=False)
     return path
@@ -164,6 +171,8 @@ def intro_chromakey(temp_dir):
 @pytest.fixture
 def intro_alpha(temp_dir):
     """Create an alpha channel intro fixture."""
+    if not FFMPEG_AVAILABLE:
+        pytest.skip("ffmpeg is required for video fixture generation")
     path = temp_dir / "intro_alpha.mp4"
     TestFixtureGenerator.create_intro_alpha(path, duration=1.0, fps=30.0, with_audio=False)
     return path
@@ -172,6 +181,8 @@ def intro_alpha(temp_dir):
 @pytest.fixture
 def intro_with_audio(temp_dir):
     """Create an intro with audio."""
+    if not FFMPEG_AVAILABLE:
+        pytest.skip("ffmpeg is required for video fixture generation")
     path = temp_dir / "intro_audio.mp4"
     TestFixtureGenerator.create_intro_chromakey(path, duration=1.0, fps=30.0, with_audio=True)
     return path
