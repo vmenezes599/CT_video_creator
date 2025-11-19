@@ -145,10 +145,10 @@ class SubVideoRecipe:
 
         return result
 
-    def _create_temp_copy_paste_helper_file(self) -> dict:
+    def _create_temp_copy_paste_helper_file(self) -> list:
         """"""
 
-        result: dict = {}
+        result_list = []
 
         for i, recipe_list in enumerate(self.video_data, 1):
 
@@ -156,24 +156,24 @@ class SubVideoRecipe:
                 "index": i,
             }
 
-            prompts = {}
+            prompts = []
 
             for j, recipe in enumerate(recipe_list, 1):
 
-                prompt = ""
+                recipe_item: dict = {"index": j}
                 if j == 1:
                     item.update({"first_frame": Path(recipe.media_path).name})
-                    prompt += self.extra_data[i - 1].get("helper_story_text", "") + "\n"
+                    recipe_item.update({"helper_story_text": self.extra_data[i - 1].get("helper_story_text", "")})
 
-                prompt += recipe.prompt
+                recipe_item.update({"prompt": recipe.prompt})
 
-                prompts.update({"index": j, "prompt": prompt})
+                prompts.append(recipe_item)
 
             item.update({"prompts": prompts})
 
-            result.update(item)
+            result_list.append(item)
 
-        return result
+        return result_list
 
     def save_current_state(self) -> None:
         """Save the current state of the video recipe to a file."""
