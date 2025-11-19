@@ -46,7 +46,7 @@ class ComfyUIRequests:
             finally:
                 tries += 1
 
-    def _send_get_request(self, url: str, params: dict = None, stream: bool = False, timeout: int = 10):
+    def _send_get_request(self, url: str, params: dict | None = None, stream: bool = False, timeout: int = 10):
         """
         Sends a GET request using the configured session.
         """
@@ -55,10 +55,10 @@ class ComfyUIRequests:
     def _send_post_request(
         self,
         url: str,
-        data: dict = None,
-        json: dict = None,
-        files: dict = None,
-        params: dict = None,
+        data: dict | None = None,
+        json: dict | None = None,
+        files: dict | None = None,
+        params: dict | None = None,
         timeout: int = 10,
     ) -> requests.Response:
         """
@@ -307,7 +307,7 @@ class ComfyUIRequests:
 
         return output_paths
 
-    def ensure_send_all_prompts(self, req_list: list[IComfyUIWorkflow], output_dir: Path) -> list[str]:
+    def ensure_send_all_prompts(self, req_list: list[IComfyUIWorkflow], output_dir: Path) -> list[Path]:
         """
         Send all prompts in the list to ComfyUI and wait for them to finish.
 
